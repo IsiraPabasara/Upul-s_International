@@ -17,3 +17,28 @@ model users {
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 }
+  
+model Product {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  sku          String   @unique
+  description  String
+  price        Float   
+  stock        Int
+  availability Boolean  @default(true)
+  brand        String
+  
+  photos       String[]
+  colors       String[]
+
+  size         String?  
+  waistSize    Int?
+  shoeSize     Int?
+  collarSize   Float?
+  vestSize     String?
+  bustSize     Int?
+  braSize      String?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
