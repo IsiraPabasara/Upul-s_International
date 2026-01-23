@@ -26,6 +26,11 @@
               "input": "apps/api/src",
               "glob": "swagger-output.json",
               "output": "apps/api/src"
+            },
+            {
+              "input": "prisma",
+              "glob": "**/*",
+              "output": "prisma"
             }
           ],
           "esbuildOptions": {
