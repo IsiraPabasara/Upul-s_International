@@ -17,7 +17,10 @@ COPY dist .
 # You can remove this install step if you build with `--bundle` option.
 # The bundled output will include external dependencies.
 
-RUN npm --omit=dev -f install
+RUN npm -f install
+
+# Generate Prisma Client
+RUN npm exec prisma@6.19 -- generate --schema=./prisma/schema.prisma
 
 CMD [ "node", "main.js" ]
 

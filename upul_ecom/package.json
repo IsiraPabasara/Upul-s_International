@@ -2,7 +2,9 @@
   "name": "@upul-ecom/source",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "postinstall": "prisma generate"
+  },
   "private": true,
   "dependencies": {
     "@prisma/client": "6.19",
