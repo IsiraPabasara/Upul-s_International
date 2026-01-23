@@ -1,14 +1,20 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "Auth Service API",
-    "description": "Automatically generated Swagger docs",
+    "title": "Upul E-com API",
+    "description": "API for Auth and Product services",
     "version": "1.0.0"
   },
   "host": "localhost:4000",
   "basePath": "/api",
   "schemes": [
     "http"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
   ],
   "paths": {
     "/auth/register": {
@@ -49,6 +55,233 @@
           }
         }
       }
+    },
+    "/products/": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "sku": {
+                  "example": "any"
+                },
+                "name": {
+                  "example": "any"
+                },
+                "description": {
+                  "example": "any"
+                },
+                "price": {
+                  "example": "any"
+                },
+                "stock": {
+                  "example": "any"
+                },
+                "availability": {
+                  "example": "any"
+                },
+                "brand": {
+                  "example": "any"
+                },
+                "photos": {
+                  "example": "any"
+                },
+                "colors": {
+                  "example": "any"
+                },
+                "size": {
+                  "example": "any"
+                },
+                "waistSize": {
+                  "example": "any"
+                },
+                "shoeSize": {
+                  "example": "any"
+                },
+                "collarSize": {
+                  "example": "any"
+                },
+                "vestSize": {
+                  "example": "any"
+                },
+                "bustSize": {
+                  "example": "any"
+                },
+                "braSize": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        }
+      },
+      "get": {
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/products/{sku}": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "sku",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Product": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "example": "Classic T-Shirt"
+        },
+        "sku": {
+          "type": "string",
+          "example": "TS-001-BLK-M"
+        },
+        "description": {
+          "type": "string",
+          "example": "Cotton t-shirt"
+        },
+        "price": {
+          "type": "number",
+          "example": 2500
+        },
+        "stock": {
+          "type": "number",
+          "example": 100
+        },
+        "brand": {
+          "type": "string",
+          "example": "Upul Basics"
+        },
+        "availability": {
+          "type": "boolean",
+          "example": true
+        },
+        "photos": {
+          "type": "array",
+          "example": [
+            "url1",
+            "url2"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "colors": {
+          "type": "array",
+          "example": [
+            "#000",
+            "#FFF"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "size": {
+          "type": "string",
+          "example": "M"
+        }
+      },
+      "required": [
+        "name",
+        "sku",
+        "description",
+        "price",
+        "stock",
+        "brand"
+      ]
+    },
+    "CreateProductDto": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "example": "Classic T-Shirt"
+        },
+        "sku": {
+          "type": "string",
+          "example": "TS-001-BLK-M"
+        },
+        "description": {
+          "type": "string",
+          "example": "Cotton t-shirt"
+        },
+        "price": {
+          "type": "number",
+          "example": 2500
+        },
+        "stock": {
+          "type": "number",
+          "example": 100
+        },
+        "brand": {
+          "type": "string",
+          "example": "Upul Basics"
+        },
+        "photos": {
+          "type": "array",
+          "example": [
+            "url1"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "colors": {
+          "type": "array",
+          "example": [
+            "#000"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "size": {
+          "type": "string",
+          "example": "M"
+        }
+      },
+      "required": [
+        "name",
+        "sku",
+        "description",
+        "price",
+        "stock",
+        "brand"
+      ]
     }
   }
 }
