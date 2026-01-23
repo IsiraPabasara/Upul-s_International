@@ -28,6 +28,11 @@
               "output": "apps/api/src"
             },
             {
+              "input": "apps/api/src/auth-service/src/utils/email-templates",
+              "glob": "**/*",
+              "output": "apps/api/src/auth-service/src/utils/email-templates"
+            },
+            {
               "input": "prisma",
               "glob": "**/*",
               "output": "prisma"

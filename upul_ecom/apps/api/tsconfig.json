@@ -6,9 +6,6 @@
   ],
   "references": [
     {
-      "path": "../../packages/libs/prisma/tsconfig.json"
-    },
-    {
       "path": "./tsconfig.app.json"
     }
   ]
