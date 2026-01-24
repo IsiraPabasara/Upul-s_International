@@ -428,3 +428,17 @@ export const updateUserProfile = async (req: any, res: Response, next: NextFunct
         next(error);
     }
 };
+
+// Get logged in user info
+export const getAdmin = async(req:any, res:Response, next:NextFunction) => {
+    try {
+        const user = req.user;
+        res.status(201).json({
+            success: true,
+            user,
+        });
+
+    } catch(error) {
+        next(error);
+    }
+}

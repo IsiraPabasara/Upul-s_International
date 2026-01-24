@@ -1,6 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import axiosInstance from '@/app//utils/axiosInstance'; // Adjust path
+import toast from 'react-hot-toast';
 
 interface Brand {
   id: string;
@@ -13,50 +16,45 @@ interface BrandSelectorProps {
 }
 
 export default function BrandSelector({ selectedBrand, onChange }: BrandSelectorProps) {
-  const [brands, setBrands] = useState<Brand[]>([]);
+  const queryClient = useQueryClient();
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [newBrandName, setNewBrandName] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  // 1. Fetch Brands on Load
-  useEffect(() => {
-    fetchBrands();
-  }, []);
+  // 1. Fetch Brands using useQuery
+  const { data: brands = [], isLoading } = useQuery<Brand[]>({
+    queryKey: ['brands'],
+    queryFn: async () => {
+      const res = await axiosInstance.get('/api/brands', { isPublic: true });
+      return res.data;
+    },
+  });
 
-  const fetchBrands = async () => {
-    try {
-      const res = await fetch('http://localhost:4000/api/brands');
-      if (res.ok) setBrands(await res.json());
-    } catch (err) {
-      console.error("Failed to load brands");
-    }
-  };
+  // 2. Create Brand using useMutation
+  const createBrandMutation = useMutation({
+    mutationFn: (name: string) => axiosInstance.post('/api/brands', { name }),
+    onSuccess: (response) => {
+      const newBrand = response.data;
+      
+      // Invalidate and refetch brands list
+      queryClient.invalidateQueries({ queryKey: ['brands'] });
+      
+      // Select the newly created brand
+      onChange(newBrand.name);
+      
+      // Reset UI
+      setIsAddingNew(false);
+      setNewBrandName('');
+      toast.success('Brand added!');
+    },
+    onError: (err: any) => {
+      const message = err.response?.data?.message || "Brand might already exist!";
+      toast.error(message);
+    },
+  });
 
-  const handleCreateBrand = async () => {
+  const handleCreateBrand = () => {
     if (!newBrandName.trim()) return;
-    setLoading(true);
-
-    try {
-      const res = await fetch('http://localhost:4000/api/brands', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newBrandName }),
-      });
-
-      if (res.ok) {
-        const newBrand = await res.json();
-        setBrands([...brands, newBrand].sort((a, b) => a.name.localeCompare(b.name))); 
-        onChange(newBrand.name); 
-        setIsAddingNew(false);
-        setNewBrandName('');
-      } else {
-        alert("Brand might already exist!");
-      }
-    } catch (err) {
-      alert("Error creating brand");
-    } finally {
-      setLoading(false);
-    }
+    createBrandMutation.mutate(newBrandName);
   };
 
   return (
@@ -66,16 +64,19 @@ export default function BrandSelector({ selectedBrand, onChange }: BrandSelector
       {!isAddingNew ? (
         <div className="flex gap-2">
           <select
-            className="w-full p-2 border border-gray-300 rounded-md bg-white focus:ring-blue-500"
+            className="w-full p-2 border border-gray-300 rounded-md bg-white focus:ring-blue-500 disabled:bg-gray-50"
             value={selectedBrand}
             onChange={(e) => onChange(e.target.value)}
+            disabled={isLoading}
           >
-            <option value="">-- Select Brand --</option>
-            {brands.map((brand) => (
-              <option key={brand.id} value={brand.name}>
-                {brand.name}
-              </option>
-            ))}
+            <option value="">{isLoading ? 'Loading brands...' : '-- Select Brand --'}</option>
+            {brands
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map((brand) => (
+                <option key={brand.id} value={brand.name}>
+                  {brand.name}
+                </option>
+              ))}
           </select>
           
           <button
@@ -99,10 +100,10 @@ export default function BrandSelector({ selectedBrand, onChange }: BrandSelector
           <button
             type="button"
             onClick={handleCreateBrand}
-            disabled={loading}
+            disabled={createBrandMutation.isPending}
             className="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm disabled:opacity-50"
           >
-            {loading ? 'Saving...' : 'Save'}
+            {createBrandMutation.isPending ? 'Saving...' : 'Save'}
           </button>
           <button
             type="button"
