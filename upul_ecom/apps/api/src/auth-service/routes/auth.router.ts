@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getUser, loginUser, logOutUser, refreshToken, resetUserPassword, userForgotPassword, userRegistration, verifyUser, verifyUserForgotPassword } from "../src/auth-service.js";
+import { addUserAddress, deleteUserAddress, getUser, loginUser, logOutUser, refreshToken, resetUserPassword, setDefaultAddress, updateUserAddress, updateUserProfile, userForgotPassword, userRegistration, verifyUser, verifyUserForgotPassword } from "../src/auth-service.js";
 import isAuthenticated from "../../../../../packages/middleware/isAuthenticated.js";
 
 export const authRouter = Router();
@@ -15,4 +15,10 @@ authRouter.post("/login-user", loginUser);
 authRouter.post("/refresh-token", refreshToken);
 authRouter.get("/logged-in-user", isAuthenticated, getUser);
 authRouter.get("/logout-user", isAuthenticated, logOutUser);
+
+authRouter.post("/add-address", isAuthenticated, addUserAddress);
+authRouter.delete("/delete-address/:addressId", isAuthenticated, deleteUserAddress);
+authRouter.put("/update-address/:addressId", isAuthenticated, updateUserAddress);
+authRouter.patch("/set-default-address/:addressId", isAuthenticated, setDefaultAddress);
+authRouter.put("/update-profile", isAuthenticated, updateUserProfile);
 

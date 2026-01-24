@@ -7,6 +7,18 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+type Address {
+  id           String   @default(uuid()) 
+  firstname    String
+  lastname     String
+  addressLine  String
+  apartment    String?  
+  city         String
+  postalCode   String
+  phoneNumber  String
+  isDefault    Boolean  @default(false)
+}
+
 model users {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   firstname   String
@@ -14,9 +26,12 @@ model users {
   email       String   @unique
   phonenumber String   @unique
   password    String?
-  role        String   @default("user")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  role        String        @default("user")
+
+  addresses    Address[]
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 }
 
 type ProductImage {
