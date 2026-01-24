@@ -1,7 +1,7 @@
 import { NextFunction, Response } from "express";
 import { AuthError } from "../error-handler";
 
-export const isSeller = (req: any, res: Response, next: NextFunction) => {
+export const isAdmin = (req: any, res: Response, next: NextFunction) => {
     if(req.role !== "admin") {
         return next(new AuthError("Access denied: Admin only"));
     }

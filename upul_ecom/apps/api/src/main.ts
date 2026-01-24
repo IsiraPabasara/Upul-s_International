@@ -19,7 +19,6 @@ app.use(cookieParser());
 app.use(morgan('dev'));
 
 //Apply rate limiting
-
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, 
   max: (req:any) => (req.user ? 1000 : 100),
@@ -27,8 +26,6 @@ const limiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: true,
 })
-
-app.use(limiter);
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.get("/docs-json", (req,res) => {
@@ -39,7 +36,7 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
-app.use("/api", router);
+app.use("/api", limiter, router);
 
 app.use(errorMiddleware);
 

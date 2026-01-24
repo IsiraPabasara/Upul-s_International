@@ -82,7 +82,6 @@ export default function AddProductPage() {
   // 2. Setup TanStack Mutation
   const mutation = useMutation({
     mutationFn: async (newProduct: ProductFormValues) => {
-      // axiosInstance automatically handles interceptors/refresh tokens
       const { data } = await axiosInstance.post("/api/products", newProduct);
       return data;
     },
@@ -93,11 +92,12 @@ export default function AddProductPage() {
     },
   });
 
-  // 3. Logic: Sync "Base Name" + "Color" -> "Product Name"
+  // 3. Logic: Sync "Base Name" + "Color" -> "Product Name" (only when color is selected)
   useEffect(() => {
-    const colorSuffix = watchedColors?.[0] ? ` - ${watchedColors[0]}` : "";
-    setValue("name", baseName + colorSuffix);
-  }, [baseName, watchedColors, setValue]);
+    if (watchedColors?.[0]) {
+      setValue("name", baseName + ` - ${watchedColors[0]}`);
+    }
+  }, [watchedColors, baseName, setValue]);
 
   // 4. Logic: Calculate Discount (UI helper)
   const getDiscountedPrice = () => {
@@ -145,7 +145,7 @@ export default function AddProductPage() {
                 placeholder="e.g. Night Dress"
               />
               <p className="text-xs text-gray-400 mt-1 h-4">
-                {currentName !== baseName && (
+                { (
                   <>
                     Saved as:{" "}
                     <span className="font-medium text-gray-600">

@@ -1,6 +1,7 @@
 import { Router } from "express";
-import { addUserAddress, deleteUserAddress, getUser, loginUser, logOutUser, refreshToken, resetUserPassword, setDefaultAddress, updateUserAddress, updateUserProfile, userForgotPassword, userRegistration, verifyUser, verifyUserForgotPassword } from "../src/auth-service.js";
+import { addUserAddress, deleteUserAddress, getAdmin, getUser, loginUser, logOutUser, refreshToken, resetUserPassword, setDefaultAddress, updateUserAddress, updateUserProfile, userForgotPassword, userRegistration, verifyUser, verifyUserForgotPassword } from "../src/auth-service.js";
 import isAuthenticated from "../../../../../packages/middleware/isAuthenticated.js";
+import { isAdmin } from "../../../../../packages/middleware/authorizedRoles.js";
 
 export const authRouter = Router();
 
@@ -22,3 +23,4 @@ authRouter.put("/update-address/:addressId", isAuthenticated, updateUserAddress)
 authRouter.patch("/set-default-address/:addressId", isAuthenticated, setDefaultAddress);
 authRouter.put("/update-profile", isAuthenticated, updateUserProfile);
 
+authRouter.get("/logged-in-admin", isAuthenticated, isAdmin, getAdmin);
