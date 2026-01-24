@@ -1,38 +1,55 @@
-import { Request, Response, NextFunction } from 'express';
-import prisma from '../../../../packages/libs/prisma';
+import { Request, Response, NextFunction } from "express";
+import prisma from "../../../../packages/libs/prisma";
 
-
-export const createProduct = async (req: Request, res: Response, next: NextFunction) => {
+export const createProduct = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const data = req.body;
+    let finalSKU = data.sku;
+
+    if (!finalSKU) {
+      finalSKU = await generateNextSku();
+    }
 
     const existing = await prisma.product.findUnique({
-      where: { sku: data.sku }
+      where: { sku: finalSKU },
     });
 
     if (existing) {
-      return res.status(400).json({ message: "Product with this SKU already exists !!!" });
+      return res
+        .status(400)
+        .json({ message: "Error generating unique SKU, please try again." });
+    }
+
+    let calculatedStock = 0;
+    if (data.variants && Array.isArray(data.variants)) {
+      calculatedStock = data.variants.reduce(
+        (sum: number, v: any) => sum + parseInt(v.stock || 0),
+        0,
+      );
     }
 
     const product = await prisma.product.create({
       data: {
         name: data.name,
-        sku: data.sku,
+        sku: finalSKU,
         description: data.description,
         price: parseFloat(data.price),
-        stock: parseInt(data.stock),
         availability: data.availability,
+        isNewArrival: data.isNewArrival,
+        discountType: data.discountType, // "NONE", "PERCENTAGE", or "FIXED"
+        discountValue: parseFloat(data.discountValue || 0),
         brand: data.brand,
-        photos: data.photos,
-        colors: data.colors,
-        size: data.size,
-        waistSize: data.waistSize ? parseInt(data.waistSize) : undefined,
-        shoeSize: data.shoeSize ? parseInt(data.shoeSize) : undefined,
-        collarSize: data.collarSize ? parseFloat(data.collarSize) : undefined,
-        vestSize: data.vestSize,
-        bustSize: data.bustSize ? parseInt(data.bustSize) : undefined,
-        braSize: data.braSize,
-      }
+        images: data.images,
+        colors: data.colors || [],
+        categoryId: data.categoryId,
+        sizeType: data.sizeType, // Save the type (e.g. "Shoes")
+        variants: data.variants, // Save the array [{size: "M", stock: 10}, ...]
+        stock: calculatedStock, // Save the calculated total
+      },
     });
     return res.status(201).json({ message: "Product created", product });
   } catch (error) {
@@ -40,7 +57,11 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
   }
 };
 
-export const getAllProducts = async (req: Request, res: Response, next: NextFunction) => {
+export const getAllProducts = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const products = await prisma.product.findMany();
     return res.json(products);
@@ -49,11 +70,15 @@ export const getAllProducts = async (req: Request, res: Response, next: NextFunc
   }
 };
 
-export const getProductBySku = async (req: Request, res: Response, next: NextFunction) => {
+export const getProductBySku = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const { sku } = req.params;
     const product = await prisma.product.findUnique({
-      where: { sku }
+      where: { sku },
     });
 
     if (!product) {
@@ -63,4 +88,23 @@ export const getProductBySku = async (req: Request, res: Response, next: NextFun
   } catch (error) {
     return next(error);
   }
+};
+
+const generateNextSku = async (prefix = "SKU") => {
+  const lastProduct = await prisma.product.findFirst({
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (!lastProduct || !lastProduct.sku) {
+    return `${prefix}-1`;
+  }
+
+  const skuParts = lastProduct.sku.split("-");
+  const lastNumber = parseInt(skuParts[skuParts.length - 1]);
+
+  if (isNaN(lastNumber)) {
+    return `${prefix}-${Date.now()}`;
+  }
+
+  return `${prefix}-${lastNumber + 1}`;
 };

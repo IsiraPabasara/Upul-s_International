@@ -35,6 +35,10 @@ const doc = {
       photos: ["url1"],
       colors: ["#000"],
       size: "M"
+    },
+    CreateCategory: {
+      $name: "Men",
+      parentId: "5f8d0d55b54764421b7156c9" 
     }
   }
 };
