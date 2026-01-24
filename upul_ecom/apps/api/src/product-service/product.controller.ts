@@ -6,14 +6,12 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
   try {
     const data = req.body;
 
-    // Check if SKU exists
     const existing = await prisma.product.findUnique({
       where: { sku: data.sku }
     });
 
     if (existing) {
-      // ADDED: return
-      return res.status(400).json({ message: "Product with this SKU already exists" });
+      return res.status(400).json({ message: "Product with this SKU already exists !!!" });
     }
 
     const product = await prisma.product.create({
@@ -36,24 +34,17 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
         braSize: data.braSize,
       }
     });
-
-    // ADDED: return
     return res.status(201).json({ message: "Product created", product });
   } catch (error) {
-    // ADDED: return
     return next(error);
   }
 };
 
 export const getAllProducts = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // ... (Use your search/filter logic here) ...
     const products = await prisma.product.findMany();
-    
-    // ADDED: return
     return res.json(products);
   } catch (error) {
-    // ADDED: return
     return next(error);
   }
 };
@@ -66,14 +57,10 @@ export const getProductBySku = async (req: Request, res: Response, next: NextFun
     });
 
     if (!product) {
-      // ADDED: return
-      return res.status(404).json({ message: "Not found" });
+      return res.status(404).json({ message: "Not found in the DB" });
     }
-
-    // ADDED: return
     return res.json(product);
   } catch (error) {
-    // ADDED: return
     return next(error);
   }
 };
