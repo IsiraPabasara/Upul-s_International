@@ -4,7 +4,7 @@ services:
       context: .
       target: api
     ports:
-      - "4000:4000"  # Maps YOUR localhost:4000 to CONTAINER 4000
+      - "4000:4000"
     env_file:
       - .env
 
@@ -13,7 +13,7 @@ services:
       context: .
       target: ui
     ports:
-      - "3000:3000"  # Maps YOUR localhost:3000 to CONTAINER 3000
+      - "3000:3000"
     env_file:
       - .env
     depends_on:
