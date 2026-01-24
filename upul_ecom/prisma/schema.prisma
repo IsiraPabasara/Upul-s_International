@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,38 +8,98 @@ datasource db {
 }
 
 model users {
-  id          String      @id @default(auto()) @map("_id") @db.ObjectId
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
   firstname   String
   lastname    String
-  email       String      @unique
-  phonenumber String      @unique
+  email       String   @unique
+  phonenumber String   @unique
   password    String?
-  role        String        @default("user")
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  role        String   @default("user")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
-  
+
+type ProductImage {
+  fileId String
+  url    String
+}
+
+type ProductVariant {
+  size  String
+  stock Int
+}
+
+enum DiscountType {
+  NONE
+  PERCENTAGE
+  FIXED
+}
+
 model Product {
-  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  id           String  @id @default(auto()) @map("_id") @db.ObjectId
   name         String
-  sku          String   @unique
+  sku          String  @unique
   description  String
-  price        Float   
-  stock        Int
-  availability Boolean  @default(true)
+  price        Float
+  availability Boolean @default(true)
   brand        String
+
+  images ProductImage[]
+  colors String[]
+
+  sizeType String           @default("Standard")
+  variants ProductVariant[] //"Standard Normal"
+  stock    Int              @default(0)
+
+  categoryId String   @db.ObjectId
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  isNewArrival  Boolean       @default(true)
+  discountType  DiscountType  @default(NONE)
+  discountValue Float         @default(0) // "10" (for %) or "500" (for LKR)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Category {
+  id   String @id @default(auto()) @map("_id") @db.ObjectId
+  name String
+
+  parentId String?   @db.ObjectId
+  parent   Category? @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  children Category[] @relation("CategoryHierarchy")
+
+  products Product[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Brand {
+  id   String @id @default(auto()) @map("_id") @db.ObjectId
+  name String @unique
+  // Optional: logoUrl String? 
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SizeType {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String   @unique 
+  values    String[] 
   
-  photos       String[]
-  colors       String[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
 
-  size         String?  
-  waistSize    Int?
-  shoeSize     Int?
-  collarSize   Float?
-  vestSize     String?
-  bustSize     Int?
-  braSize      String?
-
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+model Color {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String   @unique
+  hexCode   String   
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
