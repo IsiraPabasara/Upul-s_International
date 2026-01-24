@@ -1,49 +1,54 @@
 'use client'
 import { useMutation } from '@tanstack/react-query';
-import { EyeIcon, EyeOff } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import React, { useRef, useState } from 'react'
-import {useForm} from 'react-hook-form';
+import React, { useRef, useState, useEffect } from 'react'
+import { useForm } from 'react-hook-form';
 import axios from 'axios'
+import toast from 'react-hot-toast';
 
 type FormData = {
     firstname: string;
     lastname: string;
     email: string;
-    phonenumber: string; // Stored as string to preserve leading zeros
+    phonenumber: string; 
     password: string;
 }
 
 const Signup = () => {
-
-    const [passwordVisible, setPasswordVisible] = useState(false)
-    const [serverError, setServerError] = useState<string | null>(null)
-    const [canResend, setCanResend] = useState(true);
+    // UI States
+    const [passwordVisible, setPasswordVisible] = useState(false);
     const [showOtp, setShowOtp] = useState(false);
+    const [serverError, setServerError] = useState<string | null>(null);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    
+    // Timer & OTP States
+    const [canResend, setCanResend] = useState(true);
     const [timer, setTimer] = useState(60);
     const [otp, setOtp] = useState(["", "", "", ""]);
-    const router = useRouter();
     const [userData, setUserData] = useState<FormData | null>(null);
+    
+    const router = useRouter();
     const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+    const { register, handleSubmit, formState: { errors } } = useForm<FormData>();
 
-    const {register, handleSubmit, formState:{errors},} = useForm<FormData>(); 
+    // Resend Timer Logic
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (!canResend && timer > 0) {
+            interval = setInterval(() => {
+                setTimer((prev) => prev - 1);
+            }, 1000);
+        } else if (timer === 0) {
+            setCanResend(true);
+        }
+        return () => clearInterval(interval);
+    }, [canResend, timer]);
 
-    const startResendTimer = () => {
-        const interval = setInterval(() => {
-            setTimer((prev) => {
-                if(prev <= 1) {
-                    clearInterval(interval);
-                    setCanResend(true);
-                    return 0;
-                }
-                return prev-1;
-            })
-        },1000)
-    }
-
+    // Mutation: Initial Signup & Resend
     const signupMutation = useMutation({
-        mutationFn: async(data: FormData) => {
+        mutationFn: async (data: FormData) => {
             const response = await axios.post(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/auth/register`, data);
             return response.data;
         },
@@ -52,202 +57,180 @@ const Signup = () => {
             setShowOtp(true);
             setCanResend(false);
             setTimer(60);
-            startResendTimer();
+            setServerError(null);
+            // If it was a resend, show the success text
+            if (showOtp) {
+                setSuccessMessage("OTP has been resent successfully.");
+                setTimeout(() => setSuccessMessage(null), 5000);
+            }
         },
-        onError: (error: unknown) => {
-            if(axios.isAxiosError(error)) {
-                setServerError(error.response?.data?.message || "Something went wrong");
-            }
-            else {
-                setServerError("Something went wrong");
-            }
+        onError: (error: any) => {
+            setServerError(error.response?.data?.message || "Something went wrong. Please try again.");
+            setSuccessMessage(null);
         }
-    })
+    });
 
-    const verifyOtpMutaioin = useMutation({
+    // Mutation: OTP Verification
+    const verifyOtpMutation = useMutation({
         mutationFn: async () => {
-            if(!userData) return;
-            const  response = await axios.post(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/auth/verify-user`,
-                {
-                    ...userData,
-                    otp: otp.join(""),
-                }
-            );
+            if (!userData) return;
+            const response = await axios.post(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/auth/verify-user`, {
+                ...userData,
+                otp: otp.join(""),
+            });
             return response.data;
         },
         onSuccess: () => {
+            toast.success("Account verified successfully!");
             router.push("/login");
         },
-        onError: (error: unknown) => {
-            if(axios.isAxiosError(error)) {
-                setServerError(error.response?.data?.message || "Something went wrong");
-            }
-            else {
-                setServerError("Something went wrong");
-            }
+        onError: (error: any) => {
+            setServerError(error.response?.data?.message || "Invalid verification code.");
+            setSuccessMessage(null);
         }
-    })
-    
+    });
+
     const onSubmit = (data: FormData) => {
+        setServerError(null);
         signupMutation.mutate(data);
     };
 
-    const handleOtpChange = (index:number, value:string) => {
-        if(!/^[0-9]?$/.test(value)) return;
-        
-        const newOtp = [...otp];
-        newOtp[index] = value;
-        setOtp(newOtp);
-
-        if(value && index < inputRefs.current.length - 1 ) {
-            inputRefs.current[index + 1]?.focus();
-        }
-    }
-
-    const handleOtpKeyDown = (index:number, e:React.KeyboardEvent<HTMLInputElement>) => {
-        if(e.key === "Backspace" && !otp[index] && index > 0) {
-            inputRefs.current[index - 1]?.focus();
-        }
-    }
-
-    const resendOtp = () => {
+    const handleResend = () => {
         if (!canResend || !userData) return;
-
         setServerError(null);
-        setCanResend(false);
-        setTimer(60);
-        startResendTimer();
-
+        setSuccessMessage(null);
+        signupMutation.reset(); 
         signupMutation.mutate(userData);
     };
 
+    const handleOtpChange = (index: number, value: string) => {
+        if (!/^[0-9]?$/.test(value)) return;
+        const newOtp = [...otp];
+        newOtp[index] = value;
+        setOtp(newOtp);
+        if (value && index < 3) inputRefs.current[index + 1]?.focus();
+    };
+
+    const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Backspace" && !otp[index] && index > 0) {
+            inputRefs.current[index - 1]?.focus();
+        }
+    };
 
     return (
-        <div className='w-full py-10 min-h-[85vh] bg-[#f1f1f1]'>
-            
-            <div className='w-full flex justify-center'>
-                <div className='md:w-[480px] p-8 bg-white shadow rounded-lg'>
-                    <h3 className='text-3xl font-semibold text-center mb-2'>
-                        Signup
-                    </h3>
-                    <p className='text-center text-gray-500 mb-4'>
-                        Already have an account?{" "}
-                        <Link href="/login" className='text-blue-500'>Login</Link>
+        <div className='w-full min-h-screen bg-white flex flex-col items-center justify-center font-sans py-20'>
+            <div className='w-full max-w-[450px] px-8'>
+                
+                {/* Header */}
+                <div className="mb-14 text-center">
+                    <h2 className='text-2xl tracking-[0.4em] uppercase mb-6 text-[#111] font-light'>
+                        {showOtp ? "Verify" : "Signup"}
+                    </h2>
+                    <p className='text-[13px] text-gray-400 tracking-wide'>
+                        {showOtp ? "Enter the code sent to your email:" : "Create your account below:"}
                     </p>
-                    
-                    
+                </div>
 
-                    {!showOtp ? (
-                        <form onSubmit={handleSubmit(onSubmit)}>
-                        {/* First Name */}
-                        <label className='block text-gray-700 mb-1'>First Name</label>
-                        <input type='text' placeholder='saminu'
-                            className='w-full p-2 border border-gray-300 outline-0 rounded-md mb-1'
-                            {...register("firstname", { required: "First name is required" })}
+                {!showOtp ? (
+                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                        <div className='grid grid-cols-2 gap-4'>
+                            <input type='text' placeholder='First Name'
+                                className='w-full p-4 border border-gray-200 outline-none text-sm placeholder:text-gray-400 focus:border-black transition-colors'
+                                {...register("firstname", { required: "Required" })}
+                            />
+                            <input type='text' placeholder='Last Name'
+                                className='w-full p-4 border border-gray-200 outline-none text-sm placeholder:text-gray-400 focus:border-black transition-colors'
+                                {...register("lastname", { required: "Required" })}
+                            />
+                        </div>
+
+                        <input type='email' placeholder='E-mail'
+                            className='w-full p-4 border border-gray-200 outline-none text-sm placeholder:text-gray-400 focus:border-black transition-colors'
+                            {...register("email", { required: "Required" })}
                         />
-                        {errors.firstname && <p className='text-red-500 text-sm'>{errors.firstname.message}</p>}
 
-                        {/* Last Name */}
-                        <label className='block text-gray-700 mb-1'>Last Name</label>
-                        <input type='text' placeholder='hansaja'
-                            className='w-full p-2 border border-gray-300 outline-0 rounded-md mb-1'
-                            {...register("lastname", { required: "Last name is required" })}
+                        <input type='text' placeholder='Phone Number'
+                            className='w-full p-4 border border-gray-200 outline-none text-sm placeholder:text-gray-400 focus:border-black transition-colors'
+                            {...register("phonenumber", { required: "Required" })}
                         />
-                        {errors.lastname && <p className='text-red-500 text-sm'>{errors.lastname.message}</p>}
 
-                        {/* Email */}
-                        <label className='block text-gray-700 mb-1'>Email</label>
-                        <input type='email' placeholder='email@example.com'
-                            className='w-full p-2 border border-gray-300 outline-0 rounded-md mb-1'
-                            {...register("email", { 
-                                required: "Email is required",
-                                pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: "Invalid email" }
-                            })}
-                        />
-                        {errors.email && <p className='text-red-500 text-sm'>{errors.email.message}</p>}
-
-                        {/* Phone Number (10 Digits) */}
-                        <label className='block text-gray-700 mb-1'>Phone Number</label>
-                        <input type='text' placeholder='1234567890'
-                            className='w-full p-2 border border-gray-300 outline-0 rounded-md mb-1'
-                            {...register("phonenumber", { 
-                                required: "Phone number is required",
-                                pattern: {
-                                    value: /^\d{10}$/,
-                                    message: "Phone number must be exactly 10 digits"
-                                }
-                            })}
-                        />
-                        {errors.phonenumber && <p className='text-red-500 text-sm'>{errors.phonenumber.message}</p>}
-
-                        {/* Password */}
-                        <label className='block text-gray-700 mb-1'>Password</label>
                         <div className="relative">
                             <input
-                            type={passwordVisible ? "text" : "password"}
-                            placeholder='Min. 6 characters'
-                            className='w-full p-2 border border-gray-300 outline-0 rounded-md mb-1'
-                            {...register("password", { 
-                                required: "Password is required", 
-                                minLength: { value: 6, message: "Min 6 characters" } 
-                            })}
+                                type={passwordVisible ? "text" : "password"}
+                                placeholder='Password'
+                                className='w-full p-4 border border-gray-200 outline-none text-sm placeholder:text-gray-400 focus:border-black transition-colors'
+                                {...register("password", { required: "Required", minLength: 6 })}
                             />
-                            <button type='button' onClick={() => setPasswordVisible(!passwordVisible)} className='absolute inset-y-0 right-3 flex items-center text-gray-400'>
-                            {passwordVisible ? <EyeIcon size={20}/> : <EyeOff size={20}/>}
+                            <button type='button' onClick={() => setPasswordVisible(!passwordVisible)} className='absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-black transition-colors'>
+                                {passwordVisible ? <Eye size={18} /> : <EyeOff size={18} />}
                             </button>
                         </div>
-                        {errors.password && <p className='text-red-500 text-sm'>{errors.password.message}</p>}
 
-                        <button type='submit' className='w-full text-lg cursor-pointer mt-4 bg-black text-white py-2 rounded-lg' disabled={signupMutation.isPending}>
-                            {signupMutation.isPending ? "Signing Up..." : "Sign Up"}
+                        <button type='submit' disabled={signupMutation.isPending}
+                            className="relative w-full py-4 mt-4 text-xs tracking-[0.3em] uppercase font-bold text-white border border-black overflow-hidden group bg-black hover:text-black transition-colors duration-500">
+                            <span className="absolute inset-0 bg-white transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500 ease-out"></span>
+                            <span className="relative z-10">{signupMutation.isPending ? "Processing..." : "Sign Up"}</span>
                         </button>
-                        </form>
-                    ): (
-                        <div>
-                            <h3 className='text-xl font-semibold text-center mb-4'>Enter OTP</h3>
-                            <div className='flex justify-center gap-6'>
-                                {otp.map((digit, index) => (
-                                    <input
+
+                        <div className='mt-12 text-center'>
+                            <p className='text-[13px] text-gray-400 tracking-tight'>
+                                Already have an account? 
+                                <Link href="/login" className='text-black font-medium hover:underline underline-offset-4 ml-1'>Login</Link>
+                            </p>
+                        </div>
+                    </form>
+                ) : (
+                    <div className="text-center">
+                        <div className='flex justify-center gap-4 mb-10'>
+                            {otp.map((digit, index) => (
+                                <input
                                     key={index}
                                     type='text'
-                                    ref={(el) => {
-                                        if(el) inputRefs.current[index] = el;
-                                    }}
+                                    ref={(el) => { if (el) inputRefs.current[index] = el; }}
                                     maxLength={1}
-                                    className='w-12 h-12 text-center border border-gray-300 outline-none !rounded'
+                                    className='w-14 h-14 text-center border border-gray-200 outline-none text-lg focus:border-black transition-colors'
                                     value={digit}
-                                    onChange={(e) => handleOtpChange(index,e.target.value)}
+                                    onChange={(e) => handleOtpChange(index, e.target.value)}
                                     onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                                    >
-                                    </input>
-                                ))}
-                            </div>
-                            <button className='w-full mt-4 text-lg cursor-pointer bg-blue-500 text-white py-2 rounded-lg'
-                            disabled = {verifyOtpMutaioin.isPending}
-                            onClick={() => verifyOtpMutaioin.mutate()}
-                            >
-                                {verifyOtpMutaioin.isPending? "Verifying..." : "Verify OTP"}
-                            </button>
-                            <p className='text-center text-sm mt-4'>
-                                {canResend ? (
-                                    <button onClick={resendOtp} className=''>
-                                        Resend OTP
-                                    </button>
-                                ): (
-                                    `Resend OTP in ${timer}s`
-                                )}
-                            </p>
-                            {serverError && (
-                            <p className='text-red-500 text-sm'>
-                                {serverError}
-                            </p>
+                                />
+                            ))}
+                        </div>
+
+                        <button 
+                            onClick={() => { setServerError(null); verifyOtpMutation.mutate(); }} 
+                            disabled={verifyOtpMutation.isPending}
+                            className="relative w-full py-4 text-xs tracking-[0.3em] uppercase font-bold text-white border border-black overflow-hidden group bg-black hover:text-black transition-colors duration-500"
+                        >
+                            <span className="absolute inset-0 bg-white transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500 ease-out"></span>
+                            <span className="relative z-10">{verifyOtpMutation.isPending ? "Verifying..." : "Verify OTP"}</span>
+                        </button>
+
+                        <div className='mt-10 min-h-[24px]'>
+                            {canResend ? (
+                                <button onClick={handleResend} className='text-[11px] text-black font-bold uppercase tracking-[0.2em] hover:underline underline-offset-4'>
+                                    Resend Code
+                                </button>
+                            ) : (
+                                <p className='text-[11px] text-gray-400 uppercase tracking-[0.2em]'>
+                                    Resend in {timer}s
+                                </p>
                             )}
                         </div>
-                    )}
-                </div>
+
+                        {/* Feedback Messages */}
+                        <div className="mt-6 space-y-2">
+                            {successMessage && <p className='text-green-600 text-[11px] uppercase tracking-widest font-bold'>{successMessage}</p>}
+                            {serverError && <p className='text-red-500 text-[11px] uppercase tracking-widest font-bold'>{serverError}</p>}
+                        </div>
+                        
+                        <button onClick={() => setShowOtp(false)} className='mt-8 text-[11px] text-gray-400 hover:text-black uppercase tracking-widest transition-colors'>
+                            ← Back to Signup
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     )
 }
 
-export default Signup
+export default Signup;

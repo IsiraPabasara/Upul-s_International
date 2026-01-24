@@ -2,10 +2,14 @@
 import React from 'react'
 import useUser from '../hooks/useUser'
 
+
+
 const page = () => {
-    const {user} = useUser();
+  const {user} = useUser();
+    console.log(user);
   return (
-    <div>Home Page  {user?.firstname}</div>
+    
+    <div>Home Page</div>
   )
 }
 
