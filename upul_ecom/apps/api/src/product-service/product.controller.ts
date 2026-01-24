@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import prisma from '../utils/prisma';
+import prisma from '../../../../packages/libs/prisma';
+
 
 export const createProduct = async (req: Request, res: Response, next: NextFunction) => {
   try {

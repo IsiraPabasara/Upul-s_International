@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import cookieParser from "cookie-parser";
 import rateLimit from 'express-rate-limit';
 import { errorMiddleware } from '../../../packages/error-handler/error-middleware'
 import swaggerUi from 'swagger-ui-express'
@@ -14,6 +15,7 @@ const app = express();
 app.use(cors({ origin: true, credentials: true }));
 app.use(helmet());
 app.use(express.json());
+app.use(cookieParser());
 app.use(morgan('dev'));
 
 //Apply rate limiting
@@ -37,9 +39,9 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
-app.use(errorMiddleware);
-
 app.use("/api", router);
+
+app.use(errorMiddleware);
 
 const port = process.env.PORT || 4000;
 app.listen(port, () => {
