@@ -1,4 +1,5 @@
 'use client'
+import { useCart } from '@/app/hooks/useCart';
 import { useMutation } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { Eye, EyeOff } from 'lucide-react'; 
@@ -18,6 +19,7 @@ const Login = () => {
     const [passwordVisible, setPasswordVisible] = useState(false)
     const [serverError, setServerError] = useState<string | null>(null)
     const router = useRouter();
+    const { syncWithUser } = useCart();
     
     const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormData>({
         defaultValues: {
@@ -25,7 +27,6 @@ const Login = () => {
         }
     });
 
-    // We "watch" the value so React knows when to re-render the custom UI
     const isRemembered = watch("rememberMe");
 
     useEffect(() => {
@@ -43,12 +44,13 @@ const Login = () => {
             )
             return response.data;
         },
-        onSuccess: (data, variables) => {
+        onSuccess: async (data, variables) => {
             if (variables.rememberMe) {
                 localStorage.setItem("rememberedEmail", variables.email);
             } else {
                 localStorage.removeItem("rememberedEmail");
             }
+            await syncWithUser();
             toast.success("Login successful!");
             router.push("/");
         },
@@ -59,7 +61,10 @@ const Login = () => {
         }
     })
 
-    const onSubmit = (data: FormData) => loginMutation.mutate(data);
+    const onSubmit = (data: FormData) => {
+        setServerError(null); // Clear server error on new attempt
+        loginMutation.mutate(data);
+    };
 
     return (
         <div className='w-full min-h-screen bg-white flex flex-col items-center justify-center font-sans'>
@@ -71,39 +76,61 @@ const Login = () => {
                 </div>
 
                 <form onSubmit={handleSubmit(onSubmit)}>
+                    {/* EMAIL FIELD */}
                     <div className='mb-6'>
                         <input 
                             type='email' 
                             placeholder='E-mail'
-                            className='w-full p-4 border border-black outline-none text-sm placeholder:text-black/40 focus:border-black transition-colors font-medium'
-                            {...register("email", { required: "Email is required" })}
+                            className={`w-full p-4 border outline-none text-sm placeholder:text-black/40 transition-colors font-medium ${errors.email ? 'border-red-500' : 'border-black focus:border-black'}`}
+                            {...register("email", { 
+                                required: "Email is required",
+                                pattern: {
+                                    value: /\S+@\S+\.\S+/,
+                                    message: "Invalid email format"
+                                }
+                            })}
                         />
+                        {/* Validation Error */}
+                        {errors.email && (
+                            <p className="text-red-500 text-[10px] mt-1 font-bold uppercase tracking-widest">
+                                {errors.email.message}
+                            </p>
+                        )}
                     </div>
 
+                    {/* PASSWORD FIELD */}
                     <div className='mb-6'>
                         <div className="relative">
                             <input
                                 type={passwordVisible ? "text" : "password"}
                                 placeholder='Password'
-                                className='w-full p-4 border border-black outline-none text-sm placeholder:text-black/40 focus:border-black transition-colors font-medium'
-                                {...register("password", { required: "Password is required" })}
+                                className={`w-full p-4 border outline-none text-sm placeholder:text-black/40 transition-colors font-medium ${errors.password ? 'border-red-500' : 'border-black focus:border-black'}`}
+                                {...register("password", { 
+                                    required: "Password is required",
+                                    minLength: { value: 6, message: "Minimum 6 characters" } 
+                                })}
                             />
                             <button type="button" onClick={() => setPasswordVisible(!passwordVisible)} className="absolute right-4 top-1/2 -translate-y-1/2 text-black/40 hover:text-black transition-colors">
                                 {passwordVisible ? <EyeOff size={18} /> : <Eye size={18} />}
                             </button>
                         </div>
+                        {/* Validation Error */}
+                        {errors.password && (
+                            <p className="text-red-500 text-[10px] mt-1 font-bold uppercase tracking-widest">
+                                {errors.password.message}
+                            </p>
+                        )}
                     </div>
 
-                    {/* FIXED CHECKBOX SECTION */}
+                    {/* REMEMBER ME */}
                     <div className='flex items-center mb-10'>
                         <label className='flex items-center cursor-pointer select-none group'>
                             <div className="relative">
                                 <input 
                                     type='checkbox' 
-                                    className='sr-only' // Screen reader only (hidden but functional)
+                                    className='sr-only' 
                                     {...register("rememberMe")}
                                 />
-                                {/* Custom Box */}
                                 <div className={`w-4 h-4 border-2 border-black transition-all flex items-center justify-center ${isRemembered ? 'bg-black' : 'bg-white'}`}>
                                     {isRemembered && (
                                         <div className="w-1.5 h-1.5 bg-white" /> 
@@ -115,7 +142,7 @@ const Login = () => {
                     </div>
 
                     <button type='submit' disabled={loginMutation.isPending}
-                        className="relative w-full py-4 text-xs tracking-[0.3em] uppercase font-black text-white border-2 border-black overflow-hidden group transition-colors duration-500 bg-black hover:text-black">
+                        className="relative w-full py-4 text-xs tracking-[0.3em] uppercase font-black text-white border-2 border-black overflow-hidden group transition-colors duration-500 bg-black hover:text-black disabled:opacity-70">
                         <span className="absolute inset-0 bg-white transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500 ease-out"></span>
                         <span className="relative z-10">{loginMutation.isPending ? "Logging in..." : "Login"}</span>
                     </button>
@@ -133,7 +160,14 @@ const Login = () => {
                         </p>
                     </div>
 
-                    {serverError && <p className='text-red-600 text-[11px] mt-6 text-center font-black uppercase tracking-widest'>{serverError}</p>}
+                    {/* SERVER ERROR */}
+                    {serverError && (
+                        <div className="mt-6 p-3 border border-red-500 bg-red-50">
+                            <p className='text-red-600 text-[11px] text-center font-black uppercase tracking-widest'>
+                                {serverError}
+                            </p>
+                        </div>
+                    )}
                 </form>
             </div>
         </div>

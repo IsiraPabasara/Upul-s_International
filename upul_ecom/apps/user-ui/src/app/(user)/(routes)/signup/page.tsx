@@ -58,14 +58,13 @@ const Signup = () => {
             setCanResend(false);
             setTimer(60);
             setServerError(null);
-            // If it was a resend, show the success text
             if (showOtp) {
                 setSuccessMessage("OTP has been resent successfully.");
                 setTimeout(() => setSuccessMessage(null), 5000);
             }
         },
         onError: (error: any) => {
-            setServerError(error.response?.data?.message || "Something went wrong. Please try again.");
+            setServerError(error.response?.data?.message || "Something went wrong.");
             setSuccessMessage(null);
         }
     });
@@ -121,7 +120,6 @@ const Signup = () => {
         <div className='w-full min-h-screen bg-white flex flex-col items-center justify-center font-sans py-20'>
             <div className='w-full max-w-[450px] px-8'>
                 
-                {/* Header */}
                 <div className="mb-14 text-center">
                     <h2 className='text-2xl tracking-[0.4em] uppercase mb-6 text-[#111] font-light'>
                         {showOtp ? "Verify" : "Signup"}
@@ -132,42 +130,69 @@ const Signup = () => {
                 </div>
 
                 {!showOtp ? (
-                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+                        {/* FIRST & LAST NAME */}
                         <div className='grid grid-cols-2 gap-4'>
-                            <input type='text' placeholder='First Name'
-                                className='w-full p-4 border border-gray-200 outline-none text-sm placeholder:text-gray-400 focus:border-black transition-colors'
-                                {...register("firstname", { required: "Required" })}
-                            />
-                            <input type='text' placeholder='Last Name'
-                                className='w-full p-4 border border-gray-200 outline-none text-sm placeholder:text-gray-400 focus:border-black transition-colors'
-                                {...register("lastname", { required: "Required" })}
-                            />
+                            <div>
+                                <input type='text' placeholder='First Name'
+                                    className={`w-full p-4 border outline-none text-sm placeholder:text-gray-400 transition-colors ${errors.firstname ? 'border-red-500' : 'border-gray-200 focus:border-black'}`}
+                                    {...register("firstname", { required: "Required" })}
+                                />
+                                {errors.firstname && <p className="text-red-500 text-[10px] mt-1 font-bold uppercase tracking-widest">{errors.firstname.message}</p>}
+                            </div>
+                            <div>
+                                <input type='text' placeholder='Last Name'
+                                    className={`w-full p-4 border outline-none text-sm placeholder:text-gray-400 transition-colors ${errors.lastname ? 'border-red-500' : 'border-gray-200 focus:border-black'}`}
+                                    {...register("lastname", { required: "Required" })}
+                                />
+                                {errors.lastname && <p className="text-red-500 text-[10px] mt-1 font-bold uppercase tracking-widest">{errors.lastname.message}</p>}
+                            </div>
                         </div>
 
-                        <input type='email' placeholder='E-mail'
-                            className='w-full p-4 border border-gray-200 outline-none text-sm placeholder:text-gray-400 focus:border-black transition-colors'
-                            {...register("email", { required: "Required" })}
-                        />
-
-                        <input type='text' placeholder='Phone Number'
-                            className='w-full p-4 border border-gray-200 outline-none text-sm placeholder:text-gray-400 focus:border-black transition-colors'
-                            {...register("phonenumber", { required: "Required" })}
-                        />
-
-                        <div className="relative">
-                            <input
-                                type={passwordVisible ? "text" : "password"}
-                                placeholder='Password'
-                                className='w-full p-4 border border-gray-200 outline-none text-sm placeholder:text-gray-400 focus:border-black transition-colors'
-                                {...register("password", { required: "Required", minLength: 6 })}
+                        {/* EMAIL */}
+                        <div>
+                            <input type='email' placeholder='E-mail'
+                                className={`w-full p-4 border outline-none text-sm placeholder:text-gray-400 transition-colors ${errors.email ? 'border-red-500' : 'border-gray-200 focus:border-black'}`}
+                                {...register("email", { 
+                                    required: "Email required",
+                                    pattern: { value: /\S+@\S+\.\S+/, message: "Invalid format" }
+                                })}
                             />
-                            <button type='button' onClick={() => setPasswordVisible(!passwordVisible)} className='absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-black transition-colors'>
-                                {passwordVisible ? <Eye size={18} /> : <EyeOff size={18} />}
-                            </button>
+                            {errors.email && <p className="text-red-500 text-[10px] mt-1 font-bold uppercase tracking-widest">{errors.email.message}</p>}
                         </div>
+
+                        {/* PHONE */}
+                        <div>
+                            <input type='text' placeholder='Phone Number'
+                                className={`w-full p-4 border outline-none text-sm placeholder:text-gray-400 transition-colors ${errors.phonenumber ? 'border-red-500' : 'border-gray-200 focus:border-black'}`}
+                                {...register("phonenumber", { required: "Phone required" })}
+                            />
+                            {errors.phonenumber && <p className="text-red-500 text-[10px] mt-1 font-bold uppercase tracking-widest">{errors.phonenumber.message}</p>}
+                        </div>
+
+                        {/* PASSWORD */}
+                        <div>
+                            <div className="relative">
+                                <input
+                                    type={passwordVisible ? "text" : "password"}
+                                    placeholder='Password'
+                                    className={`w-full p-4 border outline-none text-sm placeholder:text-gray-400 transition-colors ${errors.password ? 'border-red-500' : 'border-gray-200 focus:border-black'}`}
+                                    {...register("password", { 
+                                        required: "Password required", 
+                                        minLength: { value: 6, message: "Min 6 characters" } 
+                                    })}
+                                />
+                                <button type='button' onClick={() => setPasswordVisible(!passwordVisible)} className='absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-black transition-colors'>
+                                    {passwordVisible ? <Eye size={18} /> : <EyeOff size={18} />}
+                                </button>
+                            </div>
+                            {errors.password && <p className="text-red-500 text-[10px] mt-1 font-bold uppercase tracking-widest">{errors.password.message}</p>}
+                        </div>
+
+                        {serverError && <p className='text-red-500 text-center text-[11px] uppercase tracking-widest font-bold'>{serverError}</p>}
 
                         <button type='submit' disabled={signupMutation.isPending}
-                            className="relative w-full py-4 mt-4 text-xs tracking-[0.3em] uppercase font-bold text-white border border-black overflow-hidden group bg-black hover:text-black transition-colors duration-500">
+                            className="relative w-full py-4 mt-4 text-xs tracking-[0.3em] uppercase font-bold text-white border border-black overflow-hidden group bg-black hover:text-black transition-colors duration-500 disabled:opacity-50">
                             <span className="absolute inset-0 bg-white transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500 ease-out"></span>
                             <span className="relative z-10">{signupMutation.isPending ? "Processing..." : "Sign Up"}</span>
                         </button>
@@ -180,6 +205,7 @@ const Signup = () => {
                         </div>
                     </form>
                 ) : (
+                    /* OTP VERIFICATION VIEW */
                     <div className="text-center">
                         <div className='flex justify-center gap-4 mb-10'>
                             {otp.map((digit, index) => (
@@ -217,7 +243,6 @@ const Signup = () => {
                             )}
                         </div>
 
-                        {/* Feedback Messages */}
                         <div className="mt-6 space-y-2">
                             {successMessage && <p className='text-green-600 text-[11px] uppercase tracking-widest font-bold'>{successMessage}</p>}
                             {serverError && <p className='text-red-500 text-[11px] uppercase tracking-widest font-bold'>{serverError}</p>}

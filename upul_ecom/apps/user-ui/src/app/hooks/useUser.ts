@@ -1,23 +1,41 @@
 import { useQuery } from "@tanstack/react-query";
 import axiosInstance from "../utils/axiosInstance";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 
-// fetch user data from API
-const fetchUser = async() => {
-    const response = await axiosInstance.get("/api/auth/logged-in-user");
-
-    return response.data.user;
+interface UseUserOptions {
+    required?: boolean;
 }
 
-const useUser = () => {
-    const {data:user, isLoading, isError, refetch} = useQuery({
-        queryKey: ["user"],
-        queryFn: fetchUser,
-        staleTime: 1000 * 60 * 5,
-        retry: 1,
-    })
+const useUser = ({ required = true }: UseUserOptions = {}) => {
+    const router = useRouter();
 
-    return {user, isLoading, isError, refetch};
+    const { data: user, isLoading, isError, refetch } = useQuery({
+        queryKey: ["user"],
+        queryFn: async () => {
+            try {
+                const response = await axiosInstance.get("/api/auth/logged-in-user", {
+                    isPublic: !required 
+                });
+                return response.data.user;
+            } catch (error) {
+                if (!required) return null;
+                throw error;
+            }
+        },
+        staleTime: 1000 * 60 * 5,
+        retry: required ? 1 : false, 
+    });
+
+    
+    useEffect(() => {
+        if (required && !isLoading && (isError || !user)) {
+            router.push("/login");
+        }
+    }, [required, isLoading, isError, user, router]);
+
+    return { user, isLoading, isError, refetch };
 }
 
 export default useUser;
