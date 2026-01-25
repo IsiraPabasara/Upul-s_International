@@ -2,7 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import rateLimit from 'express-rate-limit';
+import cookieParser from "cookie-parser";
+// import rateLimit from 'express-rate-limit';
 import { errorMiddleware } from '../../../packages/error-handler/error-middleware'
 import swaggerUi from 'swagger-ui-express'
 import router from './routes/main.router';
@@ -14,19 +15,17 @@ const app = express();
 app.use(cors({ origin: true, credentials: true }));
 app.use(helmet());
 app.use(express.json());
+app.use(cookieParser());
 app.use(morgan('dev'));
 
 //Apply rate limiting
-
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, 
-  max: (req:any) => (req.user ? 1000 : 100),
-  message: {error: "Too many requests, Try again later!"},
-  standardHeaders: true,
-  legacyHeaders: true,
-})
-
-app.use(limiter);
+// const limiter = rateLimit({
+//   windowMs: 15 * 60 * 1000, 
+//   max: (req:any) => (req.user ? 1000 : 100),
+//   message: {error: "Too many requests, Try again later!"},
+//   standardHeaders: true,
+//   legacyHeaders: true,
+// })
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.get("/docs-json", (req,res) => {
@@ -37,9 +36,9 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
-app.use(errorMiddleware);
-
 app.use("/api", router);
+
+app.use(errorMiddleware);
 
 const port = process.env.PORT || 4000;
 app.listen(port, () => {

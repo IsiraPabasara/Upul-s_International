@@ -12,7 +12,7 @@ COPY . .
 ENV DATABASE_URL="mongodb+srv://dummy:dummy@cluster.mongodb.net/dummy"
 RUN npx prisma generate --schema=./prisma/schema.prisma
 
-# Fix workspace sync and build
+# Workspace sync and build
 RUN npx nx sync
 RUN npx nx build api --prod
 RUN npx nx build user-ui --prod

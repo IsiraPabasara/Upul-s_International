@@ -1,16 +1,17 @@
-import type { NextFunction } from "express";
+import type { NextFunction, Request, Response } from "express";
 
 import { sendEmail } from "./sendMail/index.js";
 import crypto from 'crypto';
 import { ValidationError } from "../../../../../../packages/error-handler/index.js";
 import redis from "../../../../../../packages/libs/redis/index.js";
+import prisma from "../../../../../../packages/libs/prisma/index.js";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export const validateRegistrationData = (data: any, userType: "user" | "seller") => {
-    const { name, email, password, phone_number, country} = data;
+export const validateRegistrationData = (data: any) => {
+    const { firstname, lastname, email, password, phonenumber} = data;
 
-    if(!name || !email || !password || (userType === "seller" && (!phone_number || !country))) {
+    if(!firstname || !lastname || !email || !password || !phonenumber) {
         throw new ValidationError("Missing required fields!")
     }
 
@@ -36,7 +37,7 @@ export const trackOtpRequests = async (email:string) => {
     const otpRequestKey = `otp_request_count:${email}`;
     let otpRequests = parseInt( (await redis.get(otpRequestKey)) || "0");
 
-    if(otpRequests >= 2) {
+    if(otpRequests > 3) {
         await redis.set(`otp_spam_lock:${email}`, 'locked', "EX", 3600);
         throw new ValidationError("OTP limit reached. Try again in 1 hour.");
     }
@@ -75,3 +76,71 @@ export const verifyOtp = async (email:string, otp:string, next:NextFunction) => 
 
     await redis.del(`otp:${email}`, failedAttemptsKey);
 }
+
+export const handleForgotPassword = async (req:Request, res:Response, next:NextFunction) => {
+    try{
+        const {email} = req.body;
+        if(!email) throw new ValidationError("Email is required!");
+
+        // Find user/seller in db
+        const user = await prisma.users.findUnique({where: {email}});
+        if(!user) throw new ValidationError(`User not found!`);
+
+        // Check otp restrictions
+        await checkOtpRestrictions(email);
+        await trackOtpRequests(email);
+
+        // Generate OTP and send
+        await sendOtp(user.firstname, email, "forgot-password-user-mail");
+
+        res.status(200).json({
+            message: "OTP sent to email. Please verify your account."
+        })
+
+    } catch(error) {
+        next(error);
+    }
+}
+
+export const verifyForgotPasswordOtp = async (req:Request, res:Response, next:NextFunction) => {
+    try{
+       const {email, otp} = req.body;
+       
+       if(!email || !otp) throw new ValidationError("Email and otp are required!");
+
+       await verifyOtp(email,otp,next);
+
+       await redis.set(`reset_authorized:${email}`, "true", "EX", 300);
+       
+        res.status(200).json({
+            message: "OTP verified. You can now reset your password!",
+        });
+
+    } catch(error) {
+        next(error);
+    }
+}
+
+export const validateAddressData = (data: any) => {
+    const { 
+        firstname, 
+        lastname, 
+        addressLine, 
+        city, 
+        postalCode, 
+        phoneNumber 
+    } = data;
+
+    if (!firstname || !lastname || !addressLine || !city || !postalCode || !phoneNumber) {
+        throw new ValidationError("Missing required address fields!");
+    }
+
+    const phoneRegex = /^\d{10}$/;
+    if (!phoneRegex.test(phoneNumber)) {
+        throw new ValidationError("Phone number must be exactly 10 digits!");
+    }
+
+    if (postalCode.length < 3 || postalCode.length > 10) {
+        throw new ValidationError("Invalid postal code format!");
+    }
+};
