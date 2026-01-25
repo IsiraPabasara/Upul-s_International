@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useCallback } from 'react'; // Import useCallback
 import { useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import axiosInstance from '@/app/utils/axiosInstance';
@@ -9,7 +10,6 @@ import ProductCard from '@/app/(user)/shared/shop-components/ProductCard';
 import Pagination from '@/app/(user)/shared/shop-components/Pagination';
 import { Filter } from 'lucide-react';
 
-// Define the API Response Type
 interface ShopResponse {
   products: any[];
   pagination: {
@@ -24,19 +24,26 @@ export default function ShopPage() {
   const searchParams = useSearchParams();
   const searchTerm = searchParams.get('search');
   const categorySlug = searchParams.get('category');
-  
+
+  // --- Mobile Filter State ---
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+
+  // Use callback to keep function reference stable
+  const closeMobileFilters = useCallback(() => {
+    setIsMobileFiltersOpen(false);
+  }, []);
+
   // Default to page 1 if not in URL
   const currentPage = Number(searchParams.get('page')) || 1;
 
-  // Fetch with page param
   const { data, isLoading } = useQuery<ShopResponse>({
-    queryKey: ['shop-products', searchParams.toString()], // Auto-refetch when page changes
+    queryKey: ['shop-products', searchParams.toString()],
     queryFn: async () => {
       const res = await axiosInstance.get(`/api/products/shop?${searchParams.toString()}`, { isPublic: true });
       return res.data;
     },
     staleTime: 1000 * 60 * 2,
-    placeholderData: (previousData) => previousData // Keeps old data visible while new page loads
+    placeholderData: (previousData) => previousData,
   });
 
   const products = data?.products || [];
@@ -44,14 +51,13 @@ export default function ShopPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Header for Shop Section */}
+      {/* Header */}
       <div className="border-b border-gray-100 bg-gray-50/50">
         <div className="max-w-7xl mx-auto px-4 py-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2 capitalize">
-            {searchTerm ? `Results: "${searchTerm}"` : categorySlug ? categorySlug.replace(/-/g, ' ') : "Shop"}
+            {searchTerm ? `Results: "${searchTerm}"` : categorySlug ? categorySlug.replace(/-/g, ' ') : 'Shop'}
           </h1>
           <p className="text-sm text-gray-500">
-            {/* Show "Showing 1-12 of 50 results" */}
             {!isLoading && pagination.total > 0 && (
               <>
                 Showing <span className="font-bold">{(pagination.page - 1) * 12 + 1}</span> -{' '}
@@ -66,17 +72,24 @@ export default function ShopPage() {
       <div className="max-w-7xl mx-auto px-4 py-10">
         <div className="flex flex-col md:flex-row gap-10">
           
-          <div className="hidden md:block">
-            <FilterSidebar />
-          </div>
+          {/* SIDEBAR */}
+          <FilterSidebar 
+            isOpen={isMobileFiltersOpen} 
+            onClose={closeMobileFilters} 
+          />
 
+          {/* MOBILE CONTROLS */}
           <div className="md:hidden flex justify-between items-center mb-4">
-             <button className="flex items-center gap-2 text-sm font-bold border px-4 py-2 rounded-lg">
-                <Filter size={16} /> Filters
-             </button>
-             <SortSection />
+            <button
+              onClick={() => setIsMobileFiltersOpen(true)}
+              className="flex items-center gap-2 text-sm font-bold border border-gray-200 px-4 py-2 rounded-lg bg-white hover:bg-gray-50 transition-colors"
+            >
+              <Filter size={16} /> Filters
+            </button>
+            <SortSection />
           </div>
 
+          {/* PRODUCTS MAIN */}
           <main className="flex-1">
             <div className="hidden md:flex justify-end mb-6 pb-4 border-b border-gray-100">
               <SortSection />
@@ -99,18 +112,16 @@ export default function ShopPage() {
                     <ProductCard key={product.id} product={product} />
                   ))}
                 </div>
-                
-                {/* --- ADD PAGINATION HERE --- */}
                 <Pagination 
-                   currentPage={pagination.page} 
-                   totalPages={pagination.totalPages} 
+                  currentPage={pagination.page} 
+                  totalPages={pagination.totalPages} 
                 />
               </>
             ) : (
               <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-gray-100 rounded-2xl bg-gray-50/30">
                 <p className="text-lg font-medium text-gray-900">No products found</p>
-                <button 
-                  onClick={() => window.location.href = '/shop'}
+                <button
+                  onClick={() => (window.location.href = '/shop')}
                   className="mt-4 text-sm font-bold text-black underline underline-offset-4"
                 >
                   Clear filters
