@@ -7,6 +7,7 @@ import { ChevronLeft } from "lucide-react";
 import useUser from "@/app/hooks/useUser";
 import axiosInstance from "@/app/utils/axiosInstance";
 import { useQueryClient } from "@tanstack/react-query";
+import { useCart } from "@/app/hooks/useCart";
 import toast from "react-hot-toast";
 
 const ProfilePage = () => {
@@ -22,6 +23,11 @@ const ProfilePage = () => {
     try {
       await axiosInstance.get('/api/auth/logout-user');
       queryClient.clear();
+      
+      // Clear Zustand cart state and localStorage
+      useCart.getState().clearCart();
+      localStorage.removeItem('eshop-cart-storage');
+      
       toast.success("Logged out successfully");
       router.push('/login');
     } catch (error) {
