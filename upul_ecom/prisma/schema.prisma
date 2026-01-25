@@ -29,7 +29,7 @@ model users {
   role        String        @default("user")
 
   addresses    Address[]
-
+  cart        Cart?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 }
@@ -80,10 +80,10 @@ model Product {
 model Category {
   id   String @id @default(auto()) @map("_id") @db.ObjectId
   name String
-
+  sortOrder Int @default(999)
   parentId String?   @db.ObjectId
   parent   Category? @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
+  slug      String   @unique
   children Category[] @relation("CategoryHierarchy")
 
   products Product[]
@@ -117,4 +117,25 @@ model Color {
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+
+model Cart {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @unique @db.ObjectId
+  user      users    @relation(fields: [userId], references: [id])
+  items     CartItem[]
+  
+  updatedAt DateTime @updatedAt
+}
+
+type CartItem {
+  productId String   @db.ObjectId
+  sku       String
+  name      String
+  price     Float
+  image     String
+  quantity  Int
+  size      String?
+  color     String?
 }

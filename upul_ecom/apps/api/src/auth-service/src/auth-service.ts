@@ -164,7 +164,7 @@ export const refreshToken = async(req:any, res:Response, next:NextFunction) => {
         }
 
         let account;
-        if(decoded.role === "user") {
+        if(decoded.role === "user" || "admin") {
             account = await prisma.users.findUnique({
             where: {id: decoded.id}
         })}

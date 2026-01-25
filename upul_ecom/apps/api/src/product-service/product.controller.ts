@@ -70,25 +70,7 @@ export const getAllProducts = async (
   }
 };
 
-export const getProductBySku = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
-  try {
-    const { sku } = req.params;
-    const product = await prisma.product.findUnique({
-      where: { sku },
-    });
 
-    if (!product) {
-      return res.status(404).json({ message: "Not found in the DB" });
-    }
-    return res.json(product);
-  } catch (error) {
-    return next(error);
-  }
-};
 
 const generateNextSku = async (prefix = "SKU") => {
   const lastProduct = await prisma.product.findFirst({

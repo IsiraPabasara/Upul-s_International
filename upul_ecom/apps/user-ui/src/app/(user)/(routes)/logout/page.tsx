@@ -1,30 +1,44 @@
 'use client'
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import axiosInstance from '@/app/utils/axiosInstance';
 import { useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
+import { useCart } from '@/app/hooks/useCart';
 
 const LogoutPage = () => {
     const router = useRouter();
     const queryClient = useQueryClient();
+    
+    // Ref to prevent double-execution in React 18 Strict Mode
+    const hasLoggedOut = useRef(false);
 
     useEffect(() => {
         const performLogout = async () => {
+            if (hasLoggedOut.current) return;
+            hasLoggedOut.current = true;
+
             try {
-                // Call your backend route
+                // 1. Attempt Server Logout
                 await axiosInstance.get('/api/auth/logout-user');
-                
-                // Clear the React Query cache (removes user data from memory)
-                queryClient.clear();
-                
                 toast.success("Logged out successfully");
-                
-                // Redirect to login
-                router.push('/login');
             } catch (error) {
-                toast.error("Logout failed. Please try again.");
-                router.push('/profile');
+                // Even if server fails (e.g. token expired), we proceed to clear client data
+                console.error("Server logout error (ignoring to force client clear):", error);
+            } finally {
+                // 2. THE NUCLEAR OPTION: Clear Everything 
+                
+                // Clear React Query Cache (User Profile, Orders, etc)
+                queryClient.clear();
+
+                // Clear Zustand Cart State (in-memory + localStorage)
+                useCart.getState().clearCart(); 
+                
+                // Force remove from localStorage as backup
+                localStorage.removeItem('eshop-cart-storage');
+
+                // 3. Redirect
+                router.replace('/login');
             }
         };
 
@@ -32,8 +46,10 @@ const LogoutPage = () => {
     }, [router, queryClient]);
 
     return (
-        <div className="w-full min-h-screen bg-white flex items-center justify-center">
-            <p className="text-[10px] tracking-[0.3em] uppercase text-gray-400 animate-pulse">
+        <div className="w-full min-h-screen bg-white flex flex-col items-center justify-center gap-4">
+             {/* Simple Loading Spinner */}
+             <div className="w-8 h-8 border-4 border-gray-200 border-t-black rounded-full animate-spin"></div>
+             <p className="text-[10px] tracking-[0.3em] uppercase text-gray-400">
                 Logging you out...
             </p>
         </div>
