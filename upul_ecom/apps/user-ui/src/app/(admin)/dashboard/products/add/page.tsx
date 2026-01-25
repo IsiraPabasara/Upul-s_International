@@ -3,15 +3,14 @@
 import { useState, useEffect } from "react";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
 import { useMutation } from "@tanstack/react-query";
-// adjust the import path to where your axios instance file is located
-import axiosInstance from "@/app/utils/axiosInstance"; 
+import axiosInstance from "@/app/utils/axiosInstance";
 import ParentSelector from "../category/components/ParentSelector";
 import BrandSelector from "../brand/components/BrandSelector";
 import ImageUploader from "../../products/imagekit/components/ImageUploader";
 import StockManager from "../stockmanager/components/StockManager";
 import ColorSelector from "../colorselector/ColorSelector";
+import { uploadImageToKit } from "../imagekit/utils/uploadService";
 
-// --- Types ---
 interface ProductImage {
   fileId: string;
   url: string;
@@ -22,7 +21,6 @@ interface Variant {
   stock: number;
 }
 
-// Match this to your form structure
 interface ProductFormValues {
   name: string;
   description: string;
@@ -57,9 +55,11 @@ const INITIAL_DATA: ProductFormValues = {
 
 export default function AddProductPage() {
   const [baseName, setBaseName] = useState("");
-  const [resetKey, setResetKey] = useState(0); // To force re-render of uncontrolled components on reset
+  const [resetKey, setResetKey] = useState(0);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [selectedRawFiles, setSelectedRawFiles] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
 
-  // 1. Setup React Hook Form
   const {
     register,
     handleSubmit,
@@ -72,52 +72,84 @@ export default function AddProductPage() {
     defaultValues: INITIAL_DATA,
   });
 
-  // Watch values for real-time logic
   const watchedColors = watch("colors");
   const watchedPrice = watch("price");
   const watchedDiscountType = watch("discountType");
   const watchedDiscountValue = watch("discountValue");
   const currentName = watch("name");
 
-  // 2. Setup TanStack Mutation
+  // --- MUTATION ---
   const mutation = useMutation({
     mutationFn: async (newProduct: ProductFormValues) => {
       const { data } = await axiosInstance.post("/api/products", newProduct);
       return data;
     },
     onSuccess: () => {
+      // 1. Show success message
+      setShowSuccess(true);
+
+      // 2. Reset Form Data
       reset(INITIAL_DATA);
       setBaseName("");
-      setResetKey((prev) => prev + 1);
+      setResetKey((prev) => prev + 1); // Force re-render of complex children
+
+      // 3. Hide message after 3 seconds
+      setTimeout(() => {
+        setShowSuccess(false);
+      }, 3000);
     },
   });
 
-  // 3. Logic: Sync "Base Name" + "Color" -> "Product Name" (only when color is selected)
+  // --- LOGIC: NAME GENERATION ---
+  // Only update if colors exist. If colors is empty, name = baseName.
   useEffect(() => {
-    if (watchedColors?.[0]) {
-      setValue("name", baseName + ` - ${watchedColors[0]}`);
+    if (watchedColors && watchedColors.length > 0) {
+      setValue("name", `${baseName} - ${watchedColors[0]}`);
+    } else {
+      setValue("name", baseName);
     }
   }, [watchedColors, baseName, setValue]);
 
-  // 4. Logic: Calculate Discount (UI helper)
+  // --- LOGIC: DISCOUNT CALCULATOR ---
   const getDiscountedPrice = () => {
     const price = Number(watchedPrice) || 0;
     const val = Number(watchedDiscountValue) || 0;
-
-    if (watchedDiscountType === "PERCENTAGE") {
+    if (watchedDiscountType === "PERCENTAGE")
       return price - price * (val / 100);
-    } else if (watchedDiscountType === "FIXED") {
-      return price - val;
-    }
+    if (watchedDiscountType === "FIXED") return price - val;
     return price;
   };
 
-  const onSubmit: SubmitHandler<ProductFormValues> = (data) => {
+  const onSubmit: SubmitHandler<ProductFormValues> = async (data) => {
     if (!data.categoryId) {
-      alert("Please select a category"); // Or use toast
+      alert("Please select a category");
       return;
     }
-    mutation.mutate(data);
+
+    try {
+      setIsUploading(true);
+      let finalImages: ProductImage[] = [];
+
+      if (selectedRawFiles.length > 0) {
+        const uploadPromises = selectedRawFiles.map((file) =>
+          uploadImageToKit(file),
+        );
+        const uploadedResults = await Promise.all(uploadPromises);
+        finalImages = uploadedResults;
+      }
+
+      const productData = {
+        ...data,
+        images: finalImages,
+      };
+
+      mutation.mutate(productData);
+    } catch (error) {
+      console.error("Upload or Save failed", error);
+      alert("Failed to upload images. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -128,7 +160,7 @@ export default function AddProductPage() {
         onSubmit={handleSubmit(onSubmit)}
         className="bg-white p-6 rounded-xl shadow-sm space-y-8"
       >
-        {/* --- SECTION 1: BASIC DETAILS --- */}
+        {/* BASIC DETAILS */}
         <div className="space-y-4">
           <h2 className="text-xl font-semibold text-gray-700 border-b pb-2">
             Basic Details
@@ -144,8 +176,9 @@ export default function AddProductPage() {
                 required
                 placeholder="e.g. Night Dress"
               />
+              {/* 1. SAVED AS LOGIC: Only show if Color is selected */}
               <p className="text-xs text-gray-400 mt-1 h-4">
-                { (
+                {watchedColors && watchedColors.length > 0 && (
                   <>
                     Saved as:{" "}
                     <span className="font-medium text-gray-600">
@@ -164,7 +197,6 @@ export default function AddProductPage() {
           </div>
 
           <div className="pt-2">
-            {/* Color Selector wrapped in Controller */}
             <Controller
               name="colors"
               control={control}
@@ -172,10 +204,10 @@ export default function AddProductPage() {
                 <ColorSelector
                   key={`color-${resetKey}`}
                   selectedColor={field.value[0] || ""}
-                  onChange={(colorName) => {
-                    const newColors = colorName ? [colorName] : [];
-                    field.onChange(newColors);
-                  }}
+                  onChange={(colorName) =>
+                    field.onChange(colorName ? [colorName] : [])
+                  }
+                  disabled={!baseName || baseName.trim() === ""}
                 />
               )}
             />
@@ -196,19 +228,16 @@ export default function AddProductPage() {
             </h2>
             <ImageUploader
               key={`img-${resetKey}`}
-              onUploadSuccess={(uploadedImages) =>
-                setValue("images", uploadedImages)
-              }
+              onFilesSelected={(files) => setSelectedRawFiles(files)}
             />
           </div>
         </div>
 
-        {/* --- SECTION 2: MARKETING & PRICING --- */}
+        {/* MARKETING & PRICING */}
         <div className="space-y-4">
           <h2 className="text-xl font-semibold text-gray-700 border-b pb-2">
             Marketing & Pricing
           </h2>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <div>
@@ -219,8 +248,6 @@ export default function AddProductPage() {
                   className="input-field font-bold text-lg"
                 />
               </div>
-
-              {/* Brand Selector via Controller */}
               <Controller
                 name="brand"
                 control={control}
@@ -234,7 +261,6 @@ export default function AddProductPage() {
               />
             </div>
 
-            {/* OFFERS & FLAGS */}
             <div className="bg-orange-50 p-4 rounded-lg border border-orange-100 space-y-4">
               <div className="flex items-center gap-3">
                 <input
@@ -246,9 +272,7 @@ export default function AddProductPage() {
                   Mark as New Arrival
                 </label>
               </div>
-
               <hr className="border-orange-200" />
-
               <div>
                 <label className="label text-orange-800">Discount Offer</label>
                 <div className="flex gap-2">
@@ -260,7 +284,6 @@ export default function AddProductPage() {
                     <option value="PERCENTAGE">Percentage (%)</option>
                     <option value="FIXED">Fixed Amount (LKR)</option>
                   </select>
-
                   {watchedDiscountType !== "NONE" && (
                     <input
                       type="number"
@@ -271,8 +294,6 @@ export default function AddProductPage() {
                   )}
                 </div>
               </div>
-
-              {/* LIVE PREVIEW */}
               {watchedDiscountType !== "NONE" && Number(watchedPrice) > 0 && (
                 <div className="bg-white p-2 rounded border border-orange-200 text-sm text-center">
                   <span className="text-gray-400 line-through mr-2">
@@ -287,7 +308,7 @@ export default function AddProductPage() {
           </div>
         </div>
 
-        {/* --- SECTION 3: CATEGORIZATION --- */}
+        {/* CATEGORIZATION */}
         <div className="space-y-4">
           <h2 className="text-xl font-semibold text-gray-700 border-b pb-2">
             Categorization
@@ -307,7 +328,7 @@ export default function AddProductPage() {
           </div>
         </div>
 
-        {/* --- SECTION 4: INVENTORY --- */}
+        {/* INVENTORY */}
         <div className="space-y-4">
           <h2 className="text-xl font-semibold text-gray-700 border-b pb-2">
             Inventory & Variants
@@ -315,41 +336,40 @@ export default function AddProductPage() {
           <StockManager
             key={`stock-${resetKey}`}
             onUpdate={(data) => {
-              // Update both sizeType and variants when stock manager changes
               setValue("sizeType", data.sizeType);
               setValue("variants", data.variants);
-              setValue("stock", 0); // Reset base stock as per original logic
+              setValue("stock", 0);
             }}
           />
         </div>
 
-        {/* --- SUBMIT BUTTON --- */}
         <div className="pt-4">
           <button
             type="submit"
-            disabled={mutation.isPending}
+            disabled={mutation.isPending || isUploading}
             className="w-full bg-black text-white py-4 rounded-lg text-lg font-semibold hover:bg-gray-800 transition disabled:opacity-50"
           >
-            {mutation.isPending ? "Creating Product..." : "Publish Product"}
+            {isUploading
+              ? `Uploading ${selectedRawFiles.length} Images...`
+              : mutation.isPending
+                ? "Saving Product..."
+                : "Publish Product"}
           </button>
         </div>
 
-        {/* --- FEEDBACK MESSAGES --- */}
-        {(mutation.isSuccess || mutation.isError) && (
+        {/* 4. SUCCESS MESSAGE LOGIC (Disappears automatically) */}
+        {(showSuccess || mutation.isError) && (
           <div
-            className={`p-4 text-center rounded-lg font-medium ${
-              mutation.isSuccess
-                ? "bg-green-100 text-green-800"
-                : "bg-red-100 text-red-800"
-            }`}
+            className={`p-4 text-center rounded-lg font-medium ${showSuccess ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}
           >
-            {mutation.isSuccess
+            {showSuccess
               ? "✅ Product Created! Resetting form..."
               : `❌ Error: ${mutation.error?.message || "Something went wrong"}`}
           </div>
         )}
       </form>
 
+      {/* CSS Styles */}
       <style jsx>{`
         .label {
           display: block;
