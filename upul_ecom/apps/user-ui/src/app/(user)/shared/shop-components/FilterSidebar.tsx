@@ -1,19 +1,19 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react'; // Added useRef
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import axiosInstance from '@/app/utils/axiosInstance';
-import { ChevronDown, ChevronRight, Minus, Check, Layers } from 'lucide-react';
+import { ChevronDown, ChevronRight, Minus, Check, Layers, X } from 'lucide-react';
 
 // --- Helper: Build Tree ---
 const buildCategoryTree = (categories: any[]) => {
   const map: any = {};
   const roots: any[] = [];
-  categories.forEach(cat => {
+  categories.forEach((cat) => {
     map[cat.id] = { ...cat, children: [] };
   });
-  categories.forEach(cat => {
+  categories.forEach((cat) => {
     if (cat.parentId && map[cat.parentId]) {
       map[cat.parentId].children.push(map[cat.id]);
     } else {
@@ -26,48 +26,41 @@ const buildCategoryTree = (categories: any[]) => {
 // --- Helper: Check Descendants ---
 const isDescendantActive = (category: any, currentSlug: string | null): boolean => {
   if (!currentSlug || !category.children) return false;
-  return category.children.some((child: any) => 
+  return category.children.some((child: any) =>
     child.slug === currentSlug || isDescendantActive(child, currentSlug)
   );
 };
 
-// --- Component: Category Item (FIXED) ---
-const CategoryItem = ({ category, currentSlug }: { category: any, currentSlug: string | null }) => {
+// --- Component: Category Item ---
+const CategoryItem = ({ category, currentSlug }: { category: any; currentSlug: string | null }) => {
   const router = useRouter();
   const isActive = currentSlug === category.slug;
-  
-  // Check if a child is active (to auto-expand on load)
   const hasActiveChild = useMemo(() => isDescendantActive(category, currentSlug), [category, currentSlug]);
-  
+
   const [isOpen, setIsOpen] = useState(isActive || hasActiveChild);
   const hasChildren = category.children && category.children.length > 0;
 
-  // Sync state only when entering the page initially or navigating TO a child
   useEffect(() => {
     if (isActive || hasActiveChild) {
       setIsOpen(true);
     }
   }, [isActive, hasActiveChild]);
 
-  // Action 1: Toggle Fold (Arrow Click) - NO Navigation
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsOpen((prev) => !prev);
   };
 
-  // Action 2: Navigate (Text Click) - Forces Open
   const handleNavigate = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (hasChildren) setIsOpen(true); // Always open if we go to the parent
+    if (hasChildren) setIsOpen(true);
     if (!isActive) router.push(`/shop?category=${category.slug}`);
   };
 
   return (
     <div className="pl-3 border-l border-gray-100 ml-1">
       <div className="flex items-center justify-between py-1 text-sm group">
-        
-        {/* TEXT CLICK: Navigates */}
-        <span 
+        <span
           onClick={handleNavigate}
           className={`cursor-pointer flex-1 transition-colors ${
             isActive ? 'font-bold text-black' : 'text-gray-500 hover:text-black'
@@ -76,9 +69,8 @@ const CategoryItem = ({ category, currentSlug }: { category: any, currentSlug: s
           {category.name}
         </span>
 
-        {/* ARROW CLICK: Toggles only */}
         {hasChildren && (
-          <button 
+          <button
             onClick={handleToggle}
             className="p-1 text-gray-300 hover:text-black hover:bg-gray-100 rounded transition-colors"
           >
@@ -86,8 +78,7 @@ const CategoryItem = ({ category, currentSlug }: { category: any, currentSlug: s
           </button>
         )}
       </div>
-      
-      {/* Children Container */}
+
       {hasChildren && isOpen && (
         <div className="mt-1 space-y-1 animate-fadeIn">
           {category.children.map((child: any) => (
@@ -100,16 +91,34 @@ const CategoryItem = ({ category, currentSlug }: { category: any, currentSlug: s
 };
 
 // --- Main Sidebar Component ---
-export default function FilterSidebar() {
+interface FilterSidebarProps {
+  isOpen?: boolean; 
+  onClose?: () => void; 
+}
+
+export default function FilterSidebar({ isOpen = false, onClose }: FilterSidebarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentCategory = searchParams.get('category');
   const currentBrand = searchParams.get('brand');
-  
+
   const [minPrice, setMinPrice] = useState(searchParams.get('minPrice') || '');
   const [maxPrice, setMaxPrice] = useState(searchParams.get('maxPrice') || '');
 
-  // Fetch Categories
+  // --- FIX: Prevent immediate closing loop ---
+  // We store the previous params string to compare against
+  const prevParamsRef = useRef(searchParams.toString());
+
+  useEffect(() => {
+    const currentParams = searchParams.toString();
+    // Only close if the URL parameters *actually* changed (navigation happened)
+    if (currentParams !== prevParamsRef.current) {
+      if (onClose) onClose();
+      prevParamsRef.current = currentParams;
+    }
+  }, [searchParams, onClose]);
+  // -------------------------------------------
+
   const { data: categories = [] } = useQuery({
     queryKey: ['categories-all'],
     queryFn: async () => {
@@ -119,7 +128,6 @@ export default function FilterSidebar() {
     staleTime: 1000 * 60 * 30,
   });
 
-  // Fetch Brands
   const { data: brands = [] } = useQuery({
     queryKey: ['brands-all'],
     queryFn: async () => (await axiosInstance.get('/api/brands', { isPublic: true })).data,
@@ -130,33 +138,32 @@ export default function FilterSidebar() {
 
   const applyPriceFilter = () => {
     const params = new URLSearchParams(searchParams.toString());
-    if (minPrice) params.set('minPrice', minPrice); else params.delete('minPrice');
-    if (maxPrice) params.set('maxPrice', maxPrice); else params.delete('maxPrice');
+    if (minPrice) params.set('minPrice', minPrice);
+    else params.delete('minPrice');
+    if (maxPrice) params.set('maxPrice', maxPrice);
+    else params.delete('maxPrice');
     router.push(`/shop?${params.toString()}`);
   };
 
-  return (
-    <aside className="w-full md:w-64 flex-shrink-0 space-y-10 pr-4 md:border-r border-transparent md:border-gray-50">
-      
+  const sidebarContent = (
+    <div className="space-y-10">
       {/* CATEGORIES */}
       <div>
         <h3 className="text-xs font-extrabold uppercase tracking-widest text-gray-900 mb-4 flex items-center gap-2">
           <Layers size={14} /> Categories
         </h3>
         <div className="space-y-1">
-          <div 
+          <div
             onClick={() => router.push('/shop')}
-            className={`pl-3 border-l ml-1 py-1 cursor-pointer text-sm hover:text-black ${!currentCategory ? 'font-bold border-black text-black' : 'border-transparent text-gray-500'}`}
+            className={`pl-3 border-l ml-1 py-1 cursor-pointer text-sm hover:text-black ${
+              !currentCategory ? 'font-bold border-black text-black' : 'border-transparent text-gray-500'
+            }`}
           >
             All Products
           </div>
 
           {categoryTree.map((cat: any) => (
-            <CategoryItem 
-              key={cat.id} 
-              category={cat} 
-              currentSlug={currentCategory} 
-            />
+            <CategoryItem key={cat.id} category={cat} currentSlug={currentCategory} />
           ))}
         </div>
       </div>
@@ -165,17 +172,26 @@ export default function FilterSidebar() {
       <div>
         <h3 className="text-xs font-extrabold uppercase tracking-widest text-gray-900 mb-4">Price Range</h3>
         <div className="flex items-center gap-2 mb-3">
-          <input 
-            type="number" value={minPrice} onChange={(e) => setMinPrice(e.target.value)}
-            className="w-full p-2 border border-gray-200 rounded text-sm focus:border-black outline-none" placeholder="Min"
+          <input
+            type="number"
+            value={minPrice}
+            onChange={(e) => setMinPrice(e.target.value)}
+            className="w-full p-2 border border-gray-200 rounded text-sm focus:border-black outline-none"
+            placeholder="Min"
           />
           <Minus size={10} className="text-gray-400" />
-          <input 
-            type="number" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)}
-            className="w-full p-2 border border-gray-200 rounded text-sm focus:border-black outline-none" placeholder="Max"
+          <input
+            type="number"
+            value={maxPrice}
+            onChange={(e) => setMaxPrice(e.target.value)}
+            className="w-full p-2 border border-gray-200 rounded text-sm focus:border-black outline-none"
+            placeholder="Max"
           />
         </div>
-        <button onClick={applyPriceFilter} className="w-full py-2 bg-gray-900 text-white text-xs font-bold uppercase rounded hover:bg-black">
+        <button
+          onClick={applyPriceFilter}
+          className="w-full py-2 bg-gray-900 text-white text-xs font-bold uppercase rounded hover:bg-black transition-colors"
+        >
           Apply
         </button>
       </div>
@@ -187,16 +203,20 @@ export default function FilterSidebar() {
           {brands.map((brand: any) => {
             const isSelected = currentBrand === brand.name;
             return (
-              <div 
-                key={brand.id} 
+              <div
+                key={brand.id}
                 onClick={() => {
-                   const params = new URLSearchParams(searchParams.toString());
-                   isSelected ? params.delete('brand') : params.set('brand', brand.name);
-                   router.push(`/shop?${params.toString()}`);
+                  const params = new URLSearchParams(searchParams.toString());
+                  isSelected ? params.delete('brand') : params.set('brand', brand.name);
+                  router.push(`/shop?${params.toString()}`);
                 }}
-                className="flex items-center gap-3 cursor-pointer group hover:bg-gray-50 p-1 rounded"
+                className="flex items-center gap-3 cursor-pointer group hover:bg-gray-50 p-1 rounded transition-colors"
               >
-                <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-black border-black' : 'border-gray-300'}`}>
+                <div
+                  className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                    isSelected ? 'bg-black border-black' : 'border-gray-300'
+                  }`}
+                >
                   {isSelected && <Check size={10} className="text-white" />}
                 </div>
                 <span className={`text-sm ${isSelected ? 'font-bold text-black' : 'text-gray-600'}`}>
@@ -207,7 +227,48 @@ export default function FilterSidebar() {
           })}
         </div>
       </div>
+    </div>
+  );
 
-    </aside>
+  return (
+    <>
+      {/* 1. DESKTOP VIEW */}
+      <aside className="hidden md:block w-64 flex-shrink-0 pr-4 border-r border-gray-50">
+        {sidebarContent}
+      </aside>
+
+      {/* 2. MOBILE VIEW */}
+      {/* Note: We remove 'invisible' if open to ensure pointer events work, but keep 'md:hidden' */}
+      <div className={`md:hidden fixed inset-0 z-[100] ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+        
+        {/* Backdrop - Only show when open */}
+        <div 
+           className={`absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`} 
+           onClick={onClose} 
+        />
+
+        {/* Sliding Drawer */}
+        <aside
+          className={`absolute top-0 left-0 w-4/5 max-w-xs h-full bg-white shadow-2xl transition-transform duration-300 ease-out transform ${
+            isOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+        >
+          <div className="flex flex-col h-full">
+            <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-gray-50/50">
+              <h2 className="text-lg font-bold text-gray-900">Filters</h2>
+              <button
+                onClick={onClose}
+                className="p-2 bg-white border border-gray-200 rounded-full text-gray-500 hover:text-black hover:border-gray-300"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6 pb-20">
+              {sidebarContent}
+            </div>
+          </div>
+        </aside>
+      </div>
+    </>
   );
 }
