@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
 interface Category {
   id: string;
@@ -9,18 +9,21 @@ interface Category {
 
 interface ParentSelectorProps {
   onSelectionChange: (lastValidId: string | null) => void;
-  refreshTrigger: number; // <--- NEW PROP: Listens for changes
+  refreshTrigger: number;
 }
 
-export default function ParentSelector({ onSelectionChange, refreshTrigger }: ParentSelectorProps) {
+export default function ParentSelector({
+  onSelectionChange,
+  refreshTrigger,
+}: ParentSelectorProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [levelOptions, setLevelOptions] = useState<Category[][]>([]);
 
   // 1. FETCH HELPER
   const fetchCategories = async (parentId: string | null) => {
-    const url = parentId 
+    const url = parentId
       ? `http://localhost:4000/api/categories?parentId=${parentId}`
-      : `http://localhost:4000/api/categories`; 
+      : `http://localhost:4000/api/categories?roots=true`; // 👈 Changed this line
     try {
       const res = await fetch(url);
       if (!res.ok) return [];
@@ -36,23 +39,26 @@ export default function ParentSelector({ onSelectionChange, refreshTrigger }: Pa
     // Reset everything on refresh to ensure data consistency
     setSelectedIds([]);
     onSelectionChange(null);
-    
+
     // Fetch Root only
-    fetchCategories(null).then(data => {
-      setLevelOptions([data]); 
+    fetchCategories(null).then((data) => {
+      setLevelOptions([data]);
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshTrigger]); // <--- MAGIC: Re-runs when this number changes
 
   // 3. HANDLER
   const handleSelect = async (levelIndex: number, selectedId: string) => {
     const newSelectedIds = selectedIds.slice(0, levelIndex);
     if (selectedId !== "") newSelectedIds.push(selectedId);
-    
+
     setSelectedIds(newSelectedIds);
-    
+
     // Notify parent
-    const lastId = newSelectedIds.length > 0 ? newSelectedIds[newSelectedIds.length - 1] : null;
+    const lastId =
+      newSelectedIds.length > 0
+        ? newSelectedIds[newSelectedIds.length - 1]
+        : null;
     onSelectionChange(lastId);
 
     // Fetch next level
@@ -70,12 +76,17 @@ export default function ParentSelector({ onSelectionChange, refreshTrigger }: Pa
   return (
     <div className="space-y-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
       <div className="flex justify-between items-center">
-        <label className="block text-sm font-semibold text-gray-700">Category Hierarchy</label>
-        <span className="text-xs text-blue-500 cursor-pointer hover:underline" onClick={() => window.location.reload()}>
-           {/* Fallback refresh if needed */}
+        <label className="block text-sm font-semibold text-gray-700">
+          Category Hierarchy
+        </label>
+        <span
+          className="text-xs text-blue-500 cursor-pointer hover:underline"
+          onClick={() => window.location.reload()}
+        >
+          {/* Fallback refresh if needed */}
         </span>
       </div>
-      
+
       {levelOptions.map((options, index) => (
         <div key={index} className="flex flex-col">
           <span className="text-xs text-gray-500 mb-1 ml-1">
