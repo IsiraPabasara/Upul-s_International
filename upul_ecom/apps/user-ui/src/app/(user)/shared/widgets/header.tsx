@@ -2,15 +2,17 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Search, ShoppingCart, User } from 'lucide-react';
+import { Search, ShoppingCart, User, Heart } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import axiosInstance from '@/app/utils/axiosInstance';
 import { useCart } from '@/app/hooks/useCart';
+import { useWishlist } from '@/app/hooks/useWishlist';  
 
 export default function Header() {
   const [searchTerm, setSearchTerm] = useState('');
   const router = useRouter();
   const { toggleCart, items } = useCart();
+  const { items: wishlistItems } = useWishlist();
 
   const { data: categories = [] } = useQuery({
     queryKey: ['categories-tree'],
@@ -41,6 +43,14 @@ export default function Header() {
         </form>
 
         <div className="flex items-center gap-5">
+          <Link href="/wishlist" className="relative text-gray-700 hover:text-black transition-colors">
+            <Heart size={24} />
+            {wishlistItems.length > 0 && (
+              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold">
+                {wishlistItems.length}
+              </span>
+            )}
+          </Link>
           <button onClick={toggleCart} className="relative">
           <ShoppingCart size={24} />
           {items.length > 0 && (

@@ -27,7 +27,7 @@ model users {
   phonenumber String   @unique
   password    String?
   role        String        @default("user")
-
+  wishlist    Wishlist?
   addresses    Address[]
   cart        Cart?
   createdAt   DateTime    @default(now())
@@ -138,4 +138,21 @@ type CartItem {
   quantity  Int
   size      String?
   color     String?
+}
+
+model Wishlist {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @unique @db.ObjectId
+  user      users    @relation(fields: [userId], references: [id])
+  
+  items     WishlistItem[]
+  updatedAt DateTime @updatedAt
+}
+
+type WishlistItem {
+  productId String   @db.ObjectId
+  name      String
+  price     Float
+  image     String
+  slug      String
 }

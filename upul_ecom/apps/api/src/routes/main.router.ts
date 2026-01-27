@@ -7,6 +7,7 @@ import imagekitRoutes from '../imagekit-service/imagekit.routes';
 import sizeTypeRoutes from '../sizetype-service/sizetype.routes';
 import colorRoutes from '../color-service/color.routes';
 import cartRouter from '../cart-service/cart.routes';
+import wishlistRouter from '../wishlist-service/wishlist.router';
 
 const router: Router = express.Router();
 
@@ -18,5 +19,6 @@ router.use('/imagekit', imagekitRoutes);
 router.use('/size-types', sizeTypeRoutes);
 router.use('/colors', colorRoutes);
 router.use('/cart', cartRouter);
+router.use('/wishlist', wishlistRouter);
 
 export default router;

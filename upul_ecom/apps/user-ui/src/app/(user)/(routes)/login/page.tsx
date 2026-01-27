@@ -1,5 +1,6 @@
 'use client'
 import { useCart } from '@/app/hooks/useCart';
+import { useWishlist } from '@/app/hooks/useWishlist';
 import { useMutation } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { Eye, EyeOff } from 'lucide-react'; 
@@ -19,7 +20,8 @@ const Login = () => {
     const [passwordVisible, setPasswordVisible] = useState(false)
     const [serverError, setServerError] = useState<string | null>(null)
     const router = useRouter();
-    const { syncWithUser } = useCart();
+    const { syncWithUser: syncCart } = useCart();
+    const { syncWithUser: syncWishlist } = useWishlist();
     
     const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormData>({
         defaultValues: {
@@ -50,7 +52,10 @@ const Login = () => {
             } else {
                 localStorage.removeItem("rememberedEmail");
             }
-            await syncWithUser();
+            await Promise.all([
+                syncCart(),
+                syncWishlist() 
+            ]);
             toast.success("Login successful!");
             router.push("/");
         },

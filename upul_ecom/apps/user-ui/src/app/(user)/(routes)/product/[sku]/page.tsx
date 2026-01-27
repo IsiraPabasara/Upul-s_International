@@ -8,6 +8,8 @@ import { Minus, Plus, ShoppingBag, CheckCircle, AlertCircle, Heart } from 'lucid
 import Link from 'next/link';
 import { useCart } from '@/app/hooks/useCart';
 import useUser from '@/app/hooks/useUser';
+import { useWishlist } from '@/app/hooks/useWishlist';
+import toast from 'react-hot-toast';
 
 // --- Types ---
 interface ProductVariant {
@@ -66,6 +68,7 @@ export default function ProductPage() {
 
   const { user } = useUser({ required: false }); 
   const { items, addItem, toggleCart } = useCart(); 
+  const { toggleItem, isInWishlist } = useWishlist();
 
   const { data: product, isLoading } = useQuery<Product>({
     queryKey: ['product', sku],
@@ -74,6 +77,8 @@ export default function ProductPage() {
       return res.data;
     }
   });
+
+  const isWishlisted = product ? isInWishlist(product.id) : false;
 
   // --- 🧠 CORE LOGIC: Calculate Remaining Stock for SPECIFIC VARIANT ---
   const remainingStock = useMemo(() => {
@@ -192,6 +197,30 @@ export default function ProductPage() {
     }
   };
 
+  const handleWishlistToggle = async () => {
+      const item = {
+        productId: product.id,
+        name: product.name,
+        price: finalPrice,
+        image: product.images[0]?.url || '',
+        slug: product.sku, // fallback
+        // Add extra data so the wishlist page works without refetching
+        brand: product.brand,
+        sku: product.sku,
+        discountType: product.discountType,
+        discountValue: product.discountValue,
+        availability: product.availability
+      };
+
+      toggleItem(item); // @ts-ignore
+      if (!isWishlisted) toast.success("Added to wishlist");
+      else toast.success("Removed from wishlist");
+
+      if (user) {
+         try { await axiosInstance.post('/api/wishlist/toggle', item); } catch (err) { console.error(err); }
+      }
+  };
+
   return (
     <div className="bg-white min-h-screen pb-20">
       <div className="max-w-7xl mx-auto px-4 py-4 text-sm text-gray-500">
@@ -289,9 +318,13 @@ export default function ProductPage() {
                <><ShoppingBag size={18} /> Add to Cart</>}
             </button>
 
-            <div className="h-12 w-12 flex items-center justify-center border border-gray-200 rounded-lg hover:border-black transition-colors">
-                <Heart size={16} /> 
-            </div>
+            <button 
+              onClick={handleWishlistToggle}
+              className={`h-12 w-12 flex items-center justify-center border rounded-lg transition-colors
+                 ${isWishlisted ? 'bg-red-50 border-red-200 text-red-500' : 'border-gray-200 hover:border-black'}`}
+            >
+                <Heart size={20} fill={isWishlisted ? "currentColor" : "none"} /> 
+            </button>
           </div>
 
           <div className="pt-6 space-y-2 text-xs text-gray-500">

@@ -24,8 +24,12 @@ const useUser = ({ required = true }: UseUserOptions = {}) => {
                 throw error;
             }
         },
-        staleTime: 1000 * 60 * 5,
+        staleTime: 0, // Always fetch fresh - prevents stale auth state
+        gcTime: 1000 * 60 * 5, // Keep in cache for 5 minutes but always refetch
         retry: required ? 1 : false, 
+        refetchOnMount: true, // Always refetch when component mounts
+        refetchOnWindowFocus: false, // Don't refetch on window focus to avoid spam
+        
     });
 
     
