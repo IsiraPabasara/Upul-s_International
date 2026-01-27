@@ -1,6 +1,18 @@
-// apps/api/src/cart-service/cart.controller.ts
 import { Response, NextFunction } from "express";
 import prisma from "../../../../packages/libs/prisma";
+
+// Helper to sanitize items (Fixes Prisma Validation Error)
+const sanitizeItem = (item: any) => ({
+  productId: item.productId,
+  sku: item.sku,
+  name: item.name || "Product", // Fallback for safety
+  price: Number(item.price), // Ensure number
+  image: item.image || "",
+  quantity: Number(item.quantity),
+  // 👇 CRITICAL FIX: Ensure these are never undefined
+  size: item.size || null, 
+  color: item.color || null,
+});
 
 export const mergeCart = async (req: any, res: Response, next: NextFunction) => {
   try {
@@ -16,29 +28,35 @@ export const mergeCart = async (req: any, res: Response, next: NextFunction) => 
     }
 
     // 2. Merge Logic
-    let finalItems = [...cart.items];
+    // We cast to any[] to avoid TS strictness blocking the merge logic
+    let finalItems: any[] = [...(cart.items as any[])];
 
-    for (const localItem of localItems) {
-      const existingIndex = finalItems.findIndex(
-        (dbItem) => dbItem.sku === localItem.sku
-      );
+    if (localItems && Array.isArray(localItems)) {
+      for (const localItem of localItems) {
+        const existingIndex = finalItems.findIndex(
+          (dbItem) => dbItem.sku === localItem.sku
+        );
 
-      if (existingIndex > -1) {
-        finalItems[existingIndex].quantity += localItem.quantity;
-      } else {
-        finalItems.push(localItem);
+        if (existingIndex > -1) {
+          finalItems[existingIndex].quantity += localItem.quantity;
+        } else {
+          finalItems.push(localItem);
+        }
       }
     }
 
-    // 3. Save merged list to DB
+    // 3. SANITIZE before saving (The Fix)
+    // This ensures no 'undefined' fields crash Prisma
+    const cleanItems = finalItems.map(sanitizeItem);
+
     const updatedCart = await prisma.cart.update({
       where: { userId },
-      data: { items: finalItems }
+      data: { items: cleanItems } // 👈 Send clean data
     });
 
     return res.json(updatedCart.items);
   } catch (error) {
-    return next(error); // <--- Added 'return'
+    return next(error);
   }
 };
 
@@ -49,7 +67,7 @@ export const getCart = async (req: any, res: Response, next: NextFunction) => {
     
     return res.json(cart ? cart.items : []);
   } catch (error) {
-    return next(error); // <--- Added 'return'
+    return next(error);
   }
 };
 
@@ -64,7 +82,7 @@ export const addToCart = async (req: any, res: Response, next: NextFunction) => 
       cart = await prisma.cart.create({ data: { userId, items: [] } });
     }
 
-    const items = [...cart.items];
+    const items = [...(cart.items as any[])];
     const existingIndex = items.findIndex((i) => i.sku === item.sku);
 
     if (existingIndex > -1) {
@@ -73,14 +91,17 @@ export const addToCart = async (req: any, res: Response, next: NextFunction) => 
       items.push(item);
     }
 
+    // 3. SANITIZE before saving
+    const cleanItems = items.map(sanitizeItem);
+
     const updated = await prisma.cart.update({
       where: { userId },
-      data: { items }
+      data: { items: cleanItems }
     });
 
-    return res.json(updated.items); // <--- Added 'return'
+    return res.json(updated.items);
   } catch (error) {
-    return next(error); // <--- Added 'return'
+    return next(error);
   }
 };
 
@@ -92,18 +113,22 @@ export const updateCartItem = async (req: any, res: Response, next: NextFunction
 
     const cart = await prisma.cart.findUniqueOrThrow({ where: { userId } });
     
-    const items = cart.items.map(item => 
-      item.sku === sku ? { ...item, quantity } : item
-    );
+    // Update and Sanitize
+    const items = (cart.items as any[]).map(item => {
+      if (item.sku === sku) {
+        return sanitizeItem({ ...item, quantity });
+      }
+      return sanitizeItem(item);
+    });
 
     const updated = await prisma.cart.update({
       where: { userId },
       data: { items }
     });
 
-    return res.json(updated.items); // <--- Added 'return'
+    return res.json(updated.items);
   } catch (error) {
-    return next(error); // <--- Added 'return'
+    return next(error);
   }
 };
 
@@ -115,15 +140,18 @@ export const removeCartItem = async (req: any, res: Response, next: NextFunction
 
     const cart = await prisma.cart.findUniqueOrThrow({ where: { userId } });
 
-    const items = cart.items.filter(item => item.sku !== sku);
+    // Filter and Sanitize remaining items
+    const items = (cart.items as any[])
+      .filter(item => item.sku !== sku)
+      .map(sanitizeItem);
 
     const updated = await prisma.cart.update({
       where: { userId },
       data: { items }
     });
 
-    return res.json(updated.items); // <--- Added 'return'
+    return res.json(updated.items);
   } catch (error) {
-    return next(error); // <--- Added 'return'
+    return next(error);
   }
 };

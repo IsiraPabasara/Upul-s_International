@@ -60,6 +60,9 @@ export default function AddProductPage() {
   const [selectedRawFiles, setSelectedRawFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
 
+  // 👇 NEW: State to toggle between Simple (Perfume) and Variable (Dress)
+  const [hasVariants, setHasVariants] = useState(false);
+
   const {
     register,
     handleSubmit,
@@ -85,23 +88,16 @@ export default function AddProductPage() {
       return data;
     },
     onSuccess: () => {
-      // 1. Show success message
       setShowSuccess(true);
-
-      // 2. Reset Form Data
       reset(INITIAL_DATA);
       setBaseName("");
-      setResetKey((prev) => prev + 1); // Force re-render of complex children
-
-      // 3. Hide message after 3 seconds
-      setTimeout(() => {
-        setShowSuccess(false);
-      }, 3000);
+      setResetKey((prev) => prev + 1);
+      setHasVariants(false); // Reset toggle
+      setTimeout(() => setShowSuccess(false), 3000);
     },
   });
 
-  // --- LOGIC: NAME GENERATION ---
-  // Only update if colors exist. If colors is empty, name = baseName.
+  // --- NAME GENERATION ---
   useEffect(() => {
     if (watchedColors && watchedColors.length > 0) {
       setValue("name", `${baseName} - ${watchedColors[0]}`);
@@ -110,12 +106,10 @@ export default function AddProductPage() {
     }
   }, [watchedColors, baseName, setValue]);
 
-  // --- LOGIC: DISCOUNT CALCULATOR ---
   const getDiscountedPrice = () => {
     const price = Number(watchedPrice) || 0;
     const val = Number(watchedDiscountValue) || 0;
-    if (watchedDiscountType === "PERCENTAGE")
-      return price - price * (val / 100);
+    if (watchedDiscountType === "PERCENTAGE") return price - price * (val / 100);
     if (watchedDiscountType === "FIXED") return price - val;
     return price;
   };
@@ -126,24 +120,40 @@ export default function AddProductPage() {
       return;
     }
 
+    // 🔒 Validation based on Product Type
+    if (hasVariants && data.variants.length === 0) {
+      alert("Please add at least one size variant.");
+      return;
+    }
+    if (!hasVariants && Number(data.stock) < 0) {
+      alert("Stock cannot be negative.");
+      return;
+    }
+
     try {
       setIsUploading(true);
       let finalImages: ProductImage[] = [];
 
       if (selectedRawFiles.length > 0) {
-        const uploadPromises = selectedRawFiles.map((file) =>
-          uploadImageToKit(file),
-        );
-        const uploadedResults = await Promise.all(uploadPromises);
-        finalImages = uploadedResults;
+        const uploadPromises = selectedRawFiles.map((file) => uploadImageToKit(file));
+        finalImages = await Promise.all(uploadPromises);
       }
 
-      const productData = {
-        ...data,
-        images: finalImages,
-      };
+      // 🧹 Clean Data before sending
+      const cleanData = { ...data };
+      cleanData.images = finalImages;
 
-      mutation.mutate(productData);
+      if (hasVariants) {
+        // Variable Product: Stock is the sum of all variants
+        cleanData.stock = cleanData.variants.reduce((acc, curr) => acc + Number(curr.stock), 0);
+      } else {
+        // Simple Product: Clear variants, keep manual stock
+        cleanData.variants = [];
+        cleanData.sizeType = "One Size"; 
+        cleanData.stock = Number(data.stock); // Ensure number
+      }
+
+      mutation.mutate(cleanData);
     } catch (error) {
       console.error("Upload or Save failed", error);
       alert("Failed to upload images. Please try again.");
@@ -156,15 +166,11 @@ export default function AddProductPage() {
     <div className="max-w-4xl mx-auto p-8 bg-gray-50 min-h-screen">
       <h1 className="text-3xl font-bold text-gray-800 mb-8">Add New Product</h1>
 
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        className="bg-white p-6 rounded-xl shadow-sm space-y-8"
-      >
+      <form onSubmit={handleSubmit(onSubmit)} className="bg-white p-6 rounded-xl shadow-sm space-y-8">
+        
         {/* BASIC DETAILS */}
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-gray-700 border-b pb-2">
-            Basic Details
-          </h2>
+          <h2 className="text-xl font-semibold text-gray-700 border-b pb-2">Basic Details</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label">Product Name</label>
@@ -176,15 +182,9 @@ export default function AddProductPage() {
                 required
                 placeholder="e.g. Night Dress"
               />
-              {/* 1. SAVED AS LOGIC: Only show if Color is selected */}
               <p className="text-xs text-gray-400 mt-1 h-4">
                 {watchedColors && watchedColors.length > 0 && (
-                  <>
-                    Saved as:{" "}
-                    <span className="font-medium text-gray-600">
-                      {currentName}
-                    </span>
-                  </>
+                  <>Saved as: <span className="font-medium text-gray-600">{currentName}</span></>
                 )}
               </p>
             </div>
@@ -204,9 +204,7 @@ export default function AddProductPage() {
                 <ColorSelector
                   key={`color-${resetKey}`}
                   selectedColor={field.value[0] || ""}
-                  onChange={(colorName) =>
-                    field.onChange(colorName ? [colorName] : [])
-                  }
+                  onChange={(colorName) => field.onChange(colorName ? [colorName] : [])}
                   disabled={!baseName || baseName.trim() === ""}
                 />
               )}
@@ -223,9 +221,7 @@ export default function AddProductPage() {
           </div>
 
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold text-gray-700 border-b pb-2">
-              Media
-            </h2>
+            <h2 className="text-xl font-semibold text-gray-700 border-b pb-2">Media</h2>
             <ImageUploader
               key={`img-${resetKey}`}
               onFilesSelected={(files) => setSelectedRawFiles(files)}
@@ -235,9 +231,7 @@ export default function AddProductPage() {
 
         {/* MARKETING & PRICING */}
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-gray-700 border-b pb-2">
-            Marketing & Pricing
-          </h2>
+          <h2 className="text-xl font-semibold text-gray-700 border-b pb-2">Marketing & Pricing</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <div>
@@ -268,9 +262,7 @@ export default function AddProductPage() {
                   {...register("isNewArrival")}
                   className="w-5 h-5 accent-black"
                 />
-                <label className="font-medium text-gray-700">
-                  Mark as New Arrival
-                </label>
+                <label className="font-medium text-gray-700">Mark as New Arrival</label>
               </div>
               <hr className="border-orange-200" />
               <div>
@@ -296,12 +288,8 @@ export default function AddProductPage() {
               </div>
               {watchedDiscountType !== "NONE" && Number(watchedPrice) > 0 && (
                 <div className="bg-white p-2 rounded border border-orange-200 text-sm text-center">
-                  <span className="text-gray-400 line-through mr-2">
-                    Rs. {watchedPrice}
-                  </span>
-                  <span className="font-bold text-green-600">
-                    Now Rs. {getDiscountedPrice().toFixed(2)}
-                  </span>
+                  <span className="text-gray-400 line-through mr-2">Rs. {watchedPrice}</span>
+                  <span className="font-bold text-green-600">Now Rs. {getDiscountedPrice().toFixed(2)}</span>
                 </div>
               )}
             </div>
@@ -310,9 +298,7 @@ export default function AddProductPage() {
 
         {/* CATEGORIZATION */}
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-gray-700 border-b pb-2">
-            Categorization
-          </h2>
+          <h2 className="text-xl font-semibold text-gray-700 border-b pb-2">Categorization</h2>
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
             <Controller
               name="categoryId"
@@ -328,19 +314,56 @@ export default function AddProductPage() {
           </div>
         </div>
 
-        {/* INVENTORY */}
+        {/* 👇 INVENTORY - UPDATED FOR SIMPLE vs VARIABLE */}
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-gray-700 border-b pb-2">
-            Inventory & Variants
-          </h2>
-          <StockManager
-            key={`stock-${resetKey}`}
-            onUpdate={(data) => {
-              setValue("sizeType", data.sizeType);
-              setValue("variants", data.variants);
-              setValue("stock", 0);
-            }}
-          />
+          <div className="flex items-center justify-between border-b pb-2">
+            <h2 className="text-xl font-semibold text-gray-700">Inventory</h2>
+            
+            {/* TOGGLE SWITCH */}
+            <div className="flex items-center gap-2 bg-gray-100 px-3 py-1 rounded-full">
+              <input 
+                type="checkbox" 
+                id="variantToggle"
+                checked={hasVariants}
+                onChange={(e) => setHasVariants(e.target.checked)}
+                className="w-4 h-4 accent-black cursor-pointer"
+              />
+              <label htmlFor="variantToggle" className="text-sm font-medium cursor-pointer select-none">
+                Has Variations? (Sizes)
+              </label>
+            </div>
+          </div>
+
+          {hasVariants ? (
+            // MODE A: Variable Product (Uses StockManager)
+            <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+              <StockManager
+                key={`stock-${resetKey}`}
+                onUpdate={(data) => {
+                  setValue("sizeType", data.sizeType);
+                  setValue("variants", data.variants);
+                  // Don't set stock here, we calculate it on submit
+                }}
+              />
+            </div>
+          ) : (
+            // MODE B: Simple Product (Manual Input)
+            <div className="animate-in fade-in slide-in-from-top-2 duration-300 bg-gray-50 p-6 rounded-lg border border-gray-200">
+              <label className="label">Total Stock Quantity</label>
+              <input
+                type="number"
+                placeholder="e.g. 50"
+                className="input-field text-lg font-medium w-full md:w-1/3"
+                {...register("stock", { 
+                  required: !hasVariants, // Only required if simple product
+                  min: 0 
+                })}
+              />
+              <p className="text-sm text-gray-500 mt-2">
+                Use this for products that don't have sizes (e.g. Perfumes, Accessories).
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="pt-4">
@@ -357,11 +380,8 @@ export default function AddProductPage() {
           </button>
         </div>
 
-        {/* 4. SUCCESS MESSAGE LOGIC (Disappears automatically) */}
         {(showSuccess || mutation.isError) && (
-          <div
-            className={`p-4 text-center rounded-lg font-medium ${showSuccess ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}
-          >
+          <div className={`p-4 text-center rounded-lg font-medium ${showSuccess ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
             {showSuccess
               ? "✅ Product Created! Resetting form..."
               : `❌ Error: ${mutation.error?.message || "Something went wrong"}`}
@@ -388,8 +408,7 @@ export default function AddProductPage() {
         }
         .input-field:focus {
           border-color: #2563eb;
-          ring: 2px;
-          ring-color: #bfdbfe;
+          box-shadow: 0 0 0 2px #bfdbfe;
         }
       `}</style>
     </div>

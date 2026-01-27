@@ -1,32 +1,57 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axiosInstance from '@/app/utils/axiosInstance';
 import { useParams } from 'next/navigation';
-import { Minus, Plus, ShoppingBag, Heart, AlertCircle } from 'lucide-react';
+import { Minus, Plus, ShoppingBag, CheckCircle, AlertCircle, Heart } from 'lucide-react';
 import Link from 'next/link';
 import { useCart } from '@/app/hooks/useCart';
 import useUser from '@/app/hooks/useUser';
 
-// --- Sub-Component: Image Gallery ---
+// --- Types ---
+interface ProductVariant {
+  size: string;
+  stock: number;
+}
+
+interface Product {
+  id: string;
+  sku: string;
+  name: string;
+  price: number;
+  description: string;
+  images: { url: string }[];
+  brand: string;
+  discountType: 'PERCENTAGE' | 'FIXED' | 'NONE';
+  discountValue: number;
+  colors: string[];
+  variants: ProductVariant[];
+  stock: number;
+  availability: boolean;
+  category?: { name: string };
+}
+
+// --- Gallery (Unchanged) ---
 const ProductGallery = ({ images, name }: { images: { url: string }[], name: string }) => {
-  const [activeImage, setActiveImage] = useState(images[0]?.url || '');
+  const [activeImage, setActiveImage] = useState(images?.[0]?.url || '');
+  if (!images || images.length === 0) return <div className="bg-gray-100 h-96 rounded-xl flex items-center justify-center text-gray-400">No Image</div>;
 
   return (
     <div className="flex flex-col-reverse md:flex-row gap-4">
-      <div className="flex md:flex-col gap-3 overflow-x-auto md:overflow-visible">
+      <div className="flex md:flex-col gap-3 overflow-x-auto md:overflow-visible no-scrollbar p-1">
         {images.map((img, idx) => (
           <button 
             key={idx} 
             onClick={() => setActiveImage(img.url)}
-            className={`w-20 h-24 flex-shrink-0 rounded-lg overflow-hidden border-2 ${activeImage === img.url ? 'border-black' : 'border-transparent'}`}
+            className={`w-20 h-24 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all 
+              ${activeImage === img.url ? 'border-black ring-1 ring-black' : 'border-transparent hover:border-gray-300'}`}
           >
-            <img src={img.url} alt={`Thumbnail ${idx}`} className="w-full h-full object-cover" />
+            <img src={img.url} alt={`${name} ${idx}`} className="w-full h-full object-cover" />
           </button>
         ))}
       </div>
-      <div className="flex-1 bg-gray-100 rounded-2xl overflow-hidden relative aspect-[3/4] md:aspect-auto md:h-[600px]">
+      <div className="flex-1 bg-gray-50 rounded-2xl overflow-hidden relative aspect-[3/4] md:aspect-auto md:h-[600px]">
         <img src={activeImage || images[0]?.url} alt={name} className="w-full h-full object-cover" />
       </div>
     </div>
@@ -39,18 +64,57 @@ export default function ProductPage() {
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [selectedColor, setSelectedColor] = useState<string>('');
 
-  // 👇 FIX 1: Tell useUser that login is NOT required for this page
   const { user } = useUser({ required: false }); 
-  const { addItem, toggleCart } = useCart();
+  const { items, addItem, toggleCart } = useCart(); 
 
-  const { data: product, isLoading } = useQuery({
+  const { data: product, isLoading } = useQuery<Product>({
     queryKey: ['product', sku],
     queryFn: async () => {
-      // Ensure your backend allows public access to this route
-      const res = await axiosInstance.get(`/api/products/${sku}`, { isPublic: true });
+      const res = await axiosInstance.get(`/api/products/${sku}`);
       return res.data;
     }
   });
+
+  // --- 🧠 CORE LOGIC: Calculate Remaining Stock for SPECIFIC VARIANT ---
+  const remainingStock = useMemo(() => {
+    if (!product) return 0;
+
+    const hasVariants = product.variants && product.variants.length > 0;
+    
+    // 1. Get Total Stock for CURRENT Selection
+    let totalStockForSelection = 0;
+    
+    if (hasVariants) {
+      if (!selectedSize) return 0; 
+      const variant = product.variants.find(v => v.size === selectedSize);
+      totalStockForSelection = variant ? variant.stock : 0;
+    } else {
+      totalStockForSelection = product.stock || 0;
+    }
+
+    // 2. Count ONLY matching items in cart
+    const cartItem = items.find(item => {
+      // Must match Product ID
+      if (item.productId !== product.id) return false;
+
+      // If product has variants, MUST match size strictly
+      if (hasVariants) {
+        return item.size === selectedSize; 
+      }
+      
+      // If simple product, we already matched ID, so true
+      return true; 
+    });
+
+    const alreadyInCart = cartItem ? cartItem.quantity : 0;
+    return Math.max(0, totalStockForSelection - alreadyInCart);
+
+  }, [items, product, selectedSize]);
+
+  // Reset quantity when size changes (so you don't carry over high qty to low stock variant)
+  useEffect(() => {
+    setQuantity(1);
+  }, [selectedSize]);
 
   if (isLoading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   if (!product) return <div className="min-h-screen flex items-center justify-center">Product not found</div>;
@@ -63,32 +127,67 @@ export default function ProductPage() {
     finalPrice = originalPrice - product.discountValue;
   }
 
+  const hasVariants = product.variants && product.variants.length > 0;
+
+  // --- HANDLERS ---
+  const handleIncreaseQty = () => {
+    if (quantity < remainingStock) {
+      setQuantity(prev => prev + 1);
+    }
+  };
+
+  const handleDecreaseQty = () => {
+    if (quantity > 1) {
+      setQuantity(prev => prev - 1);
+    }
+  };
+
   const handleAddToCart = async () => {
-    if (!selectedSize && product.variants.length > 0) {
-      alert('Please select a size');
+    // 1. Validation
+    if (hasVariants && !selectedSize) {
+      alert('Please select a size first');
       return;
     }
 
+    if (quantity > remainingStock) {
+        alert(`Sorry, you hit the limit for this size.`);
+        return;
+    }
+
+    // 2. Generate Unique SKU for Cart
+    // If it has a size, append it (e.g., "SKU123-M"). If not, use original ("SKU123")
+    const cartSku = (hasVariants && selectedSize) 
+      ? `${product.sku}-${selectedSize}` 
+      : product.sku;
+
+    // 3. Find Max Stock for THIS specific variant
+    let variantMaxStock = 0;
+    if (hasVariants) {
+       variantMaxStock = product.variants.find(v => v.size === selectedSize)?.stock || 0;
+    } else {
+       variantMaxStock = product.stock || 0;
+    }
+
     const newItem = {
-      sku: product.sku,
+      sku: cartSku, // 👈 KEY FIX: Use the unique variant SKU
       productId: product.id,
       name: product.name,
       price: finalPrice,
-      image: product.images[0]?.url || '',
+      image: product.images?.[0]?.url || '',
       quantity: quantity,
-      size: selectedSize,
-      color: selectedColor
+      size: hasVariants ? selectedSize : undefined,
+      color: selectedColor,
+      maxStock: variantMaxStock
     };
 
+    // 4. Add & Sync
     addItem(newItem);
-    toggleCart();
 
-    // Only sync if user exists (now safe because page loads for guests)
     if (user) {
       try {
         await axiosInstance.post('/api/cart', newItem);
       } catch (error) {
-        console.error("Failed to sync item to server:", error);
+        console.error("Sync failed:", error);
       }
     }
   };
@@ -135,7 +234,8 @@ export default function ProductPage() {
                     <button
                       key={color}
                       onClick={() => setSelectedColor(color)}
-                      className={`w-8 h-8 rounded-full border-2 flex items-center justify-center ${selectedColor === color ? 'border-black' : 'border-gray-200'}`}
+                      className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all
+                        ${selectedColor === color ? 'border-black ring-2 ring-gray-100' : 'border-gray-200'}`}
                       style={{ backgroundColor: color }}
                       title={color}
                     />
@@ -144,11 +244,11 @@ export default function ProductPage() {
               </div>
             )}
 
-            {product.variants && product.variants.length > 0 && (
+            {hasVariants && (
               <div>
                 <h3 className="text-sm font-bold text-gray-900 mb-3">Size</h3>
                 <div className="flex flex-wrap gap-2">
-                  {product.variants.map((v: any) => (
+                  {product.variants.map((v: ProductVariant) => (
                     <button
                       key={v.size}
                       disabled={v.stock === 0}
@@ -166,37 +266,47 @@ export default function ProductPage() {
             )}
           </div>
 
+          {/* Actions */}
           <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-100">
-            <div className="flex items-center border border-gray-200 rounded-lg w-fit">
-              <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-3 hover:bg-gray-50">
+            <div className={`flex items-center border border-gray-200 rounded-lg w-fit ${(remainingStock === 0 && (!hasVariants || selectedSize)) ? 'opacity-50 pointer-events-none' : ''}`}>
+              <button onClick={handleDecreaseQty} disabled={quantity <= 1} className="p-3 hover:bg-gray-50 disabled:opacity-30">
                 <Minus size={16} />
               </button>
               <span className="w-12 text-center font-medium">{quantity}</span>
-              <button onClick={() => setQuantity(quantity + 1)} className="p-3 hover:bg-gray-50">
+              <button onClick={handleIncreaseQty} disabled={quantity >= remainingStock} className="p-3 hover:bg-gray-50 disabled:opacity-30">
                 <Plus size={16} />
               </button>
             </div>
 
             <button 
               onClick={handleAddToCart}
-              disabled={!product.availability}
-              className="flex-1 bg-black text-white h-12 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              disabled={!product.availability || remainingStock === 0 || (hasVariants && !selectedSize)}
+              className="flex-1 bg-black text-white h-12 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
             >
-              {product.availability ? <><ShoppingBag size={18} /> Add to Cart</> : 'Out of Stock'}
+              {(hasVariants && !selectedSize) ? 'Select a Size' : 
+               remainingStock === 0 ? 'Max Limit Reached' : 
+               !product.availability ? 'Out of Stock' : 
+               <><ShoppingBag size={18} /> Add to Cart</>}
             </button>
 
-            <button className="h-12 w-12 border border-gray-200 rounded-lg flex items-center justify-center hover:border-black transition-colors text-gray-600">
-              <Heart size={20} />
-            </button>
+            <div className="h-12 w-12 flex items-center justify-center border border-gray-200 rounded-lg hover:border-black transition-colors">
+                <Heart size={16} /> 
+            </div>
           </div>
 
           <div className="pt-6 space-y-2 text-xs text-gray-500">
             <p>SKU: <span className="text-gray-900">{product.sku}</span></p>
-            <p>Category: <span className="text-gray-900 capitalize">{product.category?.name}</span></p>
-            {product.availability ? (
-               <p className="text-green-600 flex items-center gap-1"><CheckIcon /> In Stock</p>
+            <p>Category: <span className="text-gray-900 capitalize">{product.category?.name || 'General'}</span></p>
+            
+            {(hasVariants && !selectedSize) ? (
+                <p className="text-blue-600 flex items-center gap-1 font-medium"><AlertCircle size={14} /> Select a size to see stock</p>
+            ) : remainingStock > 0 ? (
+               <p className="text-green-600 flex items-center gap-1 font-medium">
+                 <CheckCircle size={14} /> In Stock 
+                 <span className="text-gray-400 ml-1">({remainingStock} more available)</span>
+               </p>
             ) : (
-               <p className="text-red-500 flex items-center gap-1"><AlertCircle size={14} /> Out of Stock</p>
+               <p className="text-red-500 flex items-center gap-1 font-medium"><AlertCircle size={14} /> Limit Reached</p>
             )}
           </div>
         </div>
@@ -204,9 +314,3 @@ export default function ProductPage() {
     </div>
   );
 }
-
-const CheckIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="20 6 9 17 4 12" />
-  </svg>
-);
