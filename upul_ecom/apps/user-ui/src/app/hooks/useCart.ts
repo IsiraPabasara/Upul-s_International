@@ -12,6 +12,7 @@ export interface CartItem {
   quantity: number;
   size?: string;
   color?: string;
+  maxStock?: number;
 }
 
 interface CartState {
