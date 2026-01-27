@@ -7,7 +7,6 @@ import { useParams } from 'next/navigation';
 import { Minus, Plus, ShoppingBag, CheckCircle, AlertCircle, Heart } from 'lucide-react';
 import Link from 'next/link';
 import { useCart } from '@/app/hooks/useCart';
-import useUser from '@/app/hooks/useUser';
 import { useWishlist } from '@/app/hooks/useWishlist';
 import toast from 'react-hot-toast';
 
@@ -32,6 +31,7 @@ interface Product {
   stock: number;
   availability: boolean;
   category?: { name: string };
+  sizeType?: string; // e.g., "One Size", "Multiple Sizes"
 }
 
 // --- Gallery (Unchanged) ---
@@ -66,7 +66,6 @@ export default function ProductPage() {
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [selectedColor, setSelectedColor] = useState<string>('');
 
-  const { user } = useUser({ required: false }); 
   const { items, addItem, toggleCart } = useCart(); 
   const { toggleItem, isInWishlist } = useWishlist();
 
@@ -84,7 +83,14 @@ export default function ProductPage() {
   const remainingStock = useMemo(() => {
     if (!product) return 0;
 
-    const hasVariants = product.variants && product.variants.length > 0;
+    // If sizeType is "One Size", treat as simple product (use global stock)
+    const isOneSizeProduct = product.sizeType === 'One Size';
+    
+    // Check if product has real variants (not "One Size")
+    const hasVariants = !isOneSizeProduct && 
+                       product.variants && 
+                       Array.isArray(product.variants) && 
+                       product.variants.length > 0;
     
     // 1. Get Total Stock for CURRENT Selection
     let totalStockForSelection = 0;
@@ -94,6 +100,7 @@ export default function ProductPage() {
       const variant = product.variants.find(v => v.size === selectedSize);
       totalStockForSelection = variant ? variant.stock : 0;
     } else {
+      // No variants or "One Size" - use total product stock
       totalStockForSelection = product.stock || 0;
     }
 
@@ -107,7 +114,7 @@ export default function ProductPage() {
         return item.size === selectedSize; 
       }
       
-      // If simple product, we already matched ID, so true
+      // If simple product (no variants or "One Size"), we already matched ID, so true
       return true; 
     });
 
@@ -132,7 +139,16 @@ export default function ProductPage() {
     finalPrice = originalPrice - product.discountValue;
   }
 
-  const hasVariants = product.variants && product.variants.length > 0;
+  const isOneSizeProduct = product.sizeType === 'One Size';
+  const hasVariants = !isOneSizeProduct && 
+                     product.variants && 
+                     Array.isArray(product.variants) && 
+                     product.variants.length > 0;
+
+  // --- Check if add to cart is allowed ---
+  const canAddToCart = product.availability && 
+    remainingStock > 0 && 
+    (!hasVariants || (hasVariants && selectedSize));
 
   // --- HANDLERS ---
   const handleIncreaseQty = () => {
@@ -188,12 +204,11 @@ export default function ProductPage() {
     // 4. Add & Sync
     addItem(newItem);
 
-    if (user) {
-      try {
-        await axiosInstance.post('/api/cart', newItem);
-      } catch (error) {
-        console.error("Sync failed:", error);
-      }
+    // Try to sync with server - will silently fail if not logged in
+    try {
+      await axiosInstance.post('/api/cart', newItem, { isPublic: true });
+    } catch (error) {
+      // Silently fail - user is likely not logged in, cart is saved locally
     }
   };
 
@@ -216,8 +231,11 @@ export default function ProductPage() {
       if (!isWishlisted) toast.success("Added to wishlist");
       else toast.success("Removed from wishlist");
 
-      if (user) {
-         try { await axiosInstance.post('/api/wishlist/toggle', item); } catch (err) { console.error(err); }
+      // Try to sync with server - will silently fail if not logged in
+      try { 
+        await axiosInstance.post('/api/wishlist/toggle', item, { isPublic: true }); 
+      } catch (err) { 
+        // Silently fail - user is likely not logged in, wishlist is saved locally
       }
   };
 
@@ -309,11 +327,11 @@ export default function ProductPage() {
 
             <button 
               onClick={handleAddToCart}
-              disabled={!product.availability || remainingStock === 0 || (hasVariants && !selectedSize)}
+              disabled={!canAddToCart}
               className="flex-1 bg-black text-white h-12 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
             >
               {(hasVariants && !selectedSize) ? 'Select a Size' : 
-               remainingStock === 0 ? 'Max Limit Reached' : 
+               remainingStock === 0 ? 'Out of Stock' : 
                !product.availability ? 'Out of Stock' : 
                <><ShoppingBag size={18} /> Add to Cart</>}
             </button>
