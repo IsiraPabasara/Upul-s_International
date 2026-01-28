@@ -1,7 +1,7 @@
     'use client';
 
     import React, { useState, useEffect, useMemo } from 'react';
-    import { useForm, SubmitHandler } from 'react-hook-form';
+    import { useForm } from 'react-hook-form';
     import { zodResolver } from '@hookform/resolvers/zod';
     import * as z from 'zod';
     import { useRouter } from 'next/navigation';
@@ -17,7 +17,8 @@
 
     // Hooks & Utils
     // 👇 FIX 1: Import CartItem type from the hook source so 'productId' is defined
-    import { useCart, type CartItem } from '@/app/hooks/useCart';
+    // import { useCart, type CartItem } from '@/app/hooks/useCart';
+    import { useCart } from '@/app/hooks/useCart';
     import useUser from '@/app/hooks/useUser';
     import axiosInstance from '@/app/utils/axiosInstance';
     import { useQueryClient } from '@tanstack/react-query';
@@ -227,13 +228,13 @@
         }
     };
 
-    const onMainFormSubmit: SubmitHandler<CheckoutFormValues> = (data) => {
-        if (user && isAddingNewAddress) {
-        handleSaveNewAddress(data);
-        } else {
-        onPlaceOrder(data);
-        }
-    };
+    // const onMainFormSubmit: SubmitHandler<CheckoutFormValues> = (data) => {
+    //     if (user && isAddingNewAddress) {
+    //     handleSaveNewAddress(data);
+    //     } else {
+    //     onPlaceOrder(data);
+    //     }
+    // };
 
     if (isUserLoading) {
         return (

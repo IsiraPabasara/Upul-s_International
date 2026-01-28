@@ -1,15 +1,14 @@
 'use client';
 
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import axiosInstance from '@/app/utils/axiosInstance';
-import { Loader2, Package, CheckCircle, XCircle, Truck, Clock, AlertTriangle, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Loader2, Package, CheckCircle, XCircle, Truck, Clock, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 export default function TrackOrderPage() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
-  const router = useRouter();
 
   const { data: order, isLoading, error } = useQuery({
     queryKey: ['guest-order', token],
