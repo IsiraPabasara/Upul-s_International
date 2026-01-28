@@ -165,6 +165,7 @@ enum OrderStatus {
   SHIPPED     // 4. Handed to Domex (Tracking ID added)
   DELIVERED
   CANCELLED
+  RETURNED
 }
 
 model Order {

@@ -1,0 +1,221 @@
+import nodemailer from 'nodemailer';
+
+// 1. Configure Transporter
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  host: process.env.SMTP_HOST || 'smtp.gmail.com',
+  port: Number(process.env.SMTP_PORT) || 465,
+  secure: true,
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+});
+
+const SHOP_EMAIL = process.env.SMTP_USER;
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+// --- Helpers ---
+
+const wrapHtml = (title: string, content: string) => `
+  <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+    <div style="background-color: #000000; padding: 20px; text-align: center;">
+      <h1 style="color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 2px;">UPUL INTERNATIONAL</h1>
+    </div>
+    <div style="padding: 30px;">
+      <h2 style="color: #333333; margin-top: 0;">${title}</h2>
+      ${content}
+    </div>
+    <div style="background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #888888;">
+      <p style="margin: 0;">Thank you for shopping with us.</p>
+      <p style="margin: 5px 0 0;">Questions? Reply to this email.</p>
+    </div>
+  </div>
+`;
+
+const getTrackingLink = (order: any) => {
+  return order.guestToken 
+    ? `${FRONTEND_URL}/track-order?token=${order.guestToken}`
+    : `${FRONTEND_URL}/profile/orders/${order.id}`;
+};
+
+const getButtonHtml = (link: string, text: string = "View Order") => `
+  <div style="text-align: center; margin-top: 30px;">
+    <a href="${link}" style="background-color: #000; color: #fff; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">${text}</a>
+  </div>
+`;
+
+// --- 1. Customer: Order Placed (Invoice) ---
+export const sendOrderConfirmation = async (order: any) => {
+  try {
+    const itemsHtml = order.items.map((item: any) => `
+      <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding: 10px 0;">
+        <span>${item.name} <span style="color: #888; font-size: 12px;">x${item.quantity}</span></span>
+        <span style="font-weight: bold;">LKR ${(item.price * item.quantity).toLocaleString()}</span>
+      </div>
+    `).join('');
+
+    const trackingLink = getTrackingLink(order);
+
+    const html = wrapHtml(`Order Confirmed #${order.orderNumber}`, `
+      <p>Hi there,</p>
+      <p>Thank you for your order! We have received it and will verify it shortly via phone call.</p>
+      
+      <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+        <h3 style="margin-top: 0; border-bottom: 2px solid #ddd; padding-bottom: 5px;">INVOICE</h3>
+        ${itemsHtml}
+        <div style="display: flex; justify-content: space-between; margin-top: 15px; font-size: 18px; font-weight: bold; border-top: 2px solid #000; padding-top: 10px;">
+          <span>Total (COD)</span>
+          <span>LKR ${order.totalAmount.toLocaleString()}</span>
+        </div>
+      </div>
+
+      ${getButtonHtml(trackingLink, "View Order Details")}
+    `);
+
+    await transporter.sendMail({
+      from: `"Upul International" <${process.env.SMTP_USER}>`,
+      to: order.email,
+      subject: `Invoice & Confirmation #${order.orderNumber}`,
+      html,
+    });
+  } catch (error) {
+    console.error("Failed to send confirmation email:", error);
+  }
+};
+
+// --- 2. Customer: Order Processing Started ---
+export const sendOrderProcessing = async (order: any) => {
+  try {
+    const trackingLink = getTrackingLink(order);
+
+    const html = wrapHtml(`Processing Started ⚙️`, `
+      <p>Good news! We have verified your order <b>#${order.orderNumber}</b> and it is now being packed.</p>
+      <p>You will receive another email as soon as it is handed over to our courier partner.</p>
+      
+      ${getButtonHtml(trackingLink)}
+    `);
+
+    await transporter.sendMail({
+      from: `"Upul International" <${process.env.SMTP_USER}>`,
+      to: order.email,
+      subject: `Order #${order.orderNumber} is Processing`,
+      html,
+    });
+  } catch (error) {
+    console.error("Failed to send processing email:", error);
+  }
+};
+
+// --- 3. Customer: Order Shipped ---
+export const sendShippingUpdate = async (order: any) => {
+  try {
+    const trackingLink = getTrackingLink(order);
+
+    const html = wrapHtml(`Your Order Has Shipped! 🚚`, `
+      <p>Great news! Your order <b>#${order.orderNumber}</b> has been handed over to Domex.</p>
+      
+      <div style="background: #eefbee; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+        <p style="margin: 0; color: #555; font-size: 12px; text-transform: uppercase; font-weight: bold;">Tracking Number</p>
+        <p style="margin: 5px 0 0 0; font-size: 24px; font-weight: 900; color: #000;">${order.trackingNumber}</p>
+      </div>
+      <p>You can track your package on the Domex website.</p>
+
+      ${getButtonHtml(trackingLink)}
+    `);
+
+    await transporter.sendMail({
+      from: `"Upul International" <${process.env.SMTP_USER}>`,
+      to: order.email,
+      subject: `Order #${order.orderNumber} Shipped!`,
+      html,
+    });
+  } catch (error) {
+    console.error("Failed to send shipping email:", error);
+  }
+};
+
+// --- 4. Customer: Order Delivered ---
+export const sendOrderDelivered = async (order: any) => {
+  try {
+    const trackingLink = getTrackingLink(order);
+
+    const html = wrapHtml(`Order Delivered ✅`, `
+      <p>Your order <b>#${order.orderNumber}</b> has been marked as delivered.</p>
+      <p>We hope you enjoy your purchase! Thank you for choosing Upul International.</p>
+      
+      ${getButtonHtml(trackingLink, "Leave a Review")}
+    `);
+
+    await transporter.sendMail({
+      from: `"Upul International" <${process.env.SMTP_USER}>`,
+      to: order.email,
+      subject: `Order Delivered #${order.orderNumber}`,
+      html,
+    });
+  } catch (error) {
+    console.error("Failed to send delivery email:", error);
+  }
+};
+
+// --- 5. Customer: Order Returned ---
+export const sendOrderReturned = async (order: any) => {
+  try {
+    const html = wrapHtml(`Order Returned ↩️`, `
+      <p>Your order <b>#${order.orderNumber}</b> has been processed as returned.</p>
+      <p>If you requested this return, your refund (if applicable) is being processed.</p>
+    `);
+
+    await transporter.sendMail({
+      from: `"Upul International" <${process.env.SMTP_USER}>`,
+      to: order.email,
+      subject: `Order Returned #${order.orderNumber}`,
+      html,
+    });
+  } catch (error) {
+    console.error("Failed to send return email:", error);
+  }
+};
+
+// --- 6. Customer: Order Cancelled ---
+export const sendOrderCancelled = async (order: any) => {
+  try {
+    const html = wrapHtml(`Order Cancelled #${order.orderNumber}`, `
+      <p style="color: #d32f2f;">Your order has been cancelled.</p>
+      <p>If you have already paid or believe this is an error, please contact us immediately.</p>
+    `);
+
+    await transporter.sendMail({
+      from: `"Upul International" <${process.env.SMTP_USER}>`,
+      to: order.email,
+      subject: `Order Cancelled #${order.orderNumber}`,
+      html,
+    });
+  } catch (error) {
+    console.error("Failed to send cancellation email:", error);
+  }
+};
+
+// --- 7. Shop Owner: New Order Alert ---
+export const sendShopNewOrderNotification = async (order: any) => {
+  try {
+    const html = wrapHtml(`New Order Received #${order.orderNumber}`, `
+      <p style="font-size: 16px;"><b>Customer:</b> ${order.shippingAddress.firstname} ${order.shippingAddress.lastname}</p>
+      <p style="font-size: 16px;"><b>Amount:</b> LKR ${order.totalAmount.toLocaleString()}</p>
+      <p style="font-size: 16px;"><b>Phone:</b> <a href="tel:${order.shippingAddress.phoneNumber}">${order.shippingAddress.phoneNumber}</a></p>
+      
+      <div style="margin-top: 20px;">
+        <a href="${FRONTEND_URL}/admin/orders/${order.id}" style="color: blue; text-decoration: underline;">Open Admin Panel</a>
+      </div>
+    `);
+
+    await transporter.sendMail({
+      from: `"System Alert" <${process.env.SMTP_USER}>`,
+      to: SHOP_EMAIL, 
+      subject: `🔔 New Order #${order.orderNumber} - LKR ${order.totalAmount}`,
+      html,
+    });
+  } catch (error) {
+    console.error("Failed to send shop alert:", error);
+  }
+};

@@ -1,0 +1,238 @@
+import { Request, Response, NextFunction } from "express";
+import prisma from "../../../../packages/libs/prisma"; // Adjust path if needed
+import { v4 as uuidv4 } from 'uuid'; 
+import { sendOrderConfirmation, sendShopNewOrderNotification } from "../email-service/email.service";
+
+// Helper: Generate a short, readable 6-digit ID (e.g., "829304")
+const generateOrderNumber = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+export const createOrder = async (req: Request, res: Response, next: NextFunction) => {
+  const { type, userId, addressId, address, items, email } = req.body;
+
+  try {
+    // --- 1. PREPARE ORDER DATA ---
+    let shippingAddress;
+    let customerEmail;
+    let customerId = null;
+    
+    // 👇 FIX: Always generate a token. 
+    // This solves the "Unique Constraint" error because the field will never be null/undefined.
+    const guestToken = uuidv4(); 
+
+    // SCENARIO A: Logged-in User
+    if (type === 'USER') {
+      const user = await prisma.users.findUnique({ where: { id: userId } });
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const selectedAddr = user.addresses.find((a: any) => a.id === addressId);
+      if (!selectedAddr) return res.status(400).json({ message: "Invalid Address ID" });
+
+      shippingAddress = selectedAddr;
+      customerEmail = user.email;
+      customerId = user.id;
+    } 
+    // SCENARIO B: Guest
+    else {
+      shippingAddress = address;
+      customerEmail = email;
+    }
+
+    const orderNumber = generateOrderNumber();
+
+    // --- 2. TRANSACTION (Atomic Stock Deduction + Creation) ---
+    const order = await prisma.$transaction(async (tx) => {
+      let calculatedTotal = 0;
+      const finalItems = [];
+
+      // A. Loop through items to Validate & Deduct Stock
+      for (const item of items) {
+        // Fetch fresh product data
+        const product = await tx.product.findUnique({ where: { id: item.productId } });
+
+        if (!product) throw new Error(`Product not found: ${item.sku}`);
+        if (!product.availability) throw new Error(`Product ${product.name} is unavailable`);
+
+        // Check Stock Logic
+        let currentStock = 0;
+        let variantIndex = -1;
+
+        if (item.size) {
+           // Variant Logic
+           variantIndex = product.variants.findIndex((v: any) => v.size === item.size);
+           if (variantIndex === -1) throw new Error(`Size ${item.size} not found for ${product.name}`);
+           currentStock = product.variants[variantIndex].stock;
+        } else {
+           // Standard Logic
+           currentStock = product.stock;
+        }
+
+        if (currentStock < item.quantity) {
+           throw new Error(`Insufficient stock for ${product.name}. Only ${currentStock} left.`);
+        }
+
+        // B. Update Stock in DB
+        if (item.size) {
+           const newVariants = [...product.variants];
+           newVariants[variantIndex].stock -= item.quantity;
+           
+           await tx.product.update({
+             where: { id: product.id },
+             data: { variants: newVariants }
+           });
+        } else {
+           await tx.product.update({
+             where: { id: product.id },
+             data: { stock: { decrement: item.quantity } }
+           });
+        }
+
+        // C. Calculate Price
+        let price = product.price;
+        if (product.discountType === 'PERCENTAGE') {
+          price -= (price * (product.discountValue / 100));
+        } else if (product.discountType === 'FIXED') {
+          price -= product.discountValue;
+        }
+        
+        calculatedTotal += price * item.quantity;
+        
+        // Add to snapshot list
+        finalItems.push({
+          productId: product.id,
+          sku: item.sku,
+          name: product.name,
+          image: product.images[0]?.url || '',
+          price: price,
+          quantity: item.quantity,
+          size: item.size,
+          color: item.color
+        });
+      }
+
+      // D. Create the Order Record
+      const newOrder = await tx.order.create({
+        data: {
+          orderNumber,
+          guestToken, // Always defined now
+          userId: customerId,
+          email: customerEmail,
+          shippingAddress,
+          items: finalItems,
+          totalAmount: calculatedTotal,
+          status: 'PENDING',
+          paymentMethod: 'COD'
+        }
+      });
+
+      // E. Clear User Cart (Only for logged-in users)
+      if (customerId) {
+        await tx.cart.update({
+          where: { userId: customerId },
+          data: { items: [] }
+        });
+      }
+
+      return newOrder;
+    });
+
+    // Customer Invoice
+    sendOrderConfirmation(order).catch(err => console.error("Invoice Email Failed", err));
+    
+    // Shop Owner Alert
+    sendShopNewOrderNotification(order).catch(err => console.error("Shop Alert Failed", err));
+
+    // --- 3. RESPONSE ---
+    return res.status(200).json({ 
+      success: true, 
+      orderId: order.orderNumber, 
+      guestToken: order.guestToken 
+    });
+
+  } catch (error: any) {
+    console.error("Order Creation Error:", error);
+    return res.status(400).json({ 
+      success: false, 
+      message: error.message || "Failed to place order" 
+    });
+  }
+};
+
+
+export const getGuestOrder = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { token } = req.params;
+
+    if (!token) return res.status(400).json({ message: "Token required" });
+
+    const order = await prisma.order.findUnique({
+      where: { guestToken: token }
+    });
+
+    if (!order) {
+        return res.status(404).json({ message: "Invalid tracking link" });
+    }
+
+    // 🛑 EXPIRATION LOGIC
+    // If the order is finished, we block access to protect customer privacy
+    if (order.status === 'DELIVERED' || order.status === 'CANCELLED') {
+        return res.status(410).json({ 
+            message: "Link Expired", 
+            reason: order.status, // "DELIVERED" or "CANCELLED"
+            orderNumber: order.orderNumber // Let them know which order it was
+        });
+    }
+
+    return res.json(order);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+
+export const getUserOrders = async (req: any, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user.id; // From middleware
+    
+    const orders = await prisma.order.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        orderNumber: true,
+        createdAt: true,
+        status: true,
+        totalAmount: true,
+        items: true // Optional: if you want to show thumbnails in the list
+      }
+    });
+
+    return res.json(orders);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+// --- 6. GET SINGLE ORDER (Logged In) ---
+export const getOrderById = async (req: any, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+
+    const order = await prisma.order.findUnique({
+      where: { id }
+    });
+
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    // Security Check: Ensure this order belongs to the user
+    if (order.userId !== userId) {
+        return res.status(403).json({ message: "Unauthorized access to this order" });
+    }
+
+    return res.json(order);
+  } catch (error) {
+    return next(error);
+  }
+};
