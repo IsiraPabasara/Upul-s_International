@@ -158,8 +158,10 @@ export default function ProductForm({
       } else {
         cleanData.variants = [];
         cleanData.sizeType = "One Size";
-        cleanData.stock = Number(data.stock);
+        cleanData.stock = Number(data.stock) || 0;
       }
+
+      console.log("Submitting Payload:", cleanData);
 
       await onSubmit(cleanData);
     } catch (error) {
@@ -272,7 +274,6 @@ export default function ProductForm({
           />
         </div>
       </div>
-
       {/* 2. MARKETING & PRICING */}
       <div className="space-y-4">
         <h2 className="text-xl font-semibold text-gray-700 border-b pb-2">
@@ -349,26 +350,11 @@ export default function ProductForm({
       </div>
 
       {/* 3. CATEGORIZATION */}
-      {/* 3. CATEGORIZATION */}
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-gray-700 border-b pb-2">Categorization</h2>
+        <h2 className="text-xl font-semibold text-gray-700 border-b pb-2">
+          Categorization
+        </h2>
         <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-          
-          {/* 👇 NEW: Show the existing category name if editing */}
-          {initialData?.category && (
-            <div className="mb-3 flex items-center gap-2 bg-white p-2 rounded border border-blue-200 shadow-sm">
-              <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">Current Category:</span>
-              <span className="text-sm font-medium text-gray-800">
-                {/* Assuming your API returns the category object included */}
-                {initialData.category.name}
-              </span>
-            </div>
-          )}
-
-          <label className="text-sm text-gray-500 mb-1 block">
-            {isEditMode ? "Change Category (Optional):" : "Select Category:"}
-          </label>
-          
           <Controller
             name="categoryId"
             control={control}
@@ -376,13 +362,14 @@ export default function ProductForm({
               <ParentSelector
                 key={`cat-${resetKey}`}
                 refreshTrigger={0}
+                // 👇 PASS THE INITIAL ID HERE
+                initialCategoryId={initialData?.categoryId}
                 onSelectionChange={(id) => field.onChange(id || "")}
               />
             )}
           />
         </div>
       </div>
-
       {/* 4. INVENTORY */}
       <div className="space-y-4">
         <div className="flex items-center justify-between border-b pb-2">
@@ -416,12 +403,11 @@ export default function ProductForm({
             <input
               type="number"
               className="input-field text-lg font-medium w-full md:w-1/3"
-              {...register("stock", { required: !hasVariants, min: 0 })}
+              {...register("stock", { required: !hasVariants, min: 0 ,valueAsNumber: true })}
             />
           </div>
         )}
       </div>
-
       {/* SUBMIT */}
       <div className="pt-4">
         <button
@@ -439,7 +425,6 @@ export default function ProductForm({
                 : "Publish Product"}
         </button>
       </div>
-
       <style jsx>{`
         .label {
           display: block;

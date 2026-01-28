@@ -53,7 +53,7 @@ export const getShopProducts = async (req: Request, res: Response, next: NextFun
     // --- 2. Build Filter (Where Clause) ---
     const where: any = { 
       availability: true,
-      visibility:true
+      visible:true
     };
 
     // A. Text Search (Name, Description, Brand)

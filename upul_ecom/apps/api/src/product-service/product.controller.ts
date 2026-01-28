@@ -25,12 +25,19 @@ export const createProduct = async (
         .json({ message: "Error generating unique SKU, please try again." });
     }
 
-    let calculatedStock = 0;
-    if (data.variants && Array.isArray(data.variants)) {
-      calculatedStock = data.variants.reduce(
-        (sum: number, v: any) => sum + parseInt(v.stock || 0),
-        0,
+    // 👇 FIXED STOCK CALCULATION LOGIC
+    let finalStock = 0;
+
+    // Check if we actually have variants
+    if (data.variants && Array.isArray(data.variants) && data.variants.length > 0) {
+      // CASE A: Variable Product -> Sum of all variant stocks
+      finalStock = data.variants.reduce(
+        (sum: number, v: any) => sum + Number(v.stock || 0),
+        0
       );
+    } else {
+      // CASE B: Simple Product -> Use the manual stock input
+      finalStock = Number(data.stock || 0);
     }
 
     const product = await prisma.product.create({
@@ -41,15 +48,16 @@ export const createProduct = async (
         price: parseFloat(data.price),
         availability: data.availability,
         isNewArrival: data.isNewArrival,
-        discountType: data.discountType, // "NONE", "PERCENTAGE", or "FIXED"
+        discountType: data.discountType,
         discountValue: parseFloat(data.discountValue || 0),
         brand: data.brand,
         images: data.images,
         colors: data.colors || [],
         categoryId: data.categoryId,
-        sizeType: data.sizeType, // Save the type (e.g. "Shoes")
-        variants: data.variants, // Save the array [{size: "M", stock: 10}, ...]
-        stock: calculatedStock, // Save the calculated total
+        sizeType: data.sizeType,
+        variants: data.variants || [], // Ensure it's an array even if empty
+        
+        stock: finalStock, // 👈 Uses the corrected value
       },
     });
     return res.status(201).json({ message: "Product created", product });
@@ -57,7 +65,6 @@ export const createProduct = async (
     return next(error);
   }
 };
-
 export const getAllProducts = async (
   req: Request,
   res: Response,
@@ -150,6 +157,15 @@ export const updateProductBySku = async (req: Request, res: Response, next: Next
         }))
       : [];
 
+    // 3. Calculate Stock from Variants if variants are provided, otherwise use provided stock
+    let calculatedStock = Number(stock || 0);
+    if (formattedVariants.length > 0) {
+      calculatedStock = formattedVariants.reduce(
+        (sum: number, v: any) => sum + (v.stock || 0),
+        0,
+      );
+    }
+
     // ⚡ UPDATE (No Transaction needed for MongoDB Embedded Types!)
     const updatedProduct = await prisma.product.update({
       where: { sku },
@@ -157,7 +173,7 @@ export const updateProductBySku = async (req: Request, res: Response, next: Next
         name,
         description,
         price: Number(price),
-        stock: Number(stock),
+        stock: calculatedStock,
         brand,
         sizeType,
         
