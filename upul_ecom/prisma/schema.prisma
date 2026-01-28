@@ -30,6 +30,7 @@ model users {
   wishlist    Wishlist?
   addresses    Address[]
   cart        Cart?
+  orders      Order[]
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 }
@@ -155,4 +156,42 @@ type WishlistItem {
   price     Float
   image     String
   slug      String
+}
+
+enum OrderStatus {
+  PENDING     // 1. Placed, waiting for manual call
+  CONFIRMED   // 2. Call done, approved
+  PROCESSING  // 3. Packing
+  SHIPPED     // 4. Handed to Domex (Tracking ID added)
+  DELIVERED
+  CANCELLED
+}
+
+model Order {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  
+  // 1. Readable ID for Phone Calls (e.g., "ORD-93820")
+  orderNumber   String    @unique 
+  
+  // 2. Secret Token for Guest URLs (e.g., UUID)
+  guestToken    String?   @unique 
+  
+  // 3. Link to User (if logged in)
+  userId        String?   @db.ObjectId
+  user          users?    @relation(fields: [userId], references: [id])
+  
+  // 4. Domex Integration
+  trackingNumber String?  
+
+  // Snapshots (Data locked at time of purchase)
+  email         String
+  shippingAddress Json      
+  items         Json      
+  
+  totalAmount   Float
+  status        OrderStatus @default(PENDING)
+  paymentMethod String      @default("COD")
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 }
