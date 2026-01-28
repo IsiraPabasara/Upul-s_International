@@ -12,7 +12,7 @@ import toast from "react-hot-toast";
 import { useWishlist } from "@/app/hooks/useWishlist";
 
 const ProfilePage = () => {
-  const { user, isLoading } = useUser();
+  const { user, isLoading } = useUser({required: true});
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   
