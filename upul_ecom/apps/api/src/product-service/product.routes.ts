@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createProduct, getAllProducts ,getProductBySku , updateProductBySku} from './product.controller';
+import { createProduct, getAllProducts ,getProductBySku , updateProductBySku ,toggleVisibility , deleteProduct} from './product.controller';
 import {  getShopProducts } from './shop.controller';
 
 const router = Router();
@@ -9,6 +9,9 @@ router.post('/', createProduct);
 router.get('/', getAllProducts);
 router.get('/:sku', getProductBySku);
 router.put("/:sku", updateProductBySku);
+router.patch("/:sku/visibility", toggleVisibility);
+router.delete("/:sku", deleteProduct);
+
 
 
 
