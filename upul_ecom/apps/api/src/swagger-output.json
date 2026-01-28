@@ -443,9 +443,6 @@
                 "price": {
                   "example": "any"
                 },
-                "availability": {
-                  "example": "any"
-                },
                 "isNewArrival": {
                   "example": "any"
                 },
@@ -469,6 +466,9 @@
                 },
                 "sizeType": {
                   "example": "any"
+                },
+                "visible": {
+                  "example": "any"
                 }
               }
             }
@@ -485,6 +485,28 @@
       },
       "get": {
         "description": "",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "categoryId",
+            "in": "query",
+            "type": "string"
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK"

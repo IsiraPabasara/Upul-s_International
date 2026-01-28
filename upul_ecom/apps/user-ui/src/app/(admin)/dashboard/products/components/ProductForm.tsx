@@ -8,7 +8,7 @@ import ImageUploader from "./../../products/imagekit/components/ImageUploader";
 import StockManager from "./../stockmanager/components/StockManager";
 import ColorSelector from "./../colorselector/ColorSelector";
 import { uploadImageToKit } from "./../imagekit/utils/uploadService";
-import { Loader2 } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
 
 // --- TYPES ---
 interface ProductImage {
@@ -37,6 +37,7 @@ export interface ProductFormValues {
   isNewArrival: boolean;
   discountType: "NONE" | "PERCENTAGE" | "FIXED";
   discountValue: number;
+  visible?: boolean;
 }
 
 interface Props {
@@ -59,6 +60,7 @@ const INITIAL_DATA: ProductFormValues = {
   isNewArrival: true,
   discountType: "NONE",
   discountValue: 0,
+  visible: false,
 };
 
 export default function ProductForm({
@@ -71,6 +73,8 @@ export default function ProductForm({
   const [selectedRawFiles, setSelectedRawFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [hasVariants, setHasVariants] = useState(false);
+
+  const MAX_IMAGES = 5;
 
   const {
     register,
@@ -93,7 +97,12 @@ export default function ProductForm({
         setHasVariants(true);
       }
 
-      // 3. Debugging: Check if data is actually here
+      // 3. Ensure visible field is set properly
+      if (initialData.visible !== undefined) {
+        setValue("visible", initialData.visible);
+      }
+
+      // 4. Debugging: Check if data is actually here
       console.log("Loaded Data:", initialData);
     }
   }, [initialData, reset]);
@@ -119,6 +128,12 @@ export default function ProductForm({
   const onFormSubmit: SubmitHandler<ProductFormValues> = async (data) => {
     if (!data.categoryId) {
       alert("Please select a category");
+      return;
+    }
+
+    const totalImages = currentImages.length + selectedRawFiles.length;
+    if (totalImages > MAX_IMAGES) {
+      alert(`You can only have a maximum of ${MAX_IMAGES} images.`);
       return;
     }
 
@@ -236,42 +251,91 @@ export default function ProductForm({
         </div>
 
         {/* MEDIA SECTION */}
+        {/* MEDIA SECTION */}
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-gray-700 border-b pb-2">
-            Media
-          </h2>
+          <div className="flex justify-between items-center border-b pb-2">
+             <h2 className="text-xl font-semibold text-gray-700">Media</h2>
+             <span className={`text-xs font-medium ${currentImages.length + selectedRawFiles.length >= MAX_IMAGES ? 'text-red-500' : 'text-gray-400'}`}>
+               {currentImages.length + selectedRawFiles.length} / {MAX_IMAGES} images
+             </span>
+          </div>
 
-          {/* Show Existing Images */}
-          {currentImages.length > 0 && (
-            <div className="grid grid-cols-5 gap-4 mb-4">
-              {currentImages.map((img, idx) => (
-                <div
-                  key={idx}
-                  className="relative group border rounded-lg overflow-hidden aspect-square"
-                >
+          {/* 1. PREVIEW GRID (Combined Old + New) */}
+          <div className="grid grid-cols-5 gap-4 mb-4">
+             
+             {/* A. EXISTING IMAGES (From DB) */}
+             {currentImages.map((img, idx) => (
+                <div key={`old-${idx}`} className="relative group border rounded-lg overflow-hidden aspect-square bg-gray-50 h-10">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={img.url}
-                    alt="product"
-                    className="object-cover w-full h-full"
-                  />
+                  <img src={img.url} alt="product" className="object-cover w-full h-full" />
                   <button
                     type="button"
                     onClick={() => removeExistingImage(idx)}
-                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-sm"
                   >
                     ✕
                   </button>
+                  <span className="absolute bottom-0 left-0 bg-black/50 text-white text-[10px] px-1 w-full text-center">Saved</span>
                 </div>
-              ))}
+             ))}
+
+             {/* B. NEW IMAGES (Staged for Upload) */}
+             {selectedRawFiles.map((file, idx) => (
+                <div key={`new-${idx}`} className="relative group border-2 border-dashed border-blue-200 rounded-lg overflow-hidden aspect-square bg-blue-50">
+                  {/* Create a temporary URL for preview */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={URL.createObjectURL(file)} alt="preview" className="object-cover w-full h-full opacity-90" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                       // Remove from NEW array
+                       const updated = [...selectedRawFiles];
+                       updated.splice(idx, 1);
+                       setSelectedRawFiles(updated);
+                    }}
+                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-sm"
+                  >
+                    ✕
+                  </button>
+                  <span className="absolute bottom-0 left-0 bg-blue-600 text-white text-[10px] px-1 w-full text-center">New</span>
+                </div>
+             ))}
+          </div>
+
+          {/* 2. UPLOADER (Conditionally Hidden) */}
+          {currentImages.length + selectedRawFiles.length < MAX_IMAGES ? (
+             <ImageUploader 
+               key={`uploader-${resetKey}`} // 👈 FORCE RESET after every drop
+               onFilesSelected={(incomingFiles) => {
+                  // A. Calculate strictly how many slots are left
+                  const currentTotal = currentImages.length + selectedRawFiles.length;
+                  const slotsLeft = MAX_IMAGES - currentTotal;
+                  
+                  if (slotsLeft <= 0) {
+                     alert("Maximum image limit reached!");
+                     setResetKey(prev => prev + 1); // Reset uploader to clear selection
+                     return;
+                  }
+
+                  // B. Slice the incoming files if they exceed slots
+                  let filesToAdd = incomingFiles;
+                  if (incomingFiles.length > slotsLeft) {
+                     alert(`Limit reached! Only adding the first ${slotsLeft} images.`);
+                     filesToAdd = incomingFiles.slice(0, slotsLeft);
+                  }
+
+                  // C. Append to our Master List
+                  setSelectedRawFiles(prev => [...prev, ...filesToAdd]);
+                  
+                  // D. Reset the Uploader Component (so it's ready for next batch)
+                  setResetKey(prev => prev + 1);
+               }} 
+             />
+          ) : (
+            <div className="p-4 bg-gray-100 rounded-lg text-center text-xs text-gray-500 border border-dashed border-gray-300">
+               Maximum of {MAX_IMAGES} images reached. Remove some to add more.
             </div>
           )}
-
-          {/* Upload New */}
-          <ImageUploader
-            key={`img-${resetKey}`}
-            onFilesSelected={(files) => setSelectedRawFiles(files)}
-          />
         </div>
       </div>
       {/* 2. MARKETING & PRICING */}
@@ -403,11 +467,69 @@ export default function ProductForm({
             <input
               type="number"
               className="input-field text-lg font-medium w-full md:w-1/3"
-              {...register("stock", { required: !hasVariants, min: 0 ,valueAsNumber: true })}
+              {...register("stock", {
+                required: !hasVariants,
+                min: 0,
+                valueAsNumber: true,
+              })}
             />
           </div>
         )}
       </div>
+
+      {isEditMode && (
+        <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 space-y-4">
+          <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+            Store Visibility
+          </h3>
+          <p className="text-sm text-gray-500">
+            Control if this product is hidden from customers.
+          </p>
+
+          <Controller
+            name="visible"
+            control={control}
+            // 👇 CRITICAL: Default to true if undefined
+            defaultValue={initialData?.visible ?? true}
+            render={({ field }) => (
+              <div className="flex items-center gap-4">
+                {/* Option 1: Visible */}
+                <label
+                  className={`flex items-center gap-2 cursor-pointer p-2 rounded border transition ${field.value === true ? "bg-green-50 border-green-200 ring-1 ring-green-500" : "bg-white border-gray-200"}`}
+                >
+                  <input
+                    type="radio"
+                    // 👇 We manually handle the change to ensure BOOLEAN
+                    onChange={() => field.onChange(true)}
+                    checked={field.value === true}
+                    className="w-4 h-4 accent-green-600"
+                  />
+                  <span className="flex items-center gap-1 text-green-700 font-medium">
+                    <Eye size={16} /> Visible
+                  </span>
+                </label>
+
+                {/* Option 2: Hidden */}
+                <label
+                  className={`flex items-center gap-2 cursor-pointer p-2 rounded border transition ${field.value === false ? "bg-gray-100 border-gray-300 ring-1 ring-gray-400" : "bg-white border-gray-200"}`}
+                >
+                  <input
+                    type="radio"
+                    // 👇 We manually handle the change to ensure BOOLEAN
+                    onChange={() => field.onChange(false)}
+                    checked={field.value === false}
+                    className="w-4 h-4 accent-gray-500"
+                  />
+                  <span className="flex items-center gap-1 text-gray-600 font-medium">
+                    <EyeOff size={16} /> Hidden (Draft)
+                  </span>
+                </label>
+              </div>
+            )}
+          />
+        </div>
+      )}
+
       {/* SUBMIT */}
       <div className="pt-4">
         <button
