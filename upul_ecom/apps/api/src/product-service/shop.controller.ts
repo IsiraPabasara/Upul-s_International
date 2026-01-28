@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from "express";
 import prisma from "../../../../packages/libs/prisma";
-
 /**
  * Helper: Recursively finds the ID of a root category and ALL its descendants.
  * Example: Input "Men" -> Returns IDs for ["Men", "Clothing", "Shirts", "Oxford Shirts"]
@@ -53,7 +52,8 @@ export const getShopProducts = async (req: Request, res: Response, next: NextFun
 
     // --- 2. Build Filter (Where Clause) ---
     const where: any = { 
-      availability: true 
+      availability: true,
+      visible:true
     };
 
     // A. Text Search (Name, Description, Brand)
@@ -147,31 +147,5 @@ export const getShopProducts = async (req: Request, res: Response, next: NextFun
 
   } catch (error) {
     next(error);
-  }
-};
-
-
-
-export const getProductBySku = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { sku } = req.params;
-
-    const product = await prisma.product.findUnique({
-      where: { sku },
-      include: {
-        category: true 
-      }
-    });
-
-    if (!product) {
-      // Return needed
-      return res.status(404).json({ message: "Product not found" });
-    }
-
-    // Return needed
-    return res.json(product);
-  } catch (error) {
-    // Return needed
-    return next(error);
   }
 };
