@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect , useRef } from "react";
 import { Plus, Trash2, AlertCircle, RefreshCw } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import axiosInstance from "@/app/utils/axiosInstance";
@@ -30,16 +30,17 @@ export default function StockManager({
   initialSizeType 
 }: StockManagerProps) {
   
-  // 1. FETCH SIZE STANDARDS FROM DB 🌍
+  // 1. FETCH SIZE STANDARDS
   const { data: sizeTypes = [], isLoading } = useQuery<SizeType[]>({
     queryKey: ['size-types'],
     queryFn: async () => {
-      const res = await axiosInstance.get('/api/size-types'); // Assuming public endpoint or auth header is handled
+      const res = await axiosInstance.get('/api/size-types');
       return res.data;
     },
-    // Optional: Keep data fresh but don't refetch constantly
     staleTime: 1000 * 60 * 5, 
   });
+
+  const hasHydrated = useRef(false);
 
   const [sizeType, setSizeType] = useState<string>("");
   const [rows, setRows] = useState<VariantRow[]>([
@@ -48,23 +49,36 @@ export default function StockManager({
 
   // 2. HYDRATION (Load Data)
   useEffect(() => {
+    // 👇 3. STOP if we already hydrated
+    if (hasHydrated.current) return;
+
+    let dataLoaded = false;
+
     if (initialVariants && initialVariants.length > 0) {
       setRows(initialVariants.map((v, i) => ({
         id: Date.now() + i,
         size: v.size,
         stock: v.stock
       })));
+      dataLoaded = true;
     }
     
-    // Set initial type, or default to the first available one from DB once loaded
+    // Handle Size Type
     if (initialSizeType) {
       setSizeType(initialSizeType);
     } else if (sizeTypes.length > 0 && !sizeType) {
       setSizeType(sizeTypes[0].name);
     }
-  }, [initialVariants, initialSizeType, sizeTypes, sizeType]);
 
-  // 3. SYNC WITH PARENT FORM
+    // Only mark as hydrated if we actually had initial variants to load
+    // This prevents locking it if the data was just empty/loading initially
+    if (initialVariants && initialVariants.length > 0) {
+       hasHydrated.current = true;
+    }
+
+  }, [initialVariants, initialSizeType, sizeTypes, sizeType]);
+  
+  // 3. SYNC WITH PARENT
   useEffect(() => {
     const cleanVariants = rows.map(({ size, stock }) => ({ size, stock }));
     onUpdate({ sizeType, variants: cleanVariants });
@@ -88,14 +102,12 @@ export default function StockManager({
   };
 
   // 4. DETERMINE OPTIONS
-  // Find the currently selected Size Type object from the DB list
   const selectedTypeObj = sizeTypes.find(t => t.name === sizeType);
-  
-  // If we found it, use its values. If not (or if "Custom"), use empty array.
   const currentOptions = selectedTypeObj ? selectedTypeObj.values : [];
-  
-  // If we have options, it's a Dropdown. If not, it's a Text Input (Custom).
   const isDropdown = currentOptions.length > 0;
+
+  // 👇 NEW: Get a list of all sizes currently selected in ANY row
+  const selectedSizes = rows.map(r => r.size).filter(s => s !== "");
 
   return (
     <div className="bg-white p-6 rounded-lg border border-gray-200 animate-in fade-in slide-in-from-top-2">
@@ -116,8 +128,8 @@ export default function StockManager({
             value={sizeType}
             onChange={(e) => {
                setSizeType(e.target.value);
-               // Optional: Clear rows when switching types to prevent mismatched data
-               // setRows([{ id: Date.now(), size: "", stock: 0 }]); 
+               // Reset rows to avoid invalid sizes sticking around
+               setRows([{ id: Date.now(), size: "", stock: 0 }]); 
             }}
             disabled={isLoading}
             className="p-2 border border-gray-300 rounded-md text-sm bg-gray-50 focus:ring-2 focus:ring-black/5 outline-none min-w-[150px]"
@@ -150,7 +162,6 @@ export default function StockManager({
             {rows.map((row) => (
               <tr key={row.id} className="group hover:bg-gray-50/50 transition-colors">
                 <td className="p-3">
-                  {/* 👇 CONDITIONAL INPUT: Dropdown vs Text */}
                   {isDropdown ? (
                     <select
                       value={row.size}
@@ -158,9 +169,21 @@ export default function StockManager({
                       className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 outline-none cursor-pointer"
                     >
                       <option value="">-- Select Size --</option>
-                      {currentOptions.map(opt => (
-                        <option key={opt} value={opt}>{opt}</option>
-                      ))}
+                      {currentOptions.map(opt => {
+                        // 👇 LOGIC: Disable if selected elsewhere
+                        const isSelectedElsewhere = selectedSizes.includes(opt) && row.size !== opt;
+                        
+                        return (
+                          <option 
+                            key={opt} 
+                            value={opt} 
+                            disabled={isSelectedElsewhere}
+                            className={isSelectedElsewhere ? "text-gray-300 bg-gray-50" : ""}
+                          >
+                            {opt} {isSelectedElsewhere ? "(Selected)" : ""}
+                          </option>
+                        );
+                      })}
                     </select>
                   ) : (
                     <input
@@ -205,7 +228,8 @@ export default function StockManager({
         <button
           type="button"
           onClick={handleAddRow}
-          className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg transition"
+          disabled={isDropdown && rows.length >= currentOptions.length} // Disable adding if all options are used
+          className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Plus size={16} /> Add Variant
         </button>
