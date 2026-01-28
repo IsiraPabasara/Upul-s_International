@@ -11,8 +11,7 @@ import Link from 'next/link';
 export default function AdminOrderDetails() {
   const { id } = useParams();
   const queryClient = useQueryClient();
-  const router = useRouter();
-  
+
   const [trackingInput, setTrackingInput] = useState("");
 
   // 1. Fetch Order Data
