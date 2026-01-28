@@ -1,18 +1,25 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Trash2, AlertCircle } from "lucide-react";
+import { Plus, Trash2, AlertCircle, RefreshCw } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import axiosInstance from "@/app/utils/axiosInstance";
 
 // Types
+interface SizeType {
+  id: string;
+  name: string;
+  values: string[];
+}
+
 interface VariantRow {
-  id: number; // Internal ID for React Keys
+  id: number;
   size: string;
   stock: number;
 }
 
 interface StockManagerProps {
   onUpdate: (data: { sizeType: string; variants: { size: string; stock: number }[] }) => void;
-  // 👇 NEW PROPS for Edit Mode
   initialVariants?: { size: string; stock: number }[];
   initialSizeType?: string;
 }
@@ -23,45 +30,53 @@ export default function StockManager({
   initialSizeType 
 }: StockManagerProps) {
   
-  // State
-  const [sizeType, setSizeType] = useState<string>("Standard");
+  // 1. FETCH SIZE STANDARDS FROM DB 🌍
+  const { data: sizeTypes = [], isLoading } = useQuery<SizeType[]>({
+    queryKey: ['size-types'],
+    queryFn: async () => {
+      const res = await axiosInstance.get('/api/size-types'); // Assuming public endpoint or auth header is handled
+      return res.data;
+    },
+    // Optional: Keep data fresh but don't refetch constantly
+    staleTime: 1000 * 60 * 5, 
+  });
+
+  const [sizeType, setSizeType] = useState<string>("");
   const [rows, setRows] = useState<VariantRow[]>([
-    { id: Date.now(), size: "", stock: 0 } // Default empty row
+    { id: Date.now(), size: "", stock: 0 }
   ]);
 
-  // --- 1. HYDRATION (Load Existing Data) ---
+  // 2. HYDRATION (Load Data)
   useEffect(() => {
-    // If we have initial data (Edit Mode), load it
     if (initialVariants && initialVariants.length > 0) {
-      const hydratedRows = initialVariants.map((v, index) => ({
-        id: Date.now() + index, // Generate unique IDs
+      setRows(initialVariants.map((v, i) => ({
+        id: Date.now() + i,
         size: v.size,
         stock: v.stock
-      }));
-      setRows(hydratedRows);
+      })));
     }
-
+    
+    // Set initial type, or default to the first available one from DB once loaded
     if (initialSizeType) {
       setSizeType(initialSizeType);
+    } else if (sizeTypes.length > 0 && !sizeType) {
+      setSizeType(sizeTypes[0].name);
     }
-  }, [initialVariants, initialSizeType]);
+  }, [initialVariants, initialSizeType, sizeTypes, sizeType]);
 
-  // --- 2. SYNC WITH PARENT ---
+  // 3. SYNC WITH PARENT FORM
   useEffect(() => {
-    // Convert internal rows to clean data for the parent form
     const cleanVariants = rows.map(({ size, stock }) => ({ size, stock }));
     onUpdate({ sizeType, variants: cleanVariants });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, sizeType]);
 
-  // --- HANDLERS ---
   const handleAddRow = () => {
     setRows(prev => [...prev, { id: Date.now(), size: "", stock: 0 }]);
   };
 
   const handleRemoveRow = (id: number) => {
     if (rows.length === 1) {
-      // Don't remove the last row, just clear it
       setRows([{ id: Date.now(), size: "", stock: 0 }]);
       return;
     }
@@ -69,36 +84,54 @@ export default function StockManager({
   };
 
   const updateRow = (id: number, field: "size" | "stock", value: string | number) => {
-    setRows(prev => prev.map(row => {
-      if (row.id === id) {
-        return { ...row, [field]: value };
-      }
-      return row;
-    }));
+    setRows(prev => prev.map(row => row.id === id ? { ...row, [field]: value } : row));
   };
+
+  // 4. DETERMINE OPTIONS
+  // Find the currently selected Size Type object from the DB list
+  const selectedTypeObj = sizeTypes.find(t => t.name === sizeType);
+  
+  // If we found it, use its values. If not (or if "Custom"), use empty array.
+  const currentOptions = selectedTypeObj ? selectedTypeObj.values : [];
+  
+  // If we have options, it's a Dropdown. If not, it's a Text Input (Custom).
+  const isDropdown = currentOptions.length > 0;
 
   return (
     <div className="bg-white p-6 rounded-lg border border-gray-200 animate-in fade-in slide-in-from-top-2">
-      <div className="flex justify-between items-start mb-6">
+      
+      {/* Header & Type Selector */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <div>
-          <h3 className="font-semibold text-gray-800">Variant Manager</h3>
-          <p className="text-sm text-gray-500">Manage sizes and stock levels for this product.</p>
+          <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+            Variant Manager
+            {isLoading && <RefreshCw className="animate-spin text-gray-400" size={14} />}
+          </h3>
+          <p className="text-sm text-gray-500">Manage sizes and stock levels.</p>
         </div>
         
-        {/* Size Type Selector */}
         <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-gray-600">Size Standard:</label>
+          <label className="text-sm font-medium text-gray-600 whitespace-nowrap">Size Type:</label>
           <select 
             value={sizeType}
-            onChange={(e) => setSizeType(e.target.value)}
-            className="p-2 border border-gray-300 rounded-md text-sm bg-gray-50 focus:ring-2 focus:ring-black/5 outline-none"
+            onChange={(e) => {
+               setSizeType(e.target.value);
+               // Optional: Clear rows when switching types to prevent mismatched data
+               // setRows([{ id: Date.now(), size: "", stock: 0 }]); 
+            }}
+            disabled={isLoading}
+            className="p-2 border border-gray-300 rounded-md text-sm bg-gray-50 focus:ring-2 focus:ring-black/5 outline-none min-w-[150px]"
           >
-            <option value="Standard">Standard (S, M, L)</option>
-            <option value="US">US Sizes (4, 6, 8)</option>
-            <option value="EU">EU Sizes (36, 38, 40)</option>
-            <option value="UK">UK Sizes (8, 10, 12)</option>
-            <option value="Shoes">Shoe Sizes (40, 41, 42)</option>
-            <option value="Kids">Kids Ages (2Y, 3Y, 4Y)</option>
+            {isLoading ? (
+               <option>Loading...</option>
+            ) : (
+              <>
+                {sizeTypes.map((type) => (
+                  <option key={type.id} value={type.name}>{type.name}</option>
+                ))}
+                <option value="Custom">Custom (Manual Input)</option>
+              </>
+            )}
           </select>
         </div>
       </div>
@@ -108,22 +141,36 @@ export default function StockManager({
         <table className="w-full text-sm text-left">
           <thead className="bg-gray-50 text-gray-500 font-medium">
             <tr>
-              <th className="p-3 w-1/3">Size Label</th>
-              <th className="p-3 w-1/3">Stock Quantity</th>
-              <th className="p-3 text-right">Actions</th>
+              <th className="p-3 w-1/2">Size ({sizeType || "Custom"})</th>
+              <th className="p-3 w-1/3">Stock Qty</th>
+              <th className="p-3 text-right">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {rows.map((row, index) => (
+            {rows.map((row) => (
               <tr key={row.id} className="group hover:bg-gray-50/50 transition-colors">
                 <td className="p-3">
-                  <input
-                    type="text"
-                    value={row.size}
-                    onChange={(e) => updateRow(row.id, "size", e.target.value)}
-                    placeholder={sizeType === "Shoes" ? "e.g. 42" : "e.g. XL"}
-                    className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 outline-none transition"
-                  />
+                  {/* 👇 CONDITIONAL INPUT: Dropdown vs Text */}
+                  {isDropdown ? (
+                    <select
+                      value={row.size}
+                      onChange={(e) => updateRow(row.id, "size", e.target.value)}
+                      className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 outline-none cursor-pointer"
+                    >
+                      <option value="">-- Select Size --</option>
+                      {currentOptions.map(opt => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={row.size}
+                      onChange={(e) => updateRow(row.id, "size", e.target.value)}
+                      placeholder="Enter custom size"
+                      className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 outline-none"
+                    />
+                  )}
                 </td>
                 <td className="p-3">
                   <input
@@ -131,15 +178,14 @@ export default function StockManager({
                     value={row.stock}
                     onChange={(e) => updateRow(row.id, "stock", Number(e.target.value))}
                     min="0"
-                    className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 outline-none transition"
+                    className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 outline-none"
                   />
                 </td>
                 <td className="p-3 text-right">
                   <button
                     type="button"
                     onClick={() => handleRemoveRow(row.id)}
-                    className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 rounded transition"
-                    title="Remove Variant"
+                    className="text-gray-400 hover:text-red-500 p-2 rounded transition"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -150,20 +196,18 @@ export default function StockManager({
         </table>
       </div>
 
-      {/* Footer Actions */}
+      {/* Footer */}
       <div className="mt-4 flex justify-between items-center">
         <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 px-3 py-1.5 rounded-full">
            <AlertCircle size={14} />
            <span>Total Stock: <strong>{rows.reduce((acc, r) => acc + (Number(r.stock) || 0), 0)}</strong></span>
         </div>
-
         <button
           type="button"
           onClick={handleAddRow}
-          className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-4 py-2 rounded-lg transition"
+          className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg transition"
         >
-          <Plus size={16} />
-          Add Another Size
+          <Plus size={16} /> Add Variant
         </button>
       </div>
     </div>

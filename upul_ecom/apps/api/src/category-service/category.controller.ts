@@ -179,3 +179,29 @@ export const reorderCategories = async (
     return next(error);
   }
 };
+
+export const getCategoryPath = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const path = [];
+    
+    let currentId: string | null = id; 
+
+    while (currentId) {
+      const categoryItem: { id: string; name: string; parentId: string | null } | null = await prisma.category.findUnique({
+        where: { id: currentId },
+        select: { id: true, name: true, parentId: true }
+      });
+
+      if (!categoryItem) break;
+
+      path.unshift(categoryItem); 
+      
+      currentId = categoryItem.parentId; 
+    }
+
+    return res.json(path);
+  } catch (error) {
+    return next(error);
+  }
+};
