@@ -9,6 +9,7 @@ import axiosInstance from "@/app/utils/axiosInstance";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCart } from "@/app/hooks/useCart";
 import toast from "react-hot-toast";
+import { useWishlist } from "@/app/hooks/useWishlist";
 
 const ProfilePage = () => {
   const { user, isLoading } = useUser();
@@ -26,8 +27,10 @@ const ProfilePage = () => {
       
       // Clear Zustand cart state and localStorage
       useCart.getState().clearCart();
+      useWishlist.getState().clearWishlist();
+      useWishlist.persist.clearStorage();
       localStorage.removeItem('eshop-cart-storage');
-      
+      localStorage.removeItem('eshop-wishlist-storage');
       toast.success("Logged out successfully");
       router.push('/login');
     } catch (error) {
