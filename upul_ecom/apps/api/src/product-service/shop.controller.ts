@@ -53,7 +53,8 @@ export const getShopProducts = async (req: Request, res: Response, next: NextFun
 
     // --- 2. Build Filter (Where Clause) ---
     const where: any = { 
-      availability: true 
+      availability: true,
+      visible: true,
     };
 
     // A. Text Search (Name, Description, Brand)
@@ -156,8 +157,8 @@ export const getProductBySku = async (req: Request, res: Response, next: NextFun
   try {
     const { sku } = req.params;
 
-    const product = await prisma.product.findUnique({
-      where: { sku },
+    const product = await prisma.product.findFirst({
+      where: { sku, visible: true },
       include: {
         category: true 
       }

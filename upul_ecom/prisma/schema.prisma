@@ -58,6 +58,7 @@ model Product {
   price        Float
   availability Boolean @default(true)
   brand        String
+  visible      Boolean       @default(true)
 
   images ProductImage[]
   colors String[]

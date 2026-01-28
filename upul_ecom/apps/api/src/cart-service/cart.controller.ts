@@ -64,11 +64,33 @@ export const getCart = async (req: any, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.id;
     const cart = await prisma.cart.findUnique({ where: { userId } });
+
+    if (!cart) {
+      return res.json([]);
+    }
+
+    const visibleItems = await filterVisibleItems(cart.items);
     
-    return res.json(cart ? cart.items : []);
+    return res.json(visibleItems);
   } catch (error) {
     return next(error);
   }
+};
+
+const filterVisibleItems = async (items: any[]) => {
+  const productIds = items.map((item) => item.productId);
+  const visibleProducts = await prisma.product.findMany({
+    where: {
+      id: { in: productIds },
+      visible: true,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  const visibleProductIds = new Set(visibleProducts.map((p) => p.id));
+  return items.filter((item) => visibleProductIds.has(item.productId));
 };
 
 // --- 1. Add Item (Logged In) ---
@@ -76,6 +98,14 @@ export const addToCart = async (req: any, res: Response, next: NextFunction) => 
   try {
     const userId = req.user!.id;
     const item = req.body; 
+
+    const product = await prisma.product.findUnique({
+      where: { id: item.productId },
+    });
+
+    if (!product || !product.visible) {
+      return res.status(404).json({ message: "Product not found or not available" });
+    }
 
     let cart = await prisma.cart.findUnique({ where: { userId } });
     if (!cart) {

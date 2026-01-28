@@ -49,9 +49,59 @@ export const createProduct = async (
         sizeType: data.sizeType, // Save the type (e.g. "Shoes")
         variants: data.variants, // Save the array [{size: "M", stock: 10}, ...]
         stock: calculatedStock, // Save the calculated total
+        visible: data.visible,
       },
     });
     return res.status(201).json({ message: "Product created", product });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const updateProductVisibility = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { id } = req.params;
+    const { visible } = req.body;
+
+    const product = await prisma.product.update({
+      where: { id },
+      data: { visible },
+    });
+
+    // If the product is made invisible, remove it from all carts and wishlists
+    if (visible === false) {
+      const productId = id;
+
+      // Remove from all carts using a raw update command
+      await prisma.$runCommandRaw({
+        update: "Cart", // Note: This should match the model name in the database, which is often pluralized. Let's try "Cart" first.
+        updates: [
+          {
+            q: { "items.productId": productId },
+            u: { $pull: { items: { productId: productId } } },
+            multi: true,
+          },
+        ],
+      });
+
+      // Remove from all wishlists using a raw update command
+      await prisma.$runCommandRaw({
+        update: "Wishlist", // Same as above, using model name.
+        updates: [
+          {
+            q: { "items.productId": productId },
+            u: { $pull: { items: { productId: productId } } },
+            multi: true,
+          },
+        ],
+      });
+    }
+
+    return res.json(product);
   } catch (error) {
     return next(error);
   }
