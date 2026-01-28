@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { createProduct, getAllProducts } from './product.controller';
-import { getProductBySku, getShopProducts } from './shop.controller';
+import { createProduct, getAllProducts ,getProductBySku , updateProductBySku} from './product.controller';
+import {  getShopProducts } from './shop.controller';
 
 const router = Router();
 router.get('/shop', getShopProducts);
@@ -8,6 +8,7 @@ router.get('/shop', getShopProducts);
 router.post('/', createProduct);
 router.get('/', getAllProducts);
 router.get('/:sku', getProductBySku);
+router.put("/:sku", updateProductBySku);
 
 
 
