@@ -7,14 +7,7 @@ import * as z from 'zod';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import {
-  MapPin,
-  CreditCard,
-  Loader2,
-  Plus,
-  Mail,
-  Banknote
-} from 'lucide-react';
+import { MapPin, CreditCard, Loader2, Plus, Mail, Banknote } from 'lucide-react';
 
 import { useCart } from '@/app/hooks/useCart';
 import useUser from '@/app/hooks/useUser';
@@ -47,8 +40,8 @@ export default function CheckoutPage() {
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  
-  // 👇 New State for Payment Method
+
+  // 👇 Payment Method
   const [paymentMethod, setPaymentMethod] = useState<'COD' | 'PAYHERE'>('COD');
 
   const subtotal = useMemo(() => {
@@ -60,7 +53,6 @@ export default function CheckoutPage() {
     }, 0);
   }, [items]);
 
-  // Form Setup
   const {
     register,
     handleSubmit,
@@ -68,18 +60,12 @@ export default function CheckoutPage() {
     reset,
   } = useForm<CheckoutFormValues>({
     resolver: zodResolver(checkoutSchema),
-    defaultValues: {
-      saveAddress: true
-    }
+    defaultValues: { saveAddress: true },
   });
-
-  // --- Effects ---
 
   // Redirect if cart is empty
   useEffect(() => {
-    if (!items || items.length === 0) {
-      router.push('/shop'); 
-    }
+    if (!items || items.length === 0) router.push('/shop');
   }, [items, router]);
 
   // Set default address if user exists
@@ -91,9 +77,7 @@ export default function CheckoutPage() {
     }
   }, [user, selectedAddressId]);
 
-  // --- Handlers ---
-
-  // A. Save New Address (For Logged In User)
+  // A. Save New Address
   const handleSaveNewAddress = async (data: CheckoutFormValues) => {
     try {
       setIsProcessing(true);
@@ -106,7 +90,7 @@ export default function CheckoutPage() {
         city: data.city,
         postalCode: data.postalCode,
         phoneNumber: data.phoneNumber,
-        isDefault: !!data.saveAddress
+        isDefault: !!data.saveAddress,
       };
 
       const res = await axiosInstance.post('/api/auth/add-address', payload);
@@ -135,16 +119,16 @@ export default function CheckoutPage() {
   // B. Place Final Order (COD or PayHere)
   const onPlaceOrder = async (data: CheckoutFormValues) => {
     setIsProcessing(true);
-    
-    try {
-      let orderPayload;
 
-      // 1. Construct Payload based on Auth Status
+    try {
+      let orderPayload: any;
+
+      // 1) Construct Payload
       if (user) {
-        // --- LOGGED IN USER ---
+        // LOGGED IN USER
         if (isAddingNewAddress) {
-             await handleSaveNewAddress(data);
-             return; 
+          await handleSaveNewAddress(data);
+          return;
         }
 
         if (!selectedAddressId) {
@@ -157,23 +141,22 @@ export default function CheckoutPage() {
           type: 'USER',
           userId: user.id,
           addressId: selectedAddressId,
-          items: items.map(item => ({ 
-             productId: item.productId, 
-             sku: item.sku, 
-             quantity: item.quantity, 
-             size: item.size,
-             color: item.color
+          items: items.map((item) => ({
+            productId: item.productId,
+            sku: item.sku,
+            quantity: item.quantity,
+            size: item.size,
+            color: item.color,
           })),
-          email: user.email, 
-          paymentMethod: paymentMethod // Pass selected method
+          email: user.email,
+          paymentMethod,
         };
-      } 
-      else {
-        // --- GUEST USER ---
+      } else {
+        // GUEST USER
         if (!data.email) {
-            toast.error("Email is required for guests");
-            setIsProcessing(false);
-            return;
+          toast.error("Email is required for guests");
+          setIsProcessing(false);
+          return;
         }
 
         orderPayload = {
@@ -188,71 +171,68 @@ export default function CheckoutPage() {
             postalCode: data.postalCode,
             phoneNumber: data.phoneNumber,
           },
-          items: items.map(item => ({ 
-             productId: item.productId, 
-             sku: item.sku, 
-             quantity: item.quantity, 
-             size: item.size, 
-             color: item.color
+          items: items.map((item) => ({
+            productId: item.productId,
+            sku: item.sku,
+            quantity: item.quantity,
+            size: item.size,
+            color: item.color,
           })),
-          paymentMethod: paymentMethod // Pass selected method
+          paymentMethod,
         };
       }
 
-      // 2. Call the API
+      // 2) Call the API
       const res = await axiosInstance.post('/api/orders', orderPayload);
-      
+
       if (res.data.success) {
-        
         // --- SCENARIO A: PAYHERE REDIRECT ---
         if (res.data.isPayHere) {
-            const params = res.data.payhereParams;
-            
-            // Create invisible form
-            const form = document.createElement("form");
-            form.setAttribute("method", "POST");
-            // Use Sandbox URL for testing, Switch to "https://www.payhere.lk/pay/checkout" for Production
-            const payHereUrl = process.env.NODE_ENV === 'production' 
-                ? "https://www.payhere.lk/pay/checkout" 
-                : "https://sandbox.payhere.lk/pay/checkout";
-                
-            form.setAttribute("action", payHereUrl);
-            
-            // Add inputs
-            Object.keys(params).forEach(key => {
-                const hiddenField = document.createElement("input");
-                hiddenField.setAttribute("type", "hidden");
-                hiddenField.setAttribute("name", key);
-                hiddenField.setAttribute("value", params[key]);
-                form.appendChild(hiddenField);
-            });
+          const params = res.data.payhereParams;
 
-            document.body.appendChild(form);
-            
-            toast.loading("Redirecting to Secure Payment...");
-            
-            // Wait a moment so user sees the toast, then submit
-            setTimeout(() => {
-                form.submit(); 
-            }, 1500);
-            
-            // Clear cart here because they are leaving the site (optional, or clear on success page)
-            clearCart(); 
-            return; 
+          const form = document.createElement("form");
+          form.setAttribute("method", "POST");
+
+          const payHereUrl =
+            process.env.NODE_ENV === 'production'
+              ? "https://www.payhere.lk/pay/checkout"
+              : "https://sandbox.payhere.lk/pay/checkout";
+
+          form.setAttribute("action", payHereUrl);
+
+          Object.keys(params).forEach((key) => {
+            const hiddenField = document.createElement("input");
+            hiddenField.setAttribute("type", "hidden");
+            hiddenField.setAttribute("name", key);
+            hiddenField.setAttribute("value", params[key]);
+            form.appendChild(hiddenField);
+          });
+
+          document.body.appendChild(form);
+
+          toast.loading("Redirecting to Secure Payment...");
+
+          setTimeout(() => {
+            form.submit();
+          }, 1500);
+
+          // ❌ REMOVED: clearCart();
+          // Keep cart items in case they cancel payment and come back.
+          // Cart can be cleared on /checkout/success instead.
+          return;
         }
 
         // --- SCENARIO B: COD SUCCESS ---
         toast.success("Order placed successfully!");
-        clearCart(); 
+        clearCart(); // ✅ Keep this for COD
         router.push(`/checkout/success?orderNumber=${res.data.orderId}`);
       }
-
     } catch (error: any) {
       console.error(error);
       const msg = error.response?.data?.message || "Failed to place order";
       toast.error(msg);
-      setIsProcessing(false); // Stop loading only on error (keep loading if redirecting)
-    } 
+      setIsProcessing(false);
+    }
   };
 
   if (isUserLoading) {
@@ -267,10 +247,10 @@ export default function CheckoutPage() {
     <div className="bg-gray-50 min-h-screen py-10 px-4 md:px-8 font-sans">
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-        {/* === LEFT COLUMN: Forms === */}
+        {/* === LEFT COLUMN === */}
         <div className="lg:col-span-7 space-y-6">
 
-          {/* 1. Contact Info (Guest Only) */}
+          {/* Contact Info (Guest Only) */}
           {!user && (
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
               <div className="flex justify-between items-center mb-4">
@@ -296,13 +276,13 @@ export default function CheckoutPage() {
             </div>
           )}
 
-          {/* 2. Shipping Address */}
+          {/* Shipping Address */}
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <h2 className="text-lg font-bold flex items-center gap-2 mb-6">
               <MapPin size={18} /> Shipping Address
             </h2>
 
-            {/* --- USER: Saved Addresses List --- */}
+            {/* Saved Addresses */}
             {user && !isAddingNewAddress && (
               <div className="space-y-4 mb-6">
                 {user.addresses && user.addresses.length > 0 ? (
@@ -342,7 +322,7 @@ export default function CheckoutPage() {
               </div>
             )}
 
-            {/* --- USER/GUEST: Address Form --- */}
+            {/* Address Form */}
             {(!user || isAddingNewAddress || (user && user.addresses.length === 0)) && (
               <div className="animate-in fade-in slide-in-from-top-4 duration-300">
                 {user && (
@@ -361,12 +341,12 @@ export default function CheckoutPage() {
                 )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* ... (Firstname, Lastname inputs) ... */}
                   <div className="space-y-1">
                     <label className="text-xs font-bold uppercase text-gray-500">First Name</label>
                     <input {...register("firstname")} className="input-field" placeholder="John" />
                     {errors.firstname && <p className="error-text">{errors.firstname.message}</p>}
                   </div>
+
                   <div className="space-y-1">
                     <label className="text-xs font-bold uppercase text-gray-500">Last Name</label>
                     <input {...register("lastname")} className="input-field" placeholder="Doe" />
@@ -430,53 +410,50 @@ export default function CheckoutPage() {
             )}
           </div>
 
-          {/* 3. Payment Method Selection (NEW) */}
+          {/* Payment Method */}
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <h2 className="text-lg font-bold flex items-center gap-2 mb-4">
               <CreditCard size={18} /> Payment Method
             </h2>
 
             <div className="space-y-3">
-                {/* Option 1: COD */}
-                <div 
-                    onClick={() => setPaymentMethod('COD')}
-                    className={`border-2 rounded-lg p-4 flex items-center gap-4 cursor-pointer transition
-                    ${paymentMethod === 'COD' ? 'border-black bg-gray-50' : 'border-gray-200 hover:border-gray-300'}`}
-                >
-                    <div className={`w-5 h-5 rounded-full border-[6px] bg-white flex items-center justify-center
-                        ${paymentMethod === 'COD' ? 'border-black' : 'border-gray-300'}`} />
-                    <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                            <Banknote size={20} className="text-green-600" />
-                            <p className="font-bold text-gray-900">Cash on Delivery (COD)</p>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">Pay with cash when the package arrives.</p>
-                    </div>
+              <div
+                onClick={() => setPaymentMethod('COD')}
+                className={`border-2 rounded-lg p-4 flex items-center gap-4 cursor-pointer transition
+                ${paymentMethod === 'COD' ? 'border-black bg-gray-50' : 'border-gray-200 hover:border-gray-300'}`}
+              >
+                <div className={`w-5 h-5 rounded-full border-[6px] bg-white
+                  ${paymentMethod === 'COD' ? 'border-black' : 'border-gray-300'}`} />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <Banknote size={20} className="text-green-600" />
+                    <p className="font-bold text-gray-900">Cash on Delivery (COD)</p>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Pay with cash when the package arrives.</p>
                 </div>
+              </div>
 
-                {/* Option 2: PayHere */}
-                <div 
-                    onClick={() => setPaymentMethod('PAYHERE')}
-                    className={`border-2 rounded-lg p-4 flex items-center gap-4 cursor-pointer transition
-                    ${paymentMethod === 'PAYHERE' ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}
-                >
-                    <div className={`w-5 h-5 rounded-full border-[6px] bg-white flex items-center justify-center
-                        ${paymentMethod === 'PAYHERE' ? 'border-blue-600' : 'border-gray-300'}`} />
-                    <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                            <CreditCard size={20} className="text-blue-600" />
-                            <p className="font-bold text-gray-900">Pay Online (Visa/Master/Amex)</p>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">Secure payment via PayHere.lk gateway.</p>
-                    </div>
-                    {/* Optional: Add PayHere Logo Image here if you have one */}
+              <div
+                onClick={() => setPaymentMethod('PAYHERE')}
+                className={`border-2 rounded-lg p-4 flex items-center gap-4 cursor-pointer transition
+                ${paymentMethod === 'PAYHERE' ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}
+              >
+                <div className={`w-5 h-5 rounded-full border-[6px] bg-white
+                  ${paymentMethod === 'PAYHERE' ? 'border-blue-600' : 'border-gray-300'}`} />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <CreditCard size={20} className="text-blue-600" />
+                    <p className="font-bold text-gray-900">Pay Online (Visa/Master/Amex)</p>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Secure payment via PayHere.lk gateway.</p>
                 </div>
+              </div>
             </div>
           </div>
 
         </div>
 
-        {/* === RIGHT COLUMN: Order Summary === */}
+        {/* === RIGHT COLUMN === */}
         <div className="lg:col-span-5">
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 sticky top-4">
             <h2 className="text-lg font-bold mb-6">Order Summary</h2>
@@ -520,24 +497,21 @@ export default function CheckoutPage() {
             </div>
 
             <button
-                type="button" 
-                onClick={(e) => {
-                    // 1. Logged In + Saved Address -> Skip Validation
-                    if (user && !isAddingNewAddress) {
-                        e.preventDefault();
-                        onPlaceOrder({} as CheckoutFormValues); 
-                    } 
-                    // 2. Guest or New Address -> Run Validation
-                    else {
-                        handleSubmit(onPlaceOrder)(e);
-                    }
-                }}
-                disabled={isProcessing || (user && isAddingNewAddress)}
-                className={`w-full mt-8 text-white py-4 rounded-lg font-bold text-lg transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed
-                    ${paymentMethod === 'PAYHERE' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-black hover:bg-gray-800'}
-                `}
+              type="button"
+              onClick={(e) => {
+                if (user && !isAddingNewAddress) {
+                  e.preventDefault();
+                  onPlaceOrder({} as CheckoutFormValues);
+                } else {
+                  handleSubmit(onPlaceOrder)(e);
+                }
+              }}
+              disabled={isProcessing || (user && isAddingNewAddress)}
+              className={`w-full mt-8 text-white py-4 rounded-lg font-bold text-lg transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed
+                ${paymentMethod === 'PAYHERE' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-black hover:bg-gray-800'}
+              `}
             >
-                {isProcessing ? <Loader2 className="animate-spin" /> : (paymentMethod === 'PAYHERE' ? "PAY & PLACE ORDER" : "PLACE ORDER")}
+              {isProcessing ? <Loader2 className="animate-spin" /> : (paymentMethod === 'PAYHERE' ? "PAY & PLACE ORDER" : "PLACE ORDER")}
             </button>
 
             <p className="text-[10px] text-gray-400 text-center mt-4">
@@ -548,7 +522,6 @@ export default function CheckoutPage() {
 
       </div>
 
-      {/* Tailwind Utility for Inputs */}
       <style jsx>{`
         .input-field {
           @apply w-full mt-1 p-3 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-black outline-none transition;

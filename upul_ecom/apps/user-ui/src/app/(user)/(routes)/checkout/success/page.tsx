@@ -3,10 +3,20 @@
 import Link from 'next/link';
 import { CheckCircle, Phone, ArrowRight } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
+import { useEffect } from 'react';
+import { useCart } from '@/app/hooks/useCart';
 
 export default function SuccessPage() {
   const searchParams = useSearchParams();
   const orderNumber = searchParams.get('orderNumber');
+  const { clearCart } = useCart();
+
+  // Clear cart when user reaches success page
+  useEffect(() => {
+    if (orderNumber) {
+      clearCart();
+    }
+  }, [orderNumber, clearCart]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">

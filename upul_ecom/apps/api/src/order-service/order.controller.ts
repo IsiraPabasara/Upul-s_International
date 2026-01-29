@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import prisma from "../../../../packages/libs/prisma"; // Adjust path if needed
+import prisma from "../../../../packages/libs/prisma"; 
 import { v4 as uuidv4 } from 'uuid'; 
 import md5 from 'md5';
 import { sendOrderConfirmation, sendShopNewOrderNotification } from "../email-service/email.service";
@@ -10,7 +10,6 @@ const generateOrderNumber = () => {
 };
 
 export const createOrder = async (req: Request, res: Response, next: NextFunction) => {
-  // ✅ Added paymentMethod (default to COD if not provided)
   const { type, userId, addressId, address, items, email, paymentMethod } = req.body;
 
   try {
@@ -19,7 +18,6 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
     let customerEmail;
     let customerId: string | null = null;
 
-    // ✅ FIX: Always generate a token (prevents unique constraint issues on null/undefined)
     const guestToken = uuidv4();
 
     // SCENARIO A: Logged-in User
@@ -73,7 +71,7 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
           throw new Error(`Insufficient stock for ${product.name}. Only ${currentStock} left.`);
         }
 
-        // B. Update Stock in DB
+        // B. Update Stock in DB (Reserve items)
         if (item.size) {
           const newVariants = [...product.variants];
           newVariants[variantIndex].stock -= item.quantity;
@@ -112,14 +110,13 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
         });
       }
 
-      // ✅ Ensure order payment method stored as COD or PAYHERE
       const finalPaymentMethod = paymentMethod === 'PAYHERE' ? 'PAYHERE' : 'COD';
 
       // D. Create the Order Record
       const newOrder = await tx.order.create({
         data: {
           orderNumber,
-          guestToken, // Always defined now
+          guestToken,
           userId: customerId,
           email: customerEmail,
           shippingAddress,
@@ -130,8 +127,10 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
         }
       });
 
-      // E. Clear User Cart (Only for logged-in users)
-      if (customerId) {
+      // E. Clear User Cart 
+      // 🟢 FIX: Only clear immediately if COD. 
+      // If PayHere, we keep it until the Payment Webhook confirms success.
+      if (customerId && finalPaymentMethod === 'COD') {
         await tx.cart.update({
           where: { userId: customerId },
           data: { items: [] }
@@ -145,7 +144,6 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
 
     // SCENARIO A: Cash On Delivery (COD)
     if (paymentMethod === 'COD' || !paymentMethod) {
-      // Send emails immediately
       sendOrderConfirmation(order).catch(console.error);
       sendShopNewOrderNotification(order).catch(console.error);
 
@@ -161,7 +159,7 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
         const merchantId = process.env.PAYHERE_MERCHANT_ID;
         const secret = process.env.PAYHERE_SECRET;
 
-        // 👇 INSERT THIS BLOCK TO PREVENT SERVER CRASHES
+        // Safety Check
         if (!merchantId || !secret) {
             console.error("❌ PayHere Credentials Missing in .env file!");
             return res.status(500).json({ 
@@ -174,11 +172,10 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
         const amount = order.totalAmount.toFixed(2);
         const orderId = order.orderNumber; 
 
-        // 🛡️ 1. Safe Address Extraction
+        // Safe Address Extraction
         const shipping = order.shippingAddress as any; 
 
-        // 🔐 2. SECURITY: Generate Hash
-        // Now it is safe to use 'secret' because we checked it above
+        // Generate Hash
         const hashedSecret = md5(secret).toUpperCase();
         const hash = md5(merchantId + orderId + amount + currency + hashedSecret).toUpperCase();
 
@@ -186,7 +183,7 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
             success: true,
             isPayHere: true,
             payhereParams: {
-                sandbox: true, // Change to false for Production
+                sandbox: true,
                 merchant_id: merchantId,
                 return_url: `${process.env.FRONTEND_URL}/checkout/success?orderNumber=${orderId}`,
                 cancel_url: `${process.env.FRONTEND_URL}/checkout`,
@@ -207,12 +204,11 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
         });
     }
 
-
-    // Fallback (unknown payment method)
     return res.status(400).json({
       success: false,
       message: "Invalid payment method"
     });
+
   } catch (error: any) {
     console.error("Order Creation Error:", error);
     return res.status(400).json({
@@ -222,81 +218,43 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
   }
 };
 
-
-
+// ... (keep the getGuestOrder, getUserOrders, getOrderById functions below as they were) ...
+// (I am omitting them here to keep the answer short, but keep them in your file!)
 export const getGuestOrder = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { token } = req.params;
-
-    if (!token) return res.status(400).json({ message: "Token required" });
-
-    const order = await prisma.order.findUnique({
-      where: { guestToken: token }
-    });
-
-    if (!order) {
-        return res.status(404).json({ message: "Invalid tracking link" });
-    }
-
-    // 🛑 EXPIRATION LOGIC
-    // If the order is finished, we block access to protect customer privacy
-    if (order.status === 'DELIVERED' || order.status === 'CANCELLED') {
-        return res.status(410).json({ 
-            message: "Link Expired", 
-            reason: order.status, // "DELIVERED" or "CANCELLED"
-            orderNumber: order.orderNumber // Let them know which order it was
-        });
-    }
-
-    return res.json(order);
-  } catch (error) {
-    return next(error);
-  }
+    // ... same as before
+    try {
+        const { token } = req.params;
+        if (!token) return res.status(400).json({ message: "Token required" });
+        const order = await prisma.order.findUnique({ where: { guestToken: token } });
+        if (!order) return res.status(404).json({ message: "Invalid tracking link" });
+        if (order.status === 'DELIVERED' || order.status === 'CANCELLED') {
+            return res.status(410).json({ message: "Link Expired", reason: order.status, orderNumber: order.orderNumber });
+        }
+        return res.json(order);
+    } catch (error) { return next(error); }
 };
-
 
 export const getUserOrders = async (req: any, res: Response, next: NextFunction) => {
-  try {
-    const userId = req.user.id; // From middleware
-    
-    const orders = await prisma.order.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        orderNumber: true,
-        createdAt: true,
-        status: true,
-        totalAmount: true,
-        items: true // Optional: if you want to show thumbnails in the list
-      }
-    });
-
-    return res.json(orders);
-  } catch (error) {
-    return next(error);
-  }
+    // ... same as before
+    try {
+        const userId = req.user.id; 
+        const orders = await prisma.order.findMany({
+            where: { userId },
+            orderBy: { createdAt: 'desc' },
+            select: { id: true, orderNumber: true, createdAt: true, status: true, totalAmount: true, items: true }
+        });
+        return res.json(orders);
+    } catch (error) { return next(error); }
 };
 
-// --- 6. GET SINGLE ORDER (Logged In) ---
 export const getOrderById = async (req: any, res: Response, next: NextFunction) => {
-  try {
-    const userId = req.user.id;
-    const { id } = req.params;
-
-    const order = await prisma.order.findUnique({
-      where: { id }
-    });
-
-    if (!order) return res.status(404).json({ message: "Order not found" });
-
-    // Security Check: Ensure this order belongs to the user
-    if (order.userId !== userId) {
-        return res.status(403).json({ message: "Unauthorized access to this order" });
-    }
-
-    return res.json(order);
-  } catch (error) {
-    return next(error);
-  }
+    // ... same as before
+    try {
+        const userId = req.user.id;
+        const { id } = req.params;
+        const order = await prisma.order.findUnique({ where: { id } });
+        if (!order) return res.status(404).json({ message: "Order not found" });
+        if (order.userId !== userId) return res.status(403).json({ message: "Unauthorized" });
+        return res.json(order);
+    } catch (error) { return next(error); }
 };
