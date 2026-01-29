@@ -4,23 +4,20 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axiosInstance from '@/app/utils/axiosInstance';
 import { useParams } from 'next/navigation';
-import { Loader2, Phone, MapPin, CheckCircle, Truck, XCircle, ArrowLeft, PackageCheck } from 'lucide-react';
+import { Loader2, Phone, MapPin, CheckCircle, Truck, XCircle, ArrowLeft, PackageCheck, CreditCard, Banknote } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 
 export default function AdminOrderDetails() {
   const { id } = useParams();
   const queryClient = useQueryClient();
-
   const [trackingInput, setTrackingInput] = useState("");
 
-  // 1. Fetch Order Data
   const { data: order, isLoading } = useQuery({
     queryKey: ['admin-order', id],
     queryFn: async () => (await axiosInstance.get(`/api/orders/admin/${id}`)).data
   });
 
-  // 2. Mutation to Update Status
   const statusMutation = useMutation({
     mutationFn: async ({ status, tracking }: { status: string, tracking?: string }) => {
        await axiosInstance.patch(`/api/orders/admin/${id}/status`, { 
@@ -54,7 +51,7 @@ export default function AdminOrderDetails() {
            <ArrowLeft size={16} /> Back to Orders
         </Link>
 
-        {/* HEADER: ID and Status */}
+        {/* HEADER */}
         <div className="flex justify-between items-start mb-8">
             <div>
                 <h1 className="text-3xl font-black text-gray-900">Order #{order.orderNumber}</h1>
@@ -63,7 +60,9 @@ export default function AdminOrderDetails() {
             <div className="text-right">
                 <span className="text-xs uppercase tracking-widest text-gray-500 font-bold block mb-1">Current Status</span>
                 <span className={`text-xl font-bold px-4 py-1 rounded-lg inline-block border-2 
-                    ${order.status === 'DELIVERED' ? 'border-green-600 text-green-600 bg-green-50' : 'border-black text-black'}`}>
+                    ${order.status === 'DELIVERED' ? 'border-green-600 text-green-600 bg-green-50' : 
+                      order.status === 'CANCELLED' ? 'border-red-600 text-red-600 bg-red-50' : 
+                      'border-black text-black'}`}>
                     {order.status}
                 </span>
             </div>
@@ -91,9 +90,23 @@ export default function AdminOrderDetails() {
                             </div>
                         ))}
                     </div>
+                    {/* 👇 Updated Footer with Payment Method */}
                     <div className="mt-4 pt-4 border-t flex justify-between items-center">
-                        <span className="font-bold text-gray-600">Total Amount (COD)</span>
-                        <span className="font-black text-xl">LKR {order.totalAmount.toLocaleString()}</span>
+                        <div className="flex items-center gap-2">
+                            {order.paymentMethod === 'PAYHERE' ? (
+                                <span className="flex items-center gap-1.5 text-xs font-bold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-200">
+                                    <CreditCard size={14} /> PAID ONLINE
+                                </span>
+                            ) : (
+                                <span className="flex items-center gap-1.5 text-xs font-bold text-green-700 bg-green-50 px-3 py-1.5 rounded-full border border-green-200">
+                                    <Banknote size={14} /> CASH ON DELIVERY
+                                </span>
+                            )}
+                        </div>
+                        <div className="text-right">
+                            <span className="text-xs text-gray-500 block">Total Amount</span>
+                            <span className="font-black text-xl">LKR {order.totalAmount.toLocaleString()}</span>
+                        </div>
                     </div>
                 </div>
 
@@ -186,8 +199,7 @@ export default function AdminOrderDetails() {
                             </button>
                         )}
 
-                        {/* Step 5: Mark Returned (Refused by Customer) */}
-                        {/* Can happen after Shipping or even after Delivery if they return it */}
+                        {/* Step 5: Mark Returned */}
                         {(order.status === 'SHIPPED' || order.status === 'DELIVERED') && (
                             <button 
                                 onClick={() => {
@@ -201,7 +213,6 @@ export default function AdminOrderDetails() {
                         )}
 
                         {/* Cancel Option */}
-                        {/* Only allow cancel if not already completed/returned to avoid confusion */}
                         {['PENDING', 'CONFIRMED', 'PROCESSING'].includes(order.status) && (
                             <button 
                                 onClick={() => {
@@ -211,23 +222,6 @@ export default function AdminOrderDetails() {
                             >
                                 <XCircle size={18} /> Cancel Order
                             </button>
-                        )}
-                        
-                        {/* Final States */}
-                        {order.status === 'DELIVERED' && (
-                            <div className="p-4 bg-green-50 text-green-800 rounded-lg text-center font-bold flex items-center justify-center gap-2">
-                                <CheckCircle size={18} /> Delivered Successfully
-                            </div>
-                        )}
-                        {order.status === 'RETURNED' && (
-                            <div className="p-4 bg-orange-50 text-orange-800 rounded-lg text-center font-bold flex items-center justify-center gap-2">
-                                <XCircle size={18} /> Order Returned (Restocked)
-                            </div>
-                        )}
-                        {order.status === 'CANCELLED' && (
-                            <div className="p-4 bg-red-50 text-red-800 rounded-lg text-center font-bold flex items-center justify-center gap-2">
-                                <XCircle size={18} /> Order Cancelled (Restocked)
-                            </div>
                         )}
                     </div>
                 </div>

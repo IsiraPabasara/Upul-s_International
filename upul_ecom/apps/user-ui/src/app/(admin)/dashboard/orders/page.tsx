@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import axiosInstance from '@/app/utils/axiosInstance';
 import Link from 'next/link';
-import { Eye, Loader2, Package } from 'lucide-react';
+import { Eye, Loader2, Package, CreditCard, Banknote } from 'lucide-react';
 
 export default function AdminOrdersPage() {
   const { data: orders, isLoading } = useQuery({
@@ -14,7 +14,6 @@ export default function AdminOrdersPage() {
     }
   });
 
-  // Helper for Status Badge Colors
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'PENDING': return 'bg-yellow-100 text-yellow-800';
@@ -23,6 +22,7 @@ export default function AdminOrdersPage() {
       case 'SHIPPED': return 'bg-indigo-100 text-indigo-800';
       case 'DELIVERED': return 'bg-green-100 text-green-800';
       case 'CANCELLED': return 'bg-red-100 text-red-800';
+      case 'RETURNED': return 'bg-orange-100 text-orange-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -44,6 +44,7 @@ export default function AdminOrdersPage() {
                 <th className="px-6 py-3">Date</th>
                 <th className="px-6 py-3">Customer</th>
                 <th className="px-6 py-3">Total</th>
+                <th className="px-6 py-3">Payment</th>
                 <th className="px-6 py-3">Status</th>
                 <th className="px-6 py-3">Action</th>
               </tr>
@@ -60,6 +61,19 @@ export default function AdminOrdersPage() {
                     <p className="text-xs text-gray-500">{order.email}</p>
                   </td>
                   <td className="px-6 py-4 font-mono">LKR {order.totalAmount.toLocaleString()}</td>
+                  
+                  <td className="px-6 py-4">
+                    {order.paymentMethod === 'PAYHERE' ? (
+                       <span className="flex items-center gap-1 text-xs font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded border border-blue-100">
+                          <CreditCard size={12} /> ONLINE
+                       </span>
+                    ) : (
+                       <span className="flex items-center gap-1 text-xs font-bold text-green-700 bg-green-50 px-2 py-1 rounded border border-green-100">
+                          <Banknote size={12} /> COD
+                       </span>
+                    )}
+                  </td>
+
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 rounded-full text-xs font-bold ${getStatusColor(order.status)}`}>
                       {order.status}
