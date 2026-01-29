@@ -1,4 +1,4 @@
-import { Response, NextFunction } from "express";
+import { Request, Response, NextFunction } from "express";
 import prisma from "../../../../packages/libs/prisma";
 
 // Helper to sanitize items (Fixes Prisma Validation Error)
@@ -151,6 +151,78 @@ export const removeCartItem = async (req: any, res: Response, next: NextFunction
     });
 
     return res.json(updated.items);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+
+export const verifyCart = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { items } = req.body; // Expecting array of { productId, quantity, size? }
+
+    const errors: Record<string, string> = {};
+    let isValid = true;
+
+    // We fetch all relevant products at once to minimize DB calls
+    const productIds = items.map((i: any) => i.productId);
+    
+    const products = await prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: {
+        id: true,
+        name: true,
+        visible: true,
+        availability: true,
+        stock: true,
+        variants: true, // Need this to check size stock
+      }
+    });
+
+    // Create a Map for easy lookup
+    const productMap = new Map(products.map(p => [p.id, p]));
+
+    for (const item of items) {
+      const product = productMap.get(item.productId);
+      const errorKey = item.sku; // We map errors by SKU (unique per line item)
+
+      // 1. Check Existence & Visibility
+      if (!product || !product.visible) {
+        errors[errorKey] = "Product is no longer available";
+        isValid = false;
+        continue;
+      }
+
+      // 2. Check General Availability Flag
+      if (!product.availability) {
+        errors[errorKey] = "Product is marked as out of stock";
+        isValid = false;
+        continue;
+      }
+
+      // 3. Check Specific Stock (Size vs Standard)
+      if (item.size) {
+        // It's a variant (e.g., "Small")
+        const variant = product.variants.find(v => v.size === item.size);
+        
+        if (!variant) {
+          errors[errorKey] = "This size is no longer available";
+          isValid = false;
+        } else if (variant.stock < item.quantity) {
+          errors[errorKey] = `Only ${variant.stock} left in stock`;
+          isValid = false;
+        }
+      } else {
+        // It's a standard product (no variants)
+        if (product.stock < item.quantity) {
+          errors[errorKey] = `Only ${product.stock} left in stock`;
+          isValid = false;
+        }
+      }
+    }
+
+    return res.json({ isValid, errors });
+
   } catch (error) {
     return next(error);
   }

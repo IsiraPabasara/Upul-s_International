@@ -8,7 +8,7 @@ interface UseUserOptions {
     required?: boolean;
 }
 
-const useUser = ({ required = true }: UseUserOptions = {}) => {
+const useUser = ({ required = false }: UseUserOptions = {}) => {
     const router = useRouter();
 
     const { data: user, isLoading, isError, refetch } = useQuery({

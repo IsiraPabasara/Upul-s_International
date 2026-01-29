@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import isAuthenticated from '../../../../packages/middleware/isAuthenticated';
-import { addToCart, getCart, mergeCart, removeCartItem, updateCartItem } from './cart.controller';
+import { addToCart, getCart, mergeCart, removeCartItem, updateCartItem, verifyCart } from './cart.controller';
 
 
 const router = Router();
 
+router.post('/verify', verifyCart);
 router.use(isAuthenticated);
 
 // 1. Syncing (The "Merge" Logic)

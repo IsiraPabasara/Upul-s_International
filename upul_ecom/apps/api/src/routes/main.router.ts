@@ -8,6 +8,7 @@ import sizeTypeRoutes from '../sizetype-service/sizetype.routes';
 import colorRoutes from '../color-service/color.routes';
 import cartRouter from '../cart-service/cart.routes';
 import wishlistRouter from '../wishlist-service/wishlist.router';
+import orderRouter from '../order-service/order.router';
 
 const router: Router = express.Router();
 
@@ -20,5 +21,6 @@ router.use('/size-types', sizeTypeRoutes);
 router.use('/colors', colorRoutes);
 router.use('/cart', cartRouter);
 router.use('/wishlist', wishlistRouter);
+router.use('/orders', orderRouter);
 
 export default router;
