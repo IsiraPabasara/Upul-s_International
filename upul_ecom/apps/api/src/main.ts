@@ -11,7 +11,7 @@ import router from './routes/main.router';
 const swaggerDocument = require("./swagger-output.json");
 
 const app = express();
-
+app.use(express.urlencoded({ extended: true }));
 app.use(cors({ origin: true, credentials: true }));
 app.use(helmet());
 app.use(express.json());

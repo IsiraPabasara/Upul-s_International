@@ -3,7 +3,7 @@
 import { useParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import axiosInstance from '@/app/utils/axiosInstance';
-import { Loader2, Package, CheckCircle, Truck, Clock, MapPin, ChevronLeft, XCircle, ArrowLeft } from 'lucide-react';
+import { Loader2, Package, CheckCircle, Truck, Clock, MapPin, ChevronLeft, XCircle, ArrowLeft, CreditCard, Banknote } from 'lucide-react';
 import Link from 'next/link';
 
 export default function UserOrderDetailsPage() {
@@ -23,11 +23,10 @@ export default function UserOrderDetailsPage() {
     </div>
   );
 
-  // --- LOGIC TO HANDLE CANCELLED / RETURNED STATUS ---
   const isCancelled = order.status === 'CANCELLED';
   const isReturned = order.status === 'RETURNED';
+  const isPayHere = order.paymentMethod === 'PAYHERE';
 
-  // Define steps dynamically based on status
   let steps = [
       { id: 'PENDING', label: 'Placed', icon: Clock },
       { id: 'CONFIRMED', label: 'Confirmed', icon: CheckCircle },
@@ -36,7 +35,6 @@ export default function UserOrderDetailsPage() {
       { id: 'DELIVERED', label: 'Delivered', icon: CheckCircle },
   ];
 
-  // If Cancelled, replace the steps with a "Cancelled" flow
   if (isCancelled) {
       steps = [
           { id: 'PENDING', label: 'Placed', icon: Clock },
@@ -44,7 +42,6 @@ export default function UserOrderDetailsPage() {
       ];
   }
 
-  // If Returned, add "Returned" step at the end
   if (isReturned) {
       steps = [
           { id: 'PENDING', label: 'Placed', icon: Clock },
@@ -55,14 +52,12 @@ export default function UserOrderDetailsPage() {
       ];
   }
 
-  // Find current step index
   let currentStepIndex = steps.findIndex(s => s.id === order.status);
   
-  // Fallback for intermediate steps if status doesn't match exactly (e.g. if 'PROCESSING' but timeline shows 'CANCELLED')
   if (currentStepIndex === -1) {
       if (order.status === 'DELIVERED') currentStepIndex = steps.findIndex(s => s.id === 'DELIVERED');
-      else if (isCancelled) currentStepIndex = 1; // Force to Cancelled step
-      else if (isReturned) currentStepIndex = 4; // Force to Returned step
+      else if (isCancelled) currentStepIndex = 1; 
+      else if (isReturned) currentStepIndex = 4;
       else currentStepIndex = 0;
   }
 
@@ -91,7 +86,6 @@ export default function UserOrderDetailsPage() {
                         <p className="font-mono font-bold text-lg">{order.trackingNumber}</p>
                     </div>
                 )}
-                {/* Status Badge */}
                 <div className={`px-4 py-1.5 rounded-lg text-sm font-bold inline-block border
                     ${isCancelled ? 'bg-red-100 text-red-700 border-red-200' : 
                       isReturned ? 'bg-orange-100 text-orange-700 border-orange-200' :
@@ -101,14 +95,13 @@ export default function UserOrderDetailsPage() {
             </div>
         </div>
 
-        {/* Progress Bar */}
+        {/* Progress Bar (Hidden on mobile) */}
         <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-200 mb-8 relative overflow-hidden hidden md:block">
             <div className="relative z-10 flex justify-between">
                 {steps.map((step, idx) => {
                     const isCompleted = idx <= currentStepIndex;
                     const Icon = step.icon;
                     
-                    // Dynamic Colors based on status type
                     let activeColor = 'bg-black text-white';
                     let activeText = 'text-black';
                     
@@ -134,8 +127,6 @@ export default function UserOrderDetailsPage() {
                     );
                 })}
             </div>
-            
-            {/* Connecting Line */}
             <div className="absolute top-12 left-0 w-full h-1 bg-gray-100 z-0 px-12 md:px-20">
                 <div 
                     className={`h-full transition-all duration-1000 ease-out 
@@ -206,12 +197,28 @@ export default function UserOrderDetailsPage() {
                     </div>
                 </div>
 
+                {/* 👇 MODIFIED PAYMENT CARD */}
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
-                    <h3 className="font-bold text-gray-900 mb-4">Payment</h3>
+                    <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        {isPayHere ? <CreditCard size={18} /> : <Banknote size={18} />}
+                        Payment
+                    </h3>
                     <div className="flex justify-between items-center text-sm mb-2">
                         <span className="text-gray-500">Method</span>
-                        <span className="font-medium">Cash on Delivery</span>
+                        {isPayHere ? (
+                            <span className="font-bold text-blue-600">Online Payment (Paid)</span>
+                        ) : (
+                            <span className="font-medium text-gray-900">Cash on Delivery</span>
+                        )}
                     </div>
+                    
+                    {/* COD Message */}
+                    {!isPayHere && (
+                        <div className="bg-yellow-50 text-yellow-800 text-[10px] p-2 rounded mb-3">
+                            Please have the exact amount ready.
+                        </div>
+                    )}
+
                     <div className="flex justify-between items-center pt-4 border-t border-gray-100">
                         <span className="font-bold text-lg">Total</span>
                         <span className="font-black text-xl">LKR {order.totalAmount.toLocaleString()}</span>
