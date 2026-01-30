@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react'; // Import useCallback
+import { useState, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import axiosInstance from '@/app/utils/axiosInstance';
@@ -20,26 +20,67 @@ interface ShopResponse {
   };
 }
 
+const GridIcon = ({ columns, active }: { columns: number, active: boolean }) => (
+  <div className={`flex gap-[2px] h-3.5 ${active ? 'opacity-100' : 'opacity-40 group-hover:opacity-100'} transition-opacity`}>
+    {Array.from({ length: columns }).map((_, i) => (
+      <div key={i} className={`w-1 rounded-[1px] h-full ${active ? 'bg-black' : 'bg-gray-900'}`} />
+    ))}
+  </div>
+);
+
+const Breadcrumbs = ({ category, search }: { category?: string | null; search?: string | null }) => (
+  <nav className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-gray-400 mb-6 font-outfit">
+    <a href="/" className="hover:text-black transition-colors">Home</a>
+    <span>/</span>
+    <a href="/shop" className={`${!category && !search ? 'text-black font-bold' : 'hover:text-black'}`}>Shop</a>
+    {category && (
+      <>
+        <span>/</span>
+        <span className="text-black font-bold">{category.replace(/-/g, ' ')}</span>
+      </>
+    )}
+    {search && (
+      <>
+        <span>/</span>
+        <span className="text-black font-bold">Search</span>
+      </>
+    )}
+  </nav>
+);
+
 export default function ShopPage() {
   const searchParams = useSearchParams();
   const searchTerm = searchParams.get('search');
   const categorySlug = searchParams.get('category');
 
-  // --- Mobile Filter State ---
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+  const [desktopGrid, setDesktopGrid] = useState<3 | 4 | 6>(4);
+  const [mobileGrid, setMobileGrid] = useState<1 | 2>(2);
 
-  // Use callback to keep function reference stable
+  // ✅ 1. DYNAMIC LIMIT CALCULATION
+  // Ensures the grid is always full (e.g., 4 rows deep regardless of columns)
+  const dynamicLimit = useMemo(() => {
+    // Check if we are on mobile (simple check, or use a hook)
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) return 12;
+    
+    if (desktopGrid === 3) return 12; // 4 rows
+    if (desktopGrid === 4) return 16; // 4 rows
+    return 24;                       // 4 rows for 6-cols
+  }, [desktopGrid]);
+
   const closeMobileFilters = useCallback(() => {
     setIsMobileFiltersOpen(false);
   }, []);
 
-  // Default to page 1 if not in URL
-  const currentPage = Number(searchParams.get('page')) || 1;
-
+  // ✅ 2. UPDATED QUERY LOGIC
   const { data, isLoading } = useQuery<ShopResponse>({
-    queryKey: ['shop-products', searchParams.toString()],
+    queryKey: ['shop-products', searchParams.toString(), dynamicLimit],
     queryFn: async () => {
-      const res = await axiosInstance.get(`/api/products/shop?${searchParams.toString()}`, { isPublic: true });
+      const params = new URLSearchParams(searchParams.toString());
+      // Explicitly set the limit based on the layout
+      params.set('limit', dynamicLimit.toString());
+      
+      const res = await axiosInstance.get(`/api/products/shop?${params.toString()}`, { isPublic: true });
       return res.data;
     },
     staleTime: 1000 * 60 * 2,
@@ -49,65 +90,88 @@ export default function ShopPage() {
   const products = data?.products || [];
   const pagination = data?.pagination || { total: 0, page: 1, totalPages: 1 };
 
+  const getGridClasses = () => {
+    const mobileClass = mobileGrid === 1 ? "grid-cols-1" : "grid-cols-2";
+    let desktopClass = "lg:grid-cols-3 xl:grid-cols-4";
+    if (desktopGrid === 3) desktopClass = "lg:grid-cols-3";
+    if (desktopGrid === 6) desktopClass = "lg:grid-cols-4 xl:grid-cols-6";
+    return `${mobileClass} ${desktopClass}`;
+  };
+
   return (
     <div className="min-h-screen bg-white">
-      {/* Header */}
-      {/* <div className="border-b border-gray-100 bg-gray-50/50">
-        <div className="max-w-8xl mx-auto px-4 py-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2 capitalize">
-            {searchTerm ? `Results: "${searchTerm}"` : categorySlug ? categorySlug.replace(/-/g, ' ') : 'Shop'}
-          </h1>
-          <p className="text-sm text-gray-500">
-            {!isLoading && pagination.total > 0 && (
-              <>
-                Showing <span className="font-bold">{(pagination.page - 1) * 12 + 1}</span> -{' '}
-                <span className="font-bold">{Math.min(pagination.page * 12, pagination.total)}</span> of{' '}
-                <span className="font-bold">{pagination.total}</span> results
-              </>
-            )}
-          </p>
-        </div>
-      </div> */}
+      <div className="mx-auto px-5 py-8 font-outfit max-w-8xl">
+        <Breadcrumbs category={categorySlug} search={searchTerm} />
 
-      <div className="max-w-8xl mx-auto px-5 py-10">
         <div className="flex flex-col md:flex-row gap-10">
-          
-          {/* SIDEBAR */}
-          <FilterSidebar 
-            isOpen={isMobileFiltersOpen} 
-            onClose={closeMobileFilters} 
-          />
+          <FilterSidebar isOpen={isMobileFiltersOpen} onClose={closeMobileFilters} />
 
-          {/* MOBILE CONTROLS */}
-          <div className="md:hidden flex justify-between items-center mb-4">
-            <button
-              onClick={() => setIsMobileFiltersOpen(true)}
-              className="flex items-center gap-2 text-sm font-bold border border-gray-200 px-4 py-2 rounded-lg bg-white hover:bg-gray-50 transition-colors"
-            >
-              <Filter size={16} /> Filters
-            </button>
-            <SortSection />
-          </div>
-
-          {/* PRODUCTS MAIN */}
           <main className="flex-1">
-            <div className="hidden md:flex justify-end mb-6 pb-4 border-b border-gray-100">
-              <SortSection />
+            <div className="flex items-end justify-between mb-8 pb-4 border-b border-gray-100">
+              <div className="flex flex-col gap-1">
+                 <h1 className="text-xl md:text-2xl font-bold uppercase tracking-tight text-gray-900">
+                    {searchTerm ? `Search: "${searchTerm}"` : categorySlug ? categorySlug.replace(/-/g, ' ') : 'All Collection'}
+                 </h1>
+                 {!isLoading && (
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                      {pagination.total} Products Found
+                    </span>
+                 )}
+              </div>
+              
+              <div className="hidden md:flex items-center gap-6">
+                <div className="flex items-center gap-2 border-r border-gray-200 pr-6">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mr-2">View</span>
+                    {[3, 4, 6].map((col) => (
+                        <button
+                            key={col}
+                            onClick={() => setDesktopGrid(col as 3 | 4 | 6)}
+                            className={`p-2 rounded group transition-all ${desktopGrid === col ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
+                        >
+                            <GridIcon columns={col} active={desktopGrid === col} />
+                        </button>
+                    ))}
+                </div>
+                <SortSection />
+              </div>
+            </div>
+
+            <div className="md:hidden flex justify-between items-center mb-6 gap-4">
+              <button
+                onClick={() => setIsMobileFiltersOpen(true)}
+                className="px-4 flex items-center justify-center gap-2 text-[11px] font-black uppercase tracking-widest border border-black py-3 bg-white flex-1"
+              >
+                <Filter size={14} /> Filter
+              </button>
+
+              <div className="flex items-center gap-4">
+                 <div className="flex items-center gap-1 border-r border-gray-200 pr-4">
+                    {[1, 2].map((col) => (
+                        <button
+                            key={col}
+                            onClick={() => setMobileGrid(col as 1 | 2)}
+                            className={`p-2 rounded group transition-all ${mobileGrid === col ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
+                        >
+                            <GridIcon columns={col} active={mobileGrid === col} />
+                        </button>
+                    ))}
+                 </div>
+                 <SortSection />
+              </div>
             </div>
 
             {isLoading ? (
-              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-pulse">
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <div className={`grid gap-6 animate-pulse ${getGridClasses()}`}>
+                {[...Array(dynamicLimit)].map((_, i) => (
                   <div key={i} className="space-y-3">
                     <div className="aspect-[3/4] bg-gray-100 rounded-xl" />
                     <div className="h-4 bg-gray-100 rounded w-3/4" />
-                    <div className="h-4 bg-gray-100 rounded w-1/4" />
                   </div>
                 ))}
               </div>
             ) : products.length > 0 ? (
               <>
-                <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-10">
+                <div className={`grid gap-x-4 md:gap-x-6 gap-y-10 transition-all duration-300 ${getGridClasses()}`}>
                   {products.map((product: any) => (
                     <ProductCard key={product.id} product={product} />
                   ))}
@@ -120,11 +184,8 @@ export default function ShopPage() {
             ) : (
               <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-gray-100 rounded-2xl bg-gray-50/30">
                 <p className="text-lg font-medium text-gray-900">No products found</p>
-                <button
-                  onClick={() => (window.location.href = '/shop')}
-                  className="mt-4 text-sm font-bold text-black underline underline-offset-4"
-                >
-                  Clear filters
+                <button onClick={() => (window.location.href = '/shop')} className="mt-4 text-xs font-bold uppercase tracking-widest underline underline-offset-4">
+                  Clear all filters
                 </button>
               </div>
             )}

@@ -70,6 +70,19 @@ export default function Header() {
           </div>
         </Link>
 
+        {/* <Link href="/" className="flex-shrink-0 group">
+          <div className="relative h-10 md:h-14 w-auto flex items-center">
+            <img
+              src="" // Replace with your logo path
+              alt="Upul's International"
+              className="h-full w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+              // Setting width/height attributes helps prevent Layout Shift
+              width={200} 
+              height={56}
+            />
+          </div>
+        </Link> */}
+
         {/* Desktop Search Bar */}
         <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-xl">
           <div className="relative flex-1">

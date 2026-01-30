@@ -105,6 +105,7 @@ export default function FilterSidebar({ isOpen = false, onClose }: FilterSidebar
 
   const currentCategory = searchParams.get('category');
   const currentBrand = searchParams.get('brand');
+  const currentAvailability = searchParams.get('availability');
 
   const [minPrice, setMinPrice] = useState(Number(searchParams.get('minPrice')) || MIN_LIMIT);
   const [maxPrice, setMaxPrice] = useState(Number(searchParams.get('maxPrice')) || MAX_LIMIT);
@@ -152,7 +153,6 @@ export default function FilterSidebar({ isOpen = false, onClose }: FilterSidebar
     router.push('/shop');
   };
 
-  // Input Handlers
   const handleMinInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = Number(e.target.value);
     if (val <= maxPrice) setMinPrice(val);
@@ -161,6 +161,17 @@ export default function FilterSidebar({ isOpen = false, onClose }: FilterSidebar
   const handleMaxInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = Number(e.target.value);
     if (val >= minPrice) setMaxPrice(val);
+  };
+
+  // Availability Toggle Handler
+  const toggleAvailability = (value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (currentAvailability === value) {
+      params.delete('availability');
+    } else {
+      params.set('availability', value);
+    }
+    router.push(`/shop?${params.toString()}`);
   };
 
   const sidebarContent = (
@@ -192,12 +203,13 @@ export default function FilterSidebar({ isOpen = false, onClose }: FilterSidebar
         </div>
       </div>
 
+      
+
       {/* PRICE RANGE SLIDER + INPUTS */}
       <div>
         <h3 className="text-xs font-extrabold uppercase tracking-widest text-gray-900 mb-8 font-outfit">Price Range</h3>
         
         <div className="px-2">
-          {/* Draggable Bar */}
           <div className="relative h-1 w-full bg-gray-100 rounded-full mb-8">
             <div 
               className="absolute h-full bg-black rounded-full"
@@ -213,7 +225,7 @@ export default function FilterSidebar({ isOpen = false, onClose }: FilterSidebar
               step={100}
               value={minPrice}
               onChange={(e) => setMinPrice(Math.min(Number(e.target.value), maxPrice - 100))}
-              className="absolute w-full -top-1 h-2 appearance-none bg-transparent pointer-events-none z-20 slider-thumb"
+              className="absolute w-full -top-0.5 h-2 appearance-none bg-transparent pointer-events-none z-20 slider-thumb"
             />
             <input
               type="range"
@@ -222,11 +234,10 @@ export default function FilterSidebar({ isOpen = false, onClose }: FilterSidebar
               step={100}
               value={maxPrice}
               onChange={(e) => setMaxPrice(Math.max(Number(e.target.value), minPrice + 100))}
-              className="absolute w-full -top-1 h-2 appearance-none bg-transparent pointer-events-none z-20 slider-thumb"
+              className="absolute w-full -top-0.5 h-2 appearance-none bg-transparent pointer-events-none z-20 slider-thumb"
             />
           </div>
 
-          {/* Editable Text Inputs */}
           <div className="flex items-center gap-2 mb-6">
             <div className="flex-1 relative">
               <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 font-bold">Rs.</span>
@@ -280,6 +291,35 @@ export default function FilterSidebar({ isOpen = false, onClose }: FilterSidebar
                 </div>
                 <span className={`text-sm font-outfit transition-colors ${isSelected ? 'font-bold text-black' : ''}`}>
                   {brand.name}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* AVAILABILITY SECTION */}
+      <div>
+        <h3 className="text-xs font-extrabold uppercase tracking-widest text-gray-900 mb-4 font-outfit">Availability</h3>
+        <div className="space-y-2 text-gray-500">
+          {[
+            { label: 'In Stock', value: 'in-stock' },
+            { label: 'Out of Stock', value: 'out-of-stock' }
+          ].map((item) => {
+            const isSelected = currentAvailability === item.value;
+            return (
+              <div
+                key={item.value}
+                onClick={() => toggleAvailability(item.value)}
+                className="flex items-center gap-3 cursor-pointer group hover:bg-gray-50 p-1.5 rounded transition-colors"
+              >
+                <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                  isSelected ? 'bg-black border-black' : 'border-gray-200 group-hover:border-gray-400'
+                }`}>
+                  {isSelected && <Check size={10} className="text-white" />}
+                </div>
+                <span className={`text-sm font-outfit transition-colors ${isSelected ? 'font-bold text-black' : ''}`}>
+                  {item.label}
                 </span>
               </div>
             );

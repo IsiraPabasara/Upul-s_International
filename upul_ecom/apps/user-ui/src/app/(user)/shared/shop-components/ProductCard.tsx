@@ -86,7 +86,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               </span>
             )}
             {!product.availability && (
-              <span className="bg-white/90 text-black text-[9px] tracking-widest font-bold px-3 py-1.5 uppercase border-b border-r border-black/5">
+              <span className="bg-red-500 text-white text-[9px] tracking-widest font-bold px-3 py-1.5 uppercase border-b border-r border-black/5">
                 Sold Out
               </span>
             )}

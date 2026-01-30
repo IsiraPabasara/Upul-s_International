@@ -176,7 +176,7 @@ export default function CartSlider() {
                             onClick={() => handleRemoveItem(item.sku)}
                             className="text-gray-400 hover:text-red-500 transition-colors"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={16} className='ml-1'/>
                           </button>
                         </div>
 

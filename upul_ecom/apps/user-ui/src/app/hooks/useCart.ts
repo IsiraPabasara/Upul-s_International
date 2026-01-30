@@ -23,7 +23,8 @@ interface CartState {
   validationErrors: Record<string, string>;
 
   toggleCart: () => void;
-  addItem: (item: CartItem) => void;
+  // 👇 Updated signature to accept optional openCart boolean
+  addItem: (item: CartItem, openCart?: boolean) => void;
   removeItem: (sku: string) => void;
   updateQuantity: (sku: string, qty: number) => void;
   clearCart: () => void;
@@ -45,9 +46,14 @@ export const useCart = create<CartState>()(
 
       toggleCart: () => set((state) => ({ isOpen: !state.isOpen })),
 
-      addItem: (newItem) => {
+      // 👇 Updated implementation
+      addItem: (newItem, openCart = true) => {
         set((state) => {
           const existing = state.items.find((i) => i.sku === newItem.sku);
+
+          // If openCart is true, force it open. 
+          // If false, keep current state (don't force open, but don't force close if user has it open).
+          const nextIsOpen = openCart ? true : state.isOpen;
 
           if (existing) {
             // Update quantity if exists
@@ -57,11 +63,14 @@ export const useCart = create<CartState>()(
                   ? { ...i, quantity: i.quantity + newItem.quantity }
                   : i
               ),
-              isOpen: true, // Auto open cart on add
+              isOpen: nextIsOpen, 
             };
           }
 
-          return { items: [...state.items, newItem], isOpen: true };
+          return { 
+            items: [...state.items, newItem], 
+            isOpen: nextIsOpen 
+          };
         });
 
         // ✅ Clear errors on modification

@@ -10,9 +10,9 @@ export default function WishlistPage() {
   return (
     <div className="min-h-screen bg-white">
       <div className="border-b border-gray-100 bg-gray-50/50">
-        <div className="max-w-7xl mx-auto px-4 py-12 text-center">
-          <h1 className="text-3xl font-black text-gray-900 mb-2">My Wishlist</h1>
-          <p className="text-gray-500">
+        <div className="max-w-7xl mx-auto px-4 py-7 text-center">
+          <h1 className="text-3xl font-outfit font-extrabold text-gray-900 mb-2">My Wishlist</h1>
+          <p className="text-gray-500 font-outfit">
             {items.length} {items.length === 1 ? 'item' : 'items'} saved
           </p>
         </div>
