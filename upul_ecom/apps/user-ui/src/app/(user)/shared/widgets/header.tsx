@@ -134,7 +134,7 @@ export default function Header() {
       </div>
 
       {/* Navigation Slider */}
-      <nav className="bg-[#f2e6e6] border-t overflow-x-auto scrollbar-hide">
+      <nav className=" bg-[#f2e6e6] md:bg-[#e3e3e3]  border-t overflow-x-auto scrollbar-hide">
         <div className="max-w-8xl mx-auto px-5 flex gap-6 md:gap-10 h-11 items-center text-[12px] md:text-[13px] font-bold uppercase tracking-tight whitespace-nowrap">
           <Link href="/shop?isNewArrival=true" className="shrink-0 hover:opacity-70 transition-opacity">New Arrivals</Link>
           {categories.filter((c: any) => !c.parentId).map((cat: any) => (

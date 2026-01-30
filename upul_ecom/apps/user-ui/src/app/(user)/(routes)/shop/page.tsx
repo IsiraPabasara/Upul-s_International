@@ -29,7 +29,7 @@ const GridIcon = ({ columns, active }: { columns: number, active: boolean }) => 
 );
 
 const Breadcrumbs = ({ category, search }: { category?: string | null; search?: string | null }) => (
-  <nav className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-gray-400 mb-6 font-outfit">
+  <nav className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-gray-400 mb-4 md:mb-4 font-outfit mt-5 md:mt-1">
     <a href="/" className="hover:text-black transition-colors">Home</a>
     <span>/</span>
     <a href="/shop" className={`${!category && !search ? 'text-black font-bold' : 'hover:text-black'}`}>Shop</a>
@@ -100,7 +100,7 @@ export default function ShopPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="mx-auto px-5 py-8 font-outfit max-w-8xl">
+      <div className="mx-auto px-5 md:pt-5 font-outfit max-w-8xl">
         <Breadcrumbs category={categorySlug} search={searchTerm} />
 
         <div className="flex flex-col md:flex-row gap-10">
