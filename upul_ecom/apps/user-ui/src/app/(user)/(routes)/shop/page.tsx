@@ -52,8 +52,8 @@ export default function ShopPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className="border-b border-gray-100 bg-gray-50/50">
-        <div className="max-w-7xl mx-auto px-4 py-8">
+      {/* <div className="border-b border-gray-100 bg-gray-50/50">
+        <div className="max-w-8xl mx-auto px-4 py-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2 capitalize">
             {searchTerm ? `Results: "${searchTerm}"` : categorySlug ? categorySlug.replace(/-/g, ' ') : 'Shop'}
           </h1>
@@ -67,9 +67,9 @@ export default function ShopPage() {
             )}
           </p>
         </div>
-      </div>
+      </div> */}
 
-      <div className="max-w-7xl mx-auto px-4 py-10">
+      <div className="max-w-8xl mx-auto px-5 py-10">
         <div className="flex flex-col md:flex-row gap-10">
           
           {/* SIDEBAR */}

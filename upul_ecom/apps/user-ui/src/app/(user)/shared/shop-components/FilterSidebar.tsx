@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react'; // Added useRef
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import axiosInstance from '@/app/utils/axiosInstance';
-import { ChevronDown, ChevronRight, Minus, Check, Layers, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, Minus, Check, X, RotateCcw } from 'lucide-react';
 
 // --- Helper: Build Tree ---
 const buildCategoryTree = (categories: any[]) => {
@@ -80,7 +80,7 @@ const CategoryItem = ({ category, currentSlug }: { category: any; currentSlug: s
       </div>
 
       {hasChildren && isOpen && (
-        <div className="mt-1 space-y-1 animate-fadeIn">
+        <div className="mt-1 space-y-1">
           {category.children.map((child: any) => (
             <CategoryItem key={child.id} category={child} currentSlug={currentSlug} />
           ))}
@@ -92,32 +92,37 @@ const CategoryItem = ({ category, currentSlug }: { category: any; currentSlug: s
 
 // --- Main Sidebar Component ---
 interface FilterSidebarProps {
-  isOpen?: boolean; 
-  onClose?: () => void; 
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
 export default function FilterSidebar({ isOpen = false, onClose }: FilterSidebarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  const MIN_LIMIT = 0;
+  const MAX_LIMIT = 50000; 
+
   const currentCategory = searchParams.get('category');
   const currentBrand = searchParams.get('brand');
 
-  const [minPrice, setMinPrice] = useState(searchParams.get('minPrice') || '');
-  const [maxPrice, setMaxPrice] = useState(searchParams.get('maxPrice') || '');
+  const [minPrice, setMinPrice] = useState(Number(searchParams.get('minPrice')) || MIN_LIMIT);
+  const [maxPrice, setMaxPrice] = useState(Number(searchParams.get('maxPrice')) || MAX_LIMIT);
 
-  // --- FIX: Prevent immediate closing loop ---
-  // We store the previous params string to compare against
+  useEffect(() => {
+    setMinPrice(Number(searchParams.get('minPrice')) || MIN_LIMIT);
+    setMaxPrice(Number(searchParams.get('maxPrice')) || MAX_LIMIT);
+  }, [searchParams]);
+
   const prevParamsRef = useRef(searchParams.toString());
 
   useEffect(() => {
     const currentParams = searchParams.toString();
-    // Only close if the URL parameters *actually* changed (navigation happened)
     if (currentParams !== prevParamsRef.current) {
       if (onClose) onClose();
       prevParamsRef.current = currentParams;
     }
   }, [searchParams, onClose]);
-  // -------------------------------------------
 
   const { data: categories = [] } = useQuery({
     queryKey: ['categories-all'],
@@ -138,68 +143,124 @@ export default function FilterSidebar({ isOpen = false, onClose }: FilterSidebar
 
   const applyPriceFilter = () => {
     const params = new URLSearchParams(searchParams.toString());
-    if (minPrice) params.set('minPrice', minPrice);
-    else params.delete('minPrice');
-    if (maxPrice) params.set('maxPrice', maxPrice);
-    else params.delete('maxPrice');
+    params.set('minPrice', minPrice.toString());
+    params.set('maxPrice', maxPrice.toString());
     router.push(`/shop?${params.toString()}`);
+  };
+
+  const resetFilters = () => {
+    router.push('/shop');
+  };
+
+  // Input Handlers
+  const handleMinInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = Number(e.target.value);
+    if (val <= maxPrice) setMinPrice(val);
+  };
+
+  const handleMaxInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = Number(e.target.value);
+    if (val >= minPrice) setMaxPrice(val);
   };
 
   const sidebarContent = (
     <div className="space-y-10">
-      {/* CATEGORIES */}
-      <div>
-        <h3 className="text-xs font-extrabold uppercase tracking-widest text-gray-900 mb-4 flex items-center gap-2">
-          <Layers size={14} /> Categories
-        </h3>
+      <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+        <h3 className="text-xs font-black uppercase tracking-[0.2em] text-black font-outfit">Filters</h3>
+        <button 
+          onClick={resetFilters}
+          className="flex items-center gap-1 text-xs font-bold font-outfit uppercase text-gray-900 hover:text-red-600 transition-colors"
+        >
+          <RotateCcw size={12} /> Reset
+        </button>
+      </div>
+
+      <div className='font-outfit'>
+        <h3 className="text-xs font-extrabold uppercase tracking-widest text-gray-900 mb-4">Categories</h3>
         <div className="space-y-1">
           <div
             onClick={() => router.push('/shop')}
-            className={`pl-3 border-l ml-1 py-1 cursor-pointer text-sm hover:text-black ${
-              !currentCategory ? 'font-bold border-black text-black' : 'border-transparent text-gray-500'
+            className={`pl-3 border-l ml-1 py-1 cursor-pointer text-sm hover:text-black transition-all ${
+              !currentCategory ? 'font-bold border-black text-black' : 'border-transparent text-gray-400'
             }`}
           >
             All Products
           </div>
-
           {categoryTree.map((cat: any) => (
             <CategoryItem key={cat.id} category={cat} currentSlug={currentCategory} />
           ))}
         </div>
       </div>
 
-      {/* PRICE RANGE */}
+      {/* PRICE RANGE SLIDER + INPUTS */}
       <div>
-        <h3 className="text-xs font-extrabold uppercase tracking-widest text-gray-900 mb-4">Price Range</h3>
-        <div className="flex items-center gap-2 mb-3">
-          <input
-            type="number"
-            value={minPrice}
-            onChange={(e) => setMinPrice(e.target.value)}
-            className="w-full p-2 border border-gray-200 rounded text-sm focus:border-black outline-none"
-            placeholder="Min"
-          />
-          <Minus size={10} className="text-gray-400" />
-          <input
-            type="number"
-            value={maxPrice}
-            onChange={(e) => setMaxPrice(e.target.value)}
-            className="w-full p-2 border border-gray-200 rounded text-sm focus:border-black outline-none"
-            placeholder="Max"
-          />
+        <h3 className="text-xs font-extrabold uppercase tracking-widest text-gray-900 mb-8 font-outfit">Price Range</h3>
+        
+        <div className="px-2">
+          {/* Draggable Bar */}
+          <div className="relative h-1 w-full bg-gray-100 rounded-full mb-8">
+            <div 
+              className="absolute h-full bg-black rounded-full"
+              style={{ 
+                left: `${(minPrice / MAX_LIMIT) * 100}%`, 
+                right: `${100 - (maxPrice / MAX_LIMIT) * 100}%` 
+              }}
+            />
+            <input
+              type="range"
+              min={MIN_LIMIT}
+              max={MAX_LIMIT}
+              step={100}
+              value={minPrice}
+              onChange={(e) => setMinPrice(Math.min(Number(e.target.value), maxPrice - 100))}
+              className="absolute w-full -top-1 h-2 appearance-none bg-transparent pointer-events-none z-20 slider-thumb"
+            />
+            <input
+              type="range"
+              min={MIN_LIMIT}
+              max={MAX_LIMIT}
+              step={100}
+              value={maxPrice}
+              onChange={(e) => setMaxPrice(Math.max(Number(e.target.value), minPrice + 100))}
+              className="absolute w-full -top-1 h-2 appearance-none bg-transparent pointer-events-none z-20 slider-thumb"
+            />
+          </div>
+
+          {/* Editable Text Inputs */}
+          <div className="flex items-center gap-2 mb-6">
+            <div className="flex-1 relative">
+              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 font-bold">Rs.</span>
+              <input 
+                type="number"
+                value={minPrice}
+                onChange={handleMinInput}
+                className="w-full pl-8 pr-2 py-2 bg-gray-50 border border-gray-200 rounded text-xs font-bold outline-none focus:border-black transition-colors"
+              />
+            </div>
+            <Minus size={12} className="text-gray-300" />
+            <div className="flex-1 relative">
+              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 font-bold">Rs.</span>
+              <input 
+                type="number"
+                value={maxPrice}
+                onChange={handleMaxInput}
+                className="w-full pl-8 pr-2 py-2 bg-gray-50 border border-gray-200 rounded text-xs font-bold outline-none focus:border-black transition-colors"
+              />
+            </div>
+          </div>
+
+          <button
+            onClick={applyPriceFilter}
+            className="w-full py-2.5 bg-black text-white text-[10px] font-bold uppercase tracking-widest rounded-sm hover:bg-zinc-800 transition-colors"
+          >
+            Apply Filter
+          </button>
         </div>
-        <button
-          onClick={applyPriceFilter}
-          className="w-full py-2 bg-gray-900 text-white text-xs font-bold uppercase rounded hover:bg-black transition-colors"
-        >
-          Apply
-        </button>
       </div>
 
-      {/* BRANDS */}
       <div>
-        <h3 className="text-xs font-extrabold uppercase tracking-widest text-gray-900 mb-4">Brands</h3>
-        <div className="space-y-2 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+        <h3 className="text-xs font-extrabold uppercase tracking-widest text-gray-900 mb-4 font-outfit">Brands</h3>
+        <div className="space-y-2 max-h-64 overflow-y-auto pr-2 custom-scrollbar text-gray-500">
           {brands.map((brand: any) => {
             const isSelected = currentBrand === brand.name;
             return (
@@ -210,16 +271,14 @@ export default function FilterSidebar({ isOpen = false, onClose }: FilterSidebar
                   isSelected ? params.delete('brand') : params.set('brand', brand.name);
                   router.push(`/shop?${params.toString()}`);
                 }}
-                className="flex items-center gap-3 cursor-pointer group hover:bg-gray-50 p-1 rounded transition-colors"
+                className="flex items-center gap-3 cursor-pointer group hover:bg-gray-50 p-1.5 rounded transition-colors"
               >
-                <div
-                  className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
-                    isSelected ? 'bg-black border-black' : 'border-gray-300'
-                  }`}
-                >
+                <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                  isSelected ? 'bg-black border-black' : 'border-gray-200 group-hover:border-gray-400'
+                }`}>
                   {isSelected && <Check size={10} className="text-white" />}
                 </div>
-                <span className={`text-sm ${isSelected ? 'font-bold text-black' : 'text-gray-600'}`}>
+                <span className={`text-sm font-outfit transition-colors ${isSelected ? 'font-bold text-black' : ''}`}>
                   {brand.name}
                 </span>
               </div>
@@ -227,43 +286,69 @@ export default function FilterSidebar({ isOpen = false, onClose }: FilterSidebar
           })}
         </div>
       </div>
+
+      <style jsx global>{`
+        /* Remove arrows from number inputs */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        input[type=number] {
+          -moz-appearance: textfield;
+        }
+
+        .slider-thumb::-webkit-slider-thumb {
+          appearance: none;
+          pointer-events: auto;
+          height: 14px;
+          width: 14px;
+          border-radius: 50%;
+          background: #000;
+          border: 2px solid #fff;
+          cursor: pointer;
+          box-shadow: 0 0 0 1px #e5e7eb;
+        }
+        .slider-thumb::-moz-range-thumb {
+          pointer-events: auto;
+          height: 14px;
+          width: 14px;
+          border-radius: 50%;
+          background: #000;
+          border: 2px solid #fff;
+          cursor: pointer;
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f9fafb; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 10px; }
+      `}</style>
     </div>
   );
 
   return (
     <>
-      {/* 1. DESKTOP VIEW */}
-      <aside className="hidden md:block w-64 flex-shrink-0 pr-4 border-r border-gray-50">
+      <aside className="hidden md:block w-64 flex-shrink-0 pr-6 border-r border-gray-100 pt-2">
         {sidebarContent}
       </aside>
 
-      {/* 2. MOBILE VIEW */}
-      {/* Note: We remove 'invisible' if open to ensure pointer events work, but keep 'md:hidden' */}
       <div className={`md:hidden fixed inset-0 z-[100] ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
-        
-        {/* Backdrop - Only show when open */}
         <div 
-           className={`absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`} 
-           onClick={onClose} 
+          className={`absolute inset-0 bg-black/40 backdrop-blur-[2px] transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`} 
+          onClick={onClose} 
         />
-
-        {/* Sliding Drawer */}
         <aside
-          className={`absolute top-0 left-0 w-4/5 max-w-xs h-full bg-white shadow-2xl transition-transform duration-300 ease-out transform ${
+          className={`absolute top-0 left-0 w-[85%] max-w-xs h-full bg-white transition-transform duration-300 ease-out transform ${
             isOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
           <div className="flex flex-col h-full">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-gray-50/50">
-              <h2 className="text-lg font-bold text-gray-900">Filters</h2>
-              <button
-                onClick={onClose}
-                className="p-2 bg-white border border-gray-200 rounded-full text-gray-500 hover:text-black hover:border-gray-300"
-              >
+            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+              <h2 className="text-sm font-black uppercase tracking-widest">Filter By</h2>
+              <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full">
                 <X size={20} />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-6 pb-20">
+            <div className="flex-1 overflow-y-auto p-6 pb-24">
               {sidebarContent}
             </div>
           </div>
