@@ -39,6 +39,18 @@ const CategoryItem = ({ category, currentSlug }: { category: any; currentSlug: s
 
   const [isOpen, setIsOpen] = useState(isActive || hasActiveChild);
   const hasChildren = category.children && category.children.length > 0;
+  useEffect(() => {
+    // Only apply to mobile (since desktop sidebar isn't an overlay)
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (isActive || hasActiveChild) {

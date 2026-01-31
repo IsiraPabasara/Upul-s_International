@@ -27,7 +27,6 @@ export default function UserOrderDetailsPage() {
   const isReturned = order.status === 'RETURNED';
   const isPayHere = order.paymentMethod === 'PAYHERE';
 
-  // --- Style Helper (Consistent with List Page) ---
   const getStatusStyle = (status: string) => {
     switch(status) {
         case 'DELIVERED': return 'bg-green-50 text-green-700 border-green-200';
@@ -37,7 +36,6 @@ export default function UserOrderDetailsPage() {
     }
   };
 
-  // --- Timeline Logic ---
   let steps = [
       { id: 'PENDING', label: 'Placed', icon: Clock },
       { id: 'CONFIRMED', label: 'Confirmed', icon: CheckCircle },
@@ -52,16 +50,27 @@ export default function UserOrderDetailsPage() {
   let currentStepIndex = steps.findIndex(s => s.id === order.status);
   if (currentStepIndex === -1 && order.status === 'DELIVERED') currentStepIndex = steps.findIndex(s => s.id === 'DELIVERED');
 
+  // Logic for dynamic theme colors
+  const getThemeColor = () => {
+    if (isCancelled) return 'bg-red-600';
+    if (isReturned) return 'bg-orange-600';
+    return 'bg-black';
+  };
+
+  const getThemeText = () => {
+    if (isCancelled) return 'text-red-600';
+    if (isReturned) return 'text-orange-600';
+    return 'text-black';
+  };
+
   return (
     <div className="w-full min-h-screen bg-white font-outfit pb-32">
       <div className="max-w-5xl mx-auto px-6 pt-20">
         
-        {/* Nav - Consistent with List Page */}
         <Link href="/profile/orders" className="inline-flex items-center gap-2 text-xs tracking-[0.2em] uppercase text-gray-500 hover:text-black transition-colors mb-12">
            <ChevronLeft size={16} /> Back to Order History
         </Link>
 
-        {/* Header - Consistent Margins & Border */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 border-b border-black pb-8 gap-6">
             <div>
                 <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tighter">Order #{order.orderNumber}</h1>
@@ -83,66 +92,71 @@ export default function UserOrderDetailsPage() {
             </div>
         </div>
 
-        {/* Progress Bar (Hidden on mobile) */}
+        {/* Desktop Progress Bar (Horizontal) */}
         <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-200 mb-8 relative overflow-hidden hidden md:block">
             <div className="relative z-10 flex justify-between">
                 {steps.map((step, idx) => {
                     const isCompleted = idx <= currentStepIndex;
                     const Icon = step.icon;
-                    
-                    let activeColor = 'bg-black text-white';
-                    let activeText = 'text-black';
-                    
-                    if (isCancelled) {
-                        activeColor = 'bg-red-600 text-white';
-                        activeText = 'text-red-600';
-                    } else if (isReturned) {
-                        activeColor = 'bg-orange-600 text-white';
-                        activeText = 'text-orange-600';
-                    }
-
                     return (
                         <div key={step.id} className="flex flex-col items-center relative z-10 w-24">
                             <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-3 transition-colors duration-500
-                                ${isCompleted ? activeColor : 'bg-gray-100 text-gray-400'}`}>
+                                ${isCompleted ? `${getThemeColor()} text-white` : 'bg-gray-100 text-gray-400'}`}>
                                 <Icon size={18} />
                             </div>
                             <span className={`text-[10px] font-bold uppercase tracking-wide transition-colors duration-500
-                                ${isCompleted ? activeText : 'text-gray-300'}`}>
+                                ${isCompleted ? getThemeText() : 'text-gray-300'}`}>
                                 {step.label}
                             </span>
                         </div>
                     );
                 })}
             </div>
-            <div className="absolute top-12 left-0 w-full h-1 bg-gray-100 z-0 px-12 md:px-20">
+            <div className="absolute top-12 left-0 w-full h-1 bg-gray-100 z-0 px-20">
                 <div 
-                    className={`h-full transition-all duration-1000 ease-out 
-                        ${isCancelled ? 'bg-red-600' : isReturned ? 'bg-orange-600' : 'bg-black'}`}
+                    className={`h-full transition-all duration-1000 ease-out ${getThemeColor()}`}
                     style={{ width: `${(currentStepIndex / (steps.length - 1)) * 100}%` }} 
                 />
             </div>
         </div>
 
-        {/* Mobile View for Cancelled/Returned Message */}
-        {(isCancelled || isReturned) && (
-             <div className={`md:hidden mb-8 p-4 rounded-xl flex items-center gap-4
-                ${isCancelled ? 'bg-red-50 text-red-800' : 'bg-orange-50 text-orange-800'}`}>
-                {isCancelled ? <XCircle size={24} /> : <ArrowLeft size={24} />}
-                <div>
-                    <p className="font-bold">{isCancelled ? 'Order Cancelled' : 'Order Returned'}</p>
-                    <p className="text-xs opacity-80">
-                        {isCancelled 
-                            ? 'This order has been cancelled and will not be delivered.' 
-                            : 'This order has been marked as returned.'}
-                    </p>
+        {/* Mobile Progress Bar (Vertical) */}
+        <div className="bg-white p-6 rounded-2xl border border-gray-200 mb-8 block md:hidden">
+            <div className="relative space-y-8">
+                {/* Vertical Line Background */}
+                <div className="absolute left-[19px] top-2 bottom-2 w-0.5 bg-gray-100 z-0">
+                    <div 
+                        className={`w-full transition-all duration-1000 ease-out ${getThemeColor()}`}
+                        style={{ height: `${(currentStepIndex / (steps.length - 1)) * 100}%` }} 
+                    />
                 </div>
-             </div>
-        )}
+
+                {steps.map((step, idx) => {
+                    const isCompleted = idx <= currentStepIndex;
+                    const Icon = step.icon;
+                    return (
+                        <div key={step.id} className="flex items-center gap-4 relative z-10">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors duration-500
+                                ${isCompleted ? `${getThemeColor()} text-white` : 'bg-gray-100 text-gray-400'}`}>
+                                <Icon size={18} />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className={`text-xs font-bold uppercase tracking-widest
+                                    ${isCompleted ? getThemeText() : 'text-gray-300'}`}>
+                                    {step.label}
+                                </span>
+                                {isCompleted && idx === currentStepIndex && (
+                                    <span className="text-[10px] text-gray-400 uppercase font-medium mt-0.5">Current Status</span>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-            
-            {/* Left: Items */}
+            {/* ... Rest of your component (Items and Summary) remains exactly the same ... */}
             <div className="md:col-span-2 space-y-8">
                 <div className="border border-gray-200 p-8 rounded-sm">
                     <h3 className="text-xs font-black uppercase tracking-[0.3em] text-gray-900 mb-8 flex items-center gap-3">
@@ -167,9 +181,7 @@ export default function UserOrderDetailsPage() {
                 </div>
             </div>
 
-            {/* Right: Summary */}
             <div className="space-y-8">
-                {/* Delivery Box - Fixed Overflow */}
                 <div className="border border-gray-200 p-8 bg-gray-50/30 rounded-sm">
                     <h3 className="text-xs font-black uppercase tracking-[0.3em] text-gray-900 mb-6 flex items-center gap-3">
                         <MapPin size={16} /> Delivery
@@ -212,7 +224,6 @@ export default function UserOrderDetailsPage() {
                     </div>
                 </div>
             </div>
-
         </div>
       </div>
     </div>
