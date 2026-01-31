@@ -60,6 +60,15 @@ export default function ShopPage() {
   const [mobileGrid, setMobileGrid] = useState<1 | 2>(2);
   const [mounted, setMounted] = useState(false);
 
+  useEffect(() => {
+    // Use 'instant' for an immediate jump to the top
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: 'instant', 
+    });
+  }, [])
+
   // ✅ Hydration Fix: Set mounted to true after initial render
   useEffect(() => {
     setMounted(true);
@@ -118,7 +127,7 @@ export default function ShopPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="mx-auto px-5 md:pt-5 font-outfit max-w-8xl">
+      <div className="mx-auto px-5 mt-12 md:mt-2 md:pt-5 font-outfit max-w-8xl">
         <Breadcrumbs category={categorySlug} search={searchTerm} />
 
         <div className="flex flex-col md:flex-row gap-10">

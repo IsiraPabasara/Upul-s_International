@@ -130,7 +130,7 @@ export default function CartSlider() {
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full font-outfit">
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b">
             <h2 className="text-lg font-bold">Shopping Cart ({items.length})</h2>

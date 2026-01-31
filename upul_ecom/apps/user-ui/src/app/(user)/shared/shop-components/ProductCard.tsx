@@ -95,12 +95,12 @@ export default function ProductCard({ product }: ProductCardProps) {
           {/* Wishlist Button - Visible on hover */}
           <button 
             onClick={handleWishlistToggle}
-            className="absolute top-3 right-3 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-1.5 bg-white/50 backdrop-blur-sm rounded-full text-gray-900"
+            className="absolute top-3 right-3 z-20 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-300 p-1.5 bg-white/50 backdrop-blur-sm rounded-full text-gray-900"
           >
             <Heart 
-                size={18} 
-                strokeWidth={1.5} 
-                className={isWishlisted ? "fill-black" : "fill-none"} 
+              size={18} 
+              strokeWidth={1.5} 
+              className={isWishlisted ? "fill-black" : "fill-none"} 
             />
           </button>
         </div>

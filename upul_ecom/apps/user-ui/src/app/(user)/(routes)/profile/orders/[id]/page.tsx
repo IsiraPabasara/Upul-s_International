@@ -3,7 +3,7 @@
 import { useParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import axiosInstance from '@/app/utils/axiosInstance';
-import { Loader2, Package, CheckCircle, Truck, Clock, MapPin, ChevronLeft, XCircle, ArrowLeft, CreditCard, Banknote } from 'lucide-react';
+import { Package, CheckCircle, Truck, Clock, MapPin, ChevronLeft, XCircle, ArrowLeft, CreditCard, Banknote } from 'lucide-react';
 import Link from 'next/link';
 
 export default function UserOrderDetailsPage() {

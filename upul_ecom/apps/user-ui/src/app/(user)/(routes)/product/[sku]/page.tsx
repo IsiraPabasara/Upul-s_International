@@ -46,6 +46,15 @@ const ProductGallery = ({ images, name }: { images: { url: string }[], name: str
     if(images?.[0]?.url) setActiveImage(images[0].url);
   }, [images]);
 
+  useEffect(() => {
+    // Use 'instant' for an immediate jump to the top
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: 'instant', 
+    });
+  }, [])
+
   if (!images || images.length === 0) return <div className="bg-gray-100 h-96 rounded-xl flex items-center justify-center text-gray-400">No Image</div>;
 
   return (
@@ -284,11 +293,12 @@ export default function ProductPage() {
       try { await axiosInstance.post('/api/wishlist/toggle', item, { isPublic: true }); } catch (err) {}
   };
 
+
   return (
-    <div className="bg-white min-h-screen pb-20">
+    <div className="bg-white min-h-screen pb-20 mt-8 md:mt-2 md:pt-5">
       
       {/* Breadcrumb */}
-      <div className="max-w-7xl mx-auto px-4 py-4 text-sm text-gray-500">
+      <div className="max-w-7xl mx-auto px-4 pt-4 pb-1 md:pt-0 md:pb-0 md:py-4 text-xs md:text-sm text-gray-500">
         <Link href="/">Home</Link> <span className="mx-2">/</span>
         <Link href="/shop">Shop</Link> <span className="mx-2">/</span>
         <span className="text-black font-medium">{product.name}</span>
