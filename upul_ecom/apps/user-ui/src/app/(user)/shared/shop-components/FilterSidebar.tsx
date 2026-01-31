@@ -313,7 +313,7 @@ export default function FilterSidebar({ isOpen = false, onClose }: FilterSidebar
       {/* AVAILABILITY SECTION */}
       <div>
         <h3 className="text-xs font-extrabold uppercase tracking-widest text-gray-900 mb-4 font-outfit">Availability</h3>
-        <div className="space-y-2 text-gray-500">
+        <div className="space-y-2 text-gray-500 md:pb-10">
           {[
             { label: 'In Stock', value: 'in-stock' },
             { label: 'Out of Stock', value: 'out-of-stock' }

@@ -1,4 +1,5 @@
 import CartSlider from "./shared/cart-components/CartSlider";
+import Footer from "./shared/widgets/footer";
 import Header from "./shared/widgets/header";
 
 export default function WebsiteLayout({ children }: { children: React.ReactNode }) {
@@ -7,7 +8,7 @@ export default function WebsiteLayout({ children }: { children: React.ReactNode 
       <Header/>
       <CartSlider />
       <main>{children}</main>
-
+      <Footer/>
     </section>
   );
 }

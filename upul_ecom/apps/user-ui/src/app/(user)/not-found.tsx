@@ -3,7 +3,7 @@ import { MoveLeft, PackageX } from 'lucide-react';
 
 export default function NotFound() {
   return (
-    <div className="flex flex-col items-center justify-center mt-40 bg-white px-6 text-center">
+    <div className="flex flex-col items-center justify-center mt-40 bg-white px-6 text-center mb-20">
       
       {/* Icon Wrapper with simple bounce/pulse animation */}
       <div className="relative mb-6 md:mb-8">
