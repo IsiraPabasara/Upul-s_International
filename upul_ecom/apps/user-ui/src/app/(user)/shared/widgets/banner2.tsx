@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { ArrowUpRight} from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Swiper, SwiperSlide } from "swiper/react";
-import { Autoplay, Navigation, EffectFade, Pagination } from "swiper/modules";
+// import { Swiper, SwiperSlide } from "swiper/react";
+// import { Autoplay, Navigation, EffectFade, Pagination } from "swiper/modules";
 // --- Components ---
 
 // // Essential Swiper Styles

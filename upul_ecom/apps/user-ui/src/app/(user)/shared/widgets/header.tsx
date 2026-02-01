@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
+// import Image from 'next/image';
 import Link from 'next/link';
 import { Search, ShoppingCart, User, Heart, Menu, X, Package, UserCircle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';

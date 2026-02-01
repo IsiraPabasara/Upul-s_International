@@ -9,7 +9,6 @@ import axiosInstance from '@/app/utils/axiosInstance';
 import ProductCard from '@/app/(user)/shared/shop-components/ProductCard';
 import BrandMarquee from './shared/widgets/brandsMarquee';
 import Hero from './shared/widgets/banner';
-import Footer from './shared/widgets/footer';
 
 
 

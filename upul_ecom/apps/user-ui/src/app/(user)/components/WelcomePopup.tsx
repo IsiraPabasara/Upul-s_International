@@ -21,8 +21,10 @@ export default function WelcomePopup({
     const lastShownTime = localStorage.getItem('welcomePopupTime');
     const now = Date.now();
     
-    const shouldShow = !lastShownTime || (now - parseInt(lastShownTime) >= resetDuration);
-    
+    const parsedTime = parseInt(lastShownTime || '0'); // Default to 0
+
+    const shouldShow = !lastShownTime || (!isNaN(parsedTime) && now - parsedTime >= resetDuration);
+
     if (shouldShow) {
       // Show popup after delay
       const timer = setTimeout(() => {
@@ -32,6 +34,8 @@ export default function WelcomePopup({
       
       return () => clearTimeout(timer);
     }
+
+    return undefined;
   }, [resetDuration, showDelay]);
 
   const handleClose = () => {
