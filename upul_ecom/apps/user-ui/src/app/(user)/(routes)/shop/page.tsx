@@ -88,11 +88,14 @@ export default function ShopPage() {
   const dynamicLimit = useMemo(() => {
     if (!mounted) return 12; // Default for Server Side Rendering
     
-    if (typeof window !== 'undefined' && window.innerWidth < 1024) return 12;
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      // Mobile: 8 items for 1 column, 12 for 2 columns
+      return mobileGrid === 1 ? 8 : 12;
+    }
     if (desktopGrid === 3) return 12;
     if (desktopGrid === 4) return 16;
     return 24; 
-  }, [desktopGrid, mounted]);
+  }, [desktopGrid, mobileGrid, mounted]);
 
   const closeMobileFilters = useCallback(() => {
     setIsMobileFiltersOpen(false);
@@ -103,6 +106,10 @@ export default function ShopPage() {
     queryKey: ['shop-products', searchParams.toString(), dynamicLimit],
     queryFn: async () => {
       const params = new URLSearchParams(searchParams.toString());
+      // Ensure page parameter is set (default to 1 if not present)
+      if (!params.has('page')) {
+        params.set('page', '1');
+      }
       params.set('limit', dynamicLimit.toString());
       const res = await axiosInstance.get(`/api/products/shop?${params.toString()}`, { isPublic: true });
       return res.data;
@@ -113,7 +120,7 @@ export default function ShopPage() {
   });
 
   const products = data?.products || [];
-  const pagination = data?.pagination || { total: 0, page: 1, totalPages: 1 };
+  const pagination = data?.pagination || { total: 0, page: 1, limit: dynamicLimit, totalPages: 1 };
 
   const getGridClasses = () => {
     if (!mounted) return "grid-cols-2 lg:grid-cols-4"; // Static fallback for SSR
@@ -126,7 +133,7 @@ export default function ShopPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white mb-10">
       <div className="mx-auto px-5 mt-12 md:mt-2 md:pt-5 font-outfit max-w-8xl">
         <Breadcrumbs category={categorySlug} search={searchTerm} />
 
