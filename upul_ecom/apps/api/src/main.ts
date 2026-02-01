@@ -7,6 +7,7 @@ import cookieParser from "cookie-parser";
 import { errorMiddleware } from '../../../packages/error-handler/error-middleware'
 import swaggerUi from 'swagger-ui-express'
 import router from './routes/main.router';
+import './email-service/email-queue'; // Initialize email queue
 
 const swaggerDocument = require("./swagger-output.json");
 
@@ -44,4 +45,6 @@ const port = process.env.PORT || 4000;
 app.listen(port, () => {
   console.log(`API running on http://localhost:${port}`);
   console.log(`Swagger Docs available at http://localhost:${port}/api-docs`);
+  console.log(`📧 Email Queue initialized and running`);
+  console.log(`📊 Email Dashboard: http://localhost:${port}/api/admin/email/statistics`);
 });
