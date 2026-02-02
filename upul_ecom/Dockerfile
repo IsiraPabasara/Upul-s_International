@@ -28,7 +28,9 @@ COPY --from=builder /app/apps/api/dist ./
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/prisma ./prisma
 
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev && \
+    npm cache clean --force && \
+    rm -rf /tmp/* /var/cache/apk/*
 
 EXPOSE 3000
 # Runtime sync for Cloud MongoDB Atlas
@@ -45,7 +47,9 @@ COPY --from=builder /app/apps/user-ui/public ./public
 COPY --from=builder /app/apps/user-ui/package.json ./package.json
 COPY --from=builder /app/package-lock.json ./package-lock.json
 
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev && \
+    npm cache clean --force && \
+    rm -rf /tmp/* /var/cache/apk/*
 
 EXPOSE 3001
 CMD ["npx", "next", "start"]
@@ -61,7 +65,9 @@ COPY --from=builder /app/apps/admin-ui/public ./public
 COPY --from=builder /app/apps/admin-ui/package.json ./package.json
 COPY --from=builder /app/package-lock.json ./package-lock.json
 
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev && \
+    npm cache clean --force && \
+    rm -rf /tmp/* /var/cache/apk/*
 
 EXPOSE 3002
 CMD ["npx", "next", "start"]
