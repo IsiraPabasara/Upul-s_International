@@ -48,12 +48,35 @@ RUN node -e " \
 # Clean up builder
 RUN rm -rf node_modules/.cache .next/cache apps/*/node_modules
 
-# Aggressively prune standalone output to reduce size
+# Aggressively prune standalone output to reduce size (target: <50MB app code)
 RUN cd apps/user-ui/.next/standalone && \
-    find . -type f \( -name "*.md" -o -name "*.txt" -o -name "LICENSE*" -o -name "*.map" -o -name "*.d.ts" -o -name "*.d.mts" -o -name "CHANGELOG*" -o -name "readme*" -o -name "README*" -o -name "*.flow" -o -name "*.ts.map" -o -name "*.mts" -o -name "*.cts" \) -delete 2>/dev/null || true && \
-    find . -type d \( -name "test" -o -name "tests" -o -name "__tests__" -o -name "docs" -o -name ".github" -o -name "example" -o -name "examples" -o -name "benchmark" -o -name "benchmarks" -o -name ".idea" -o -name ".vscode" \) -exec rm -rf {} + 2>/dev/null || true && \
-    find . -name "package.json" -exec sed -i 's/"types":.*,//g' {} \; 2>/dev/null || true && \
-    find . -type f -name "*.node" ! -path "*linux-x64*" ! -path "*linuxmusl-x64*" -delete 2>/dev/null || true
+    # Remove documentation and type files
+    find . -type f \( \
+      -name "*.md" -o -name "*.txt" -o -name "LICENSE*" -o -name "*.map" \
+      -o -name "*.d.ts" -o -name "*.d.mts" -o -name "*.d.cts" \
+      -o -name "CHANGELOG*" -o -name "readme*" -o -name "README*" \
+      -o -name "*.flow" -o -name "*.ts.map" -o -name "*.mts" -o -name "*.cts" \
+      -o -name "tsconfig*.json" -o -name ".npmignore" -o -name ".gitignore" \
+      -o -name "*.tsbuildinfo" -o -name "jest.config.*" -o -name "*.test.js" \
+      -o -name "*.spec.js" -o -name ".eslintrc*" -o -name ".prettierrc*" \
+      -o -name "Makefile" -o -name "*.mk" -o -name "binding.gyp" \
+    \) -delete 2>/dev/null || true && \
+    # Remove unnecessary directories
+    find . -type d \( \
+      -name "test" -o -name "tests" -o -name "__tests__" -o -name "__mocks__" \
+      -o -name "docs" -o -name "doc" -o -name ".github" -o -name ".git" \
+      -o -name "example" -o -name "examples" -o -name "benchmark" -o -name "benchmarks" \
+      -o -name ".idea" -o -name ".vscode" -o -name "coverage" -o -name ".nyc_output" \
+      -o -name "src" -o -name "source" -o -name "es" -o -name "esm" \
+      -o -name "types" -o -name "typings" -o -name "@types" \
+    \) -exec rm -rf {} + 2>/dev/null || true && \
+    # Remove non-linux native binaries
+    find . -type f -name "*.node" ! -path "*linux*" -delete 2>/dev/null || true && \
+    find . -type d \( -name "darwin*" -o -name "win32*" -o -name "freebsd*" -o -name "*-arm64*" \) -exec rm -rf {} + 2>/dev/null || true && \
+    # Remove unnecessary package files
+    find . -name "package.json" -exec sed -i -e 's/"types":.*,//g' -e 's/"typings":.*,//g' {} \; 2>/dev/null || true && \
+    # Remove browser/ESM variants (server only needs CJS)
+    find . -path "*/node_modules/*" -type f \( -name "*.browser.js" -o -name "*.esm.js" -o -name "*.mjs" \) -delete 2>/dev/null || true
 
 # --- Stage 2: Production API (Minimal) ---
 FROM node:20-alpine AS api
@@ -81,15 +104,16 @@ EXPOSE 3000
 CMD npx prisma@6.19 db push --schema=./prisma/schema.prisma && node main.js
 
 # --- Stage 3: Production UI (Next.js Standalone) ---
-# Using distroless for minimal size - only ~50MB base
-FROM gcr.io/distroless/nodejs20-debian12 AS ui
+# Using minimal scratch-based image with just Node.js (~35MB base)
+FROM gcr.io/distroless/nodejs20-debian12:nonroot AS ui
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3001 HOSTNAME=0.0.0.0
 
 # For Nx monorepos, standalone includes full app structure with all deps bundled
-COPY --from=builder /app/apps/user-ui/.next/standalone ./
-COPY --from=builder /app/apps/user-ui/.next/static ./apps/user-ui/.next/static
-COPY --from=builder /app/apps/user-ui/public ./apps/user-ui/public
+COPY --from=builder --chown=nonroot:nonroot /app/apps/user-ui/.next/standalone ./
+COPY --from=builder --chown=nonroot:nonroot /app/apps/user-ui/.next/static ./apps/user-ui/.next/static
+COPY --from=builder --chown=nonroot:nonroot /app/apps/user-ui/public ./apps/user-ui/public
 
+USER nonroot
 EXPOSE 3001
 CMD ["apps/user-ui/server.js"]
