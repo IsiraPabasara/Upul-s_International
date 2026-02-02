@@ -3,8 +3,9 @@
 import Link from 'next/link';
 import { CheckCircle, Phone, ArrowRight } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
-export default function SuccessPage() {
+function SuccessContent() {
   const searchParams = useSearchParams();
   const orderNumber = searchParams.get('orderNumber');
 
@@ -68,5 +69,21 @@ export default function SuccessPage() {
 
       </div>
     </div>
+  );
+}
+
+export default function SuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white max-w-lg w-full rounded-2xl shadow-xl p-8 text-center border border-gray-100">
+          <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse"></div>
+          <div className="h-8 bg-gray-100 rounded mb-4 animate-pulse"></div>
+          <div className="h-4 bg-gray-100 rounded animate-pulse"></div>
+        </div>
+      </div>
+    }>
+      <SuccessContent />
+    </Suspense>
   );
 }

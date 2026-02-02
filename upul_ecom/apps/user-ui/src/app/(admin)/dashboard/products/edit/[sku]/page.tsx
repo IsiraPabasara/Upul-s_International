@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import axiosInstance from "@/app/utils/axiosInstance";
 import ProductForm, { ProductFormValues } from "../../components/ProductForm";
 import toast from "react-hot-toast";

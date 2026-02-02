@@ -83,7 +83,7 @@ export default function ProductForm({
     setValue,
     watch,
     reset,
-    formState: { errors },
+    formState: {  },
   } = useForm<ProductFormValues>({
     defaultValues: INITIAL_DATA,
   });
@@ -108,7 +108,7 @@ export default function ProductForm({
   }, [initialData, reset]);
 
   // Watchers
-  const watchedColors = watch("colors");
+
   const watchedPrice = watch("price");
   const watchedDiscountType = watch("discountType");
   const watchedDiscountValue = watch("discountValue");

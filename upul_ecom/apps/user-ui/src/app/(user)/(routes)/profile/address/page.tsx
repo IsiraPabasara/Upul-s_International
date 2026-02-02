@@ -26,7 +26,7 @@ const AddressManager = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
 
-  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<AddressFormData>();
+  const { register, handleSubmit, reset, setValue, watch, formState: { } } = useForm<AddressFormData>();
   const isDefaultChecked = watch("isDefault");
 
   const invalidateUser = () => queryClient.invalidateQueries({ queryKey: ["user"] });

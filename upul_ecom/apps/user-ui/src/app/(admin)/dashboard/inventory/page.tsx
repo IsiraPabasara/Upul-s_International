@@ -46,7 +46,7 @@ interface ApiResponse {
 }
 
 // Store edits as a Record: { "sku-size": newStockValue }
-type EditsRecord = Record<string, number>;
+
 
 export default function InventoryPage() {
   const queryClient = useQueryClient();

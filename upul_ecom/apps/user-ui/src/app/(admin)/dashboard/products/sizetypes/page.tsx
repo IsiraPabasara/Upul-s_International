@@ -50,14 +50,17 @@ export default function SizeTypeManager() {
     },
   });
 
-  const handleCreate = (e: React.FormEvent) => {
+  const handleCreate = (e: React.FormEvent): void => {
     e.preventDefault();
     const valuesArray = newValueString
       .split(',')
       .map((v) => v.trim())
       .filter((v) => v !== '');
 
-    if (valuesArray.length === 0) return toast.error('Please add at least one value');
+    if (valuesArray.length === 0) {
+      toast.error('Please add at least one value');
+      return;
+    }
 
     createMutation.mutate({ name: newName, values: valuesArray });
   };

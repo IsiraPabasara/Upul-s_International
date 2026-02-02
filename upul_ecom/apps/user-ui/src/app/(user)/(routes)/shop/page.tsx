@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import axiosInstance from '@/app/utils/axiosInstance';
@@ -49,7 +49,7 @@ const Breadcrumbs = ({ category, search }: { category?: string | null; search?: 
   </nav>
 );
 
-export default function ShopPage() {
+function ShopContent() {
   const searchParams = useSearchParams();
   const searchTerm = searchParams.get('search');
   const categorySlug = searchParams.get('category');
@@ -235,5 +235,30 @@ export default function ShopPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ShopPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-white mb-10">
+        <div className="mx-auto px-5 mt-12 md:mt-2 md:pt-5 font-outfit max-w-8xl">
+          <div className="animate-pulse space-y-8">
+            <div className="h-8 bg-gray-100 rounded w-1/3"></div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+              {[...Array(12)].map((_, i) => (
+                <div key={i} className="space-y-3">
+                  <div className="aspect-[3/4] bg-gray-100 rounded-xl" />
+                  <div className="h-4 bg-gray-100 rounded w-3/4" />
+                  <div className="h-4 bg-gray-100 rounded w-1/2" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <ShopContent />
+    </Suspense>
   );
 }

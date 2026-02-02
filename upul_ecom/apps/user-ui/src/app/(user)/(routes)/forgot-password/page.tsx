@@ -25,7 +25,7 @@ const ForgotPassword = () => {
     
     const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
     const router = useRouter();
-    const { register, handleSubmit, formState: { errors }, reset } = useForm<FormData>();
+    const { register, handleSubmit, formState: { errors } } = useForm<FormData>();
 
     // Resend Timer
     useEffect(() => {

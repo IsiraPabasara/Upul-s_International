@@ -5,8 +5,9 @@ import { useQuery } from '@tanstack/react-query';
 import axiosInstance from '@/app/utils/axiosInstance';
 import { Loader2, Package, CheckCircle, XCircle, Truck, Clock, ArrowLeft, CreditCard, Banknote } from 'lucide-react';
 import Link from 'next/link';
+import { Suspense } from 'react';
 
-export default function TrackOrderPage() {
+function TrackOrderContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
 
@@ -232,5 +233,20 @@ export default function TrackOrderPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function TrackOrderPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="animate-spin w-8 h-8" />
+          <p className="text-gray-500">Loading order details...</p>
+        </div>
+      </div>
+    }>
+      <TrackOrderContent />
+    </Suspense>
   );
 }

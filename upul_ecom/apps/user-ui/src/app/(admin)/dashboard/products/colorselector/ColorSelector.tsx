@@ -53,8 +53,11 @@ export default function ColorSelector({
     },
   });
 
-  const handleAddColor = () => {
-    if (!newName.trim()) return toast.error("Please enter a color name");
+  const handleAddColor = (): void => {
+    if (!newName.trim()) {
+      toast.error("Please enter a color name");
+      return;
+    }
     addColorMutation.mutate({ name: newName, hexCode: newHex });
   };
 

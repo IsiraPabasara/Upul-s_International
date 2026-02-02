@@ -52,15 +52,12 @@ export default function StockManager({
     // 👇 3. STOP if we already hydrated
     if (hasHydrated.current) return;
 
-    let dataLoaded = false;
-
     if (initialVariants && initialVariants.length > 0) {
       setRows(initialVariants.map((v, i) => ({
         id: Date.now() + i,
         size: v.size,
         stock: v.stock
       })));
-      dataLoaded = true;
     }
     
     // Handle Size Type
