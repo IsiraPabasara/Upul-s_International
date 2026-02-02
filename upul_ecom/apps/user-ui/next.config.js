@@ -12,6 +12,14 @@ const nextConfig = {
   // See: https://nx.dev/recipes/next/next-config-setup
   nx: {},
   output: 'standalone',
+  // Reduce bundle size
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'framer-motion', '@tanstack/react-query'],
+  },
+  // Disable source maps in production
+  productionBrowserSourceMaps: false,
+  // Compress output
+  compress: true,
 };
 
 const plugins = [

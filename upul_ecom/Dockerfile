@@ -48,9 +48,12 @@ RUN node -e " \
 # Clean up builder
 RUN rm -rf node_modules/.cache .next/cache apps/*/node_modules
 
-# Prune standalone output to reduce size
-RUN find apps/user-ui/.next/standalone -type f \( -name "*.md" -o -name "LICENSE*" -o -name "*.map" -o -name "*.d.ts" -o -name "CHANGELOG*" \) -delete 2>/dev/null || true && \
-    find apps/user-ui/.next/standalone -type d \( -name "test" -o -name "tests" -o -name "__tests__" -o -name "docs" -o -name ".github" \) -exec rm -rf {} + 2>/dev/null || true
+# Aggressively prune standalone output to reduce size
+RUN cd apps/user-ui/.next/standalone && \
+    find . -type f \( -name "*.md" -o -name "*.txt" -o -name "LICENSE*" -o -name "*.map" -o -name "*.d.ts" -o -name "*.d.mts" -o -name "CHANGELOG*" -o -name "readme*" -o -name "README*" -o -name "*.flow" -o -name "*.ts.map" -o -name "*.mts" -o -name "*.cts" \) -delete 2>/dev/null || true && \
+    find . -type d \( -name "test" -o -name "tests" -o -name "__tests__" -o -name "docs" -o -name ".github" -o -name "example" -o -name "examples" -o -name "benchmark" -o -name "benchmarks" -o -name ".idea" -o -name ".vscode" \) -exec rm -rf {} + 2>/dev/null || true && \
+    find . -name "package.json" -exec sed -i 's/"types":.*,//g' {} \; 2>/dev/null || true && \
+    find . -type f -name "*.node" ! -path "*linux-x64*" ! -path "*linuxmusl-x64*" -delete 2>/dev/null || true
 
 # --- Stage 2: Production API (Minimal) ---
 FROM node:20-alpine AS api
