@@ -3,7 +3,7 @@
 import { useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import axiosInstance from '@/app/utils/axiosInstance';
-import { Loader2, Package, CheckCircle, XCircle, Truck, Clock, ArrowLeft } from 'lucide-react';
+import { Loader2, Package, CheckCircle, XCircle, Truck, Clock, ArrowLeft, CreditCard, Banknote } from 'lucide-react';
 import Link from 'next/link';
 
 export default function TrackOrderPage() {
@@ -18,7 +18,6 @@ export default function TrackOrderPage() {
         const res = await axiosInstance.get(`/api/orders/track/${token}`);
         return res.data;
       } catch (err: any) {
-        // If 410 (Expired), return the error data payload to render the specific UI
         if (err.response?.status === 410) {
             throw err.response.data; 
         }
@@ -41,31 +40,20 @@ export default function TrackOrderPage() {
   // --- 1. HANDLE EXPIRED / COMPLETED STATE ---
   if (error) {
       const errData = error as any;
-      
-      // If backend says "Link Expired" (410)
       if (errData?.message === "Link Expired") {
           const isDelivered = errData.reason === 'DELIVERED';
-          
           return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
                 <div className="bg-white max-w-md w-full p-8 rounded-2xl shadow-xl text-center border border-gray-100">
                     <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 ${isDelivered ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
                         {isDelivered ? <CheckCircle size={40} /> : <XCircle size={40} />}
                     </div>
-                    
                     <h1 className="text-2xl font-black text-gray-900 mb-2">
                         Order {isDelivered ? 'Delivered' : 'Cancelled'}
                     </h1>
-                    
                     <p className="text-gray-500 mb-6 leading-relaxed">
                         This tracking link has expired because Order <b>#{errData.orderNumber}</b> has been completed.
-                        For privacy reasons, order details are no longer publicly accessible.
                     </p>
-
-                    <div className="bg-gray-50 p-4 rounded-lg mb-6 text-sm text-gray-600">
-                        Need help? Contact us at <span className="font-bold text-black">support@upul.com</span>
-                    </div>
-
                     <Link href="/shop" className="block w-full bg-black text-white py-3 rounded-lg font-bold hover:bg-gray-800 transition">
                         Continue Shopping
                     </Link>
@@ -73,27 +61,23 @@ export default function TrackOrderPage() {
             </div>
           );
       }
-
       return <div className="min-h-screen flex items-center justify-center">Order not found.</div>;
   }
 
   if (isLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
 
   // --- 2. ACTIVE TRACKING STATE ---
-  
   const isReturned = order.status === 'RETURNED';
+  const isPayHere = order.paymentMethod === 'PAYHERE';
 
-  // Status Steps Logic
   let steps = [
       { id: 'PENDING', label: 'Placed', icon: Clock },
       { id: 'CONFIRMED', label: 'Confirmed', icon: CheckCircle },
       { id: 'PROCESSING', label: 'Processing', icon: Package },
       { id: 'SHIPPED', label: 'Shipped', icon: Truck },
-      // Added Delivered here so Shipped isn't the last dot
       { id: 'DELIVERED', label: 'Delivered', icon: CheckCircle }, 
   ];
 
-  // If Returned, swap the last step or add it
   if (isReturned) {
       steps = [
           { id: 'PENDING', label: 'Placed', icon: Clock },
@@ -159,8 +143,6 @@ export default function TrackOrderPage() {
                     );
                 })}
             </div>
-            
-            {/* Connecting Line */}
             <div className="absolute top-12 left-0 w-full h-1 bg-gray-100 z-0 px-12 md:px-20">
                 <div 
                     className={`h-full transition-all duration-1000 ease-out ${isReturned ? 'bg-orange-600' : 'bg-black'}`} 
@@ -169,7 +151,7 @@ export default function TrackOrderPage() {
             </div>
         </div>
 
-        {/* Mobile Status Card (Since Progress Bar is hidden on mobile) */}
+        {/* Mobile Status Card */}
         <div className="md:hidden bg-white p-6 rounded-2xl shadow-sm border border-gray-200 mb-8 flex items-center gap-4">
              <div className="w-12 h-12 bg-black text-white rounded-full flex items-center justify-center">
                 <Truck size={24} />
@@ -223,14 +205,27 @@ export default function TrackOrderPage() {
                     </div>
                 </div>
 
-                <div className="bg-black text-white p-6 rounded-2xl shadow-lg">
+                {/* 👇 MODIFIED PAYMENT CARD */}
+                <div className={`p-6 rounded-2xl shadow-lg text-white
+                    ${isPayHere ? 'bg-blue-900' : 'bg-black'}`}>
+                    
                     <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm text-gray-400">Total (COD)</span>
+                        <span className="text-sm text-gray-300 flex items-center gap-2">
+                            {isPayHere ? <CreditCard size={16}/> : <Banknote size={16}/>}
+                            Total {isPayHere ? '(Paid)' : '(COD)'}
+                        </span>
                         <span className="text-xl font-bold">LKR {order.totalAmount.toLocaleString()}</span>
                     </div>
-                    <p className="text-[10px] text-gray-500 mt-4">
-                        Please have the exact amount ready for the courier.
-                    </p>
+
+                    {isPayHere ? (
+                        <p className="text-[10px] text-blue-200 mt-4 font-bold uppercase tracking-wide flex items-center gap-1">
+                            <CheckCircle size={12} /> Payment Completed
+                        </p>
+                    ) : (
+                        <p className="text-[10px] text-gray-400 mt-4">
+                            Please have the <span className="text-white font-bold">exact amount</span> ready for the courier.
+                        </p>
+                    )}
                 </div>
             </div>
 

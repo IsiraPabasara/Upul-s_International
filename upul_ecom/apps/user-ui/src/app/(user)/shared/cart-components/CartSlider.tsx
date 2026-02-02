@@ -33,21 +33,32 @@ export default function CartSlider() {
   const { user } = useUser();
   const router = useRouter();
 
+  // 1. Initial Mount
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // ✅ 2. ADDED SCROLL LOCK LOGIC
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
 
   if (!mounted) return null;
 
   const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
 
-  // --- Logic to Remove Item ---
+  // --- Handlers ---
   const handleRemoveItem = async (sku: string) => {
     removeItem(sku);
-
-    // Clear any old validation errors after cart modification
     setValidationErrors({});
-
     if (user) {
       try {
         await axiosInstance.delete(`/api/cart/${sku}`);
@@ -58,12 +69,8 @@ export default function CartSlider() {
     }
   };
 
-  // --- Logic to Update Quantity ---
   const handleUpdateQuantity = async (sku: string, newQty: number, maxStock: number) => {
-    // 1. Prevent going below 1
     if (newQty < 1) return;
-
-    // 2. Prevent going above Stock Limit
     const limit = maxStock || 99;
     if (newQty > limit) {
       toast.error(`Sorry, only ${limit} available.`);
@@ -71,8 +78,6 @@ export default function CartSlider() {
     }
 
     updateQuantity(sku, newQty);
-
-    // Clear any old validation errors after cart modification
     setValidationErrors({});
 
     if (user) {
@@ -84,20 +89,18 @@ export default function CartSlider() {
     }
   };
 
-  // 👇 Verification before checkout
   const handleCheckoutClick = async (e: React.MouseEvent) => {
-    e.preventDefault(); // Stop default Link behavior
-
+    e.preventDefault();
     if (items.length === 0) return;
 
     setIsVerifying(true);
-    setValidationErrors({}); // Clear old errors
+    setValidationErrors({});
 
     try {
       const { data } = await axiosInstance.post('/api/cart/verify', { items });
 
       if (data.isValid) {
-        toggleCart(); // Close slider
+        toggleCart();
         router.push('/checkout');
       } else {
         setValidationErrors(data.errors || {});
@@ -127,7 +130,7 @@ export default function CartSlider() {
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full font-outfit">
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b">
             <h2 className="text-lg font-bold">Shopping Cart ({items.length})</h2>
@@ -153,8 +156,6 @@ export default function CartSlider() {
               items.map((item) => {
                 const stockLimit = item.maxStock ?? 99;
                 const isMaxReached = item.quantity >= stockLimit;
-
-                // 👇 sku-specific validation error from store
                 const errorMsg = validationErrors?.[item.sku];
 
                 return (
@@ -176,11 +177,10 @@ export default function CartSlider() {
                             onClick={() => handleRemoveItem(item.sku)}
                             className="text-gray-400 hover:text-red-500 transition-colors"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={16} className='ml-1'/>
                           </button>
                         </div>
 
-                        {/* Variant Info */}
                         <div className="flex gap-2 text-xs text-gray-500 mt-1">
                           {item.size && <span>Size: {item.size}</span>}
                           {item.color && (
@@ -196,7 +196,6 @@ export default function CartSlider() {
                       </div>
 
                       <div className="flex items-end justify-between mt-2">
-                        {/* Quantity Controls */}
                         <div className="flex flex-col items-start gap-1">
                           <div className="flex items-center border border-gray-200 rounded-md h-8">
                             <button
@@ -229,14 +228,12 @@ export default function CartSlider() {
                             </button>
                           </div>
 
-                          {/* Stock limit warning */}
                           {isMaxReached && (
                             <span className="text-[10px] text-red-500 flex items-center gap-1">
                               <AlertCircle size={10} /> Max limit
                             </span>
                           )}
 
-                          {/* Backend validation error (verify endpoint) */}
                           {errorMsg && (
                             <p className="text-[11px] text-red-600 font-bold mt-2 flex items-center gap-1">
                               <AlertCircle size={12} /> {errorMsg}
@@ -264,7 +261,6 @@ export default function CartSlider() {
               </div>
               <p className="text-xs text-gray-500 mb-4">Taxes and shipping calculated at checkout.</p>
 
-              {/* ✅ Updated Checkout Button with verification */}
               <Link
                 href="/checkout"
                 onClick={handleCheckoutClick}

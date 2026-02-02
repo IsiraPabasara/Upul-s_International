@@ -21,14 +21,8 @@ const EditProfilePage = () => {
   const queryClient = useQueryClient();
   const router = useRouter();
 
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    formState: { errors },
-  } = useForm<ProfileFormData>();
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<ProfileFormData>();
 
-  // Pre-fill form when user data is available
   useEffect(() => {
     if (user) {
       setValue("firstname", user.firstname);
@@ -39,13 +33,12 @@ const EditProfilePage = () => {
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: ProfileFormData) => {
-      // Adjust this endpoint based on your backend route
       const response = await axiosInstance.put("/api/auth/update-profile", data);
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["user"] });
-      toast.success("Profile updated successfully");
+      toast.success("Profile updated");
       router.push("/profile");
     },
     onError: (error: any) => {
@@ -53,103 +46,61 @@ const EditProfilePage = () => {
     },
   });
 
-  const onSubmit = (data: ProfileFormData) => {
-    updateProfileMutation.mutate(data);
-  };
+  const onSubmit = (data: ProfileFormData) => updateProfileMutation.mutate(data);
 
-  if (isLoading) return <div className="p-20 text-center uppercase tracking-[0.3em] text-[10px] text-black">Loading...</div>;
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center text-xs uppercase tracking-[0.3em] font-bold">Loading...</div>;
 
   return (
-    <div className="w-full min-h-screen bg-white font-sans pb-20">
-      <div className="max-w-[1200px] mx-auto px-6 md:px-12 pt-12">
+    <div className="w-full min-h-screen bg-white font-outfit pb-32">
+      <div className="max-w-3xl mx-auto px-6 pt-20">
         
-        {/* Navigation */}
-        <div className="flex mb-12">
-          <Link href="/profile" className="flex items-center gap-1 text-[10px] tracking-[0.2em] uppercase text-black font-black hover:text-black/50 transition-colors">
-            <ChevronLeft size={12} /> Back to Account
-          </Link>
-        </div>
+        <Link href="/profile" className="inline-flex items-center gap-2 text-xs tracking-[0.2em] uppercase text-gray-500 hover:text-black transition-colors mb-12">
+          <ChevronLeft size={16} /> Back to Dashboard
+        </Link>
 
-        <div className="flex flex-col mb-16 border-b-2 border-black pb-6">
-          <h1 className="text-[22px] tracking-[0.4em] uppercase text-black ">
-            Edit Profile
-          </h1>
-          <p className="text-[12px] text-gray-500 mt-2 uppercase tracking-widest">Update your personal information</p>
-        </div>
+        <h1 className="text-4xl font-black uppercase tracking-tighter mb-4">Edit Details</h1>
+        <p className="text-base text-gray-500 mb-16 max-w-lg">Ensure your personal information is accurate for a smooth checkout experience.</p>
 
-        <div className="max-w-[500px]">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-10">
-            
-            {/* First Name */}
-            <div className="flex flex-col">
-              <label className="text-[10px] uppercase tracking-[0.2em] font-black mb-3 text-black">
-                First Name
-              </label>
-              <input
-                {...register("firstname", { required: "First name is required" })}
-                className="w-full p-4 border border-black outline-none focus:ring-1 focus:ring-black text-sm font-medium transition-all"
-                placeholder="Enter first name"
-              />
-              {errors.firstname && <p className="text-red-600 text-[10px] mt-2 uppercase font-bold tracking-tighter">{errors.firstname.message}</p>}
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-12">
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+            <div className="space-y-4">
+              <label className="text-xs uppercase tracking-[0.2em] font-bold text-gray-400">First Name</label>
+              <input {...register("firstname", { required: "Required" })}
+                className="w-full py-4 border-b border-gray-200 outline-none focus:border-black transition-colors text-xl font-medium placeholder:text-gray-300"
+                placeholder="First Name" />
+              {errors.firstname && <span className="text-xs text-red-600 font-bold">{errors.firstname.message}</span>}
             </div>
 
-            {/* Last Name */}
-            <div className="flex flex-col">
-              <label className="text-[10px] uppercase tracking-[0.2em] font-black mb-3 text-black">
-                Last Name
-              </label>
-              <input
-                {...register("lastname", { required: "Last name is required" })}
-                className="w-full p-4 border border-black outline-none focus:ring-1 focus:ring-black text-sm font-medium transition-all"
-                placeholder="Enter last name"
-              />
-              {errors.lastname && <p className="text-red-600 text-[10px] mt-2 uppercase font-bold tracking-tighter">{errors.lastname.message}</p>}
+            <div className="space-y-4">
+              <label className="text-xs uppercase tracking-[0.2em] font-bold text-gray-400">Last Name</label>
+              <input {...register("lastname", { required: "Required" })}
+                className="w-full py-4 border-b border-gray-200 outline-none focus:border-black transition-colors text-xl font-medium placeholder:text-gray-300"
+                placeholder="Last Name" />
+              {errors.lastname && <span className="text-xs text-red-600 font-bold">{errors.lastname.message}</span>}
             </div>
+          </div>
 
-            {/* Phone Number */}
-            <div className="flex flex-col">
-              <label className="text-[10px] uppercase tracking-[0.2em] font-black mb-3 text-black">
-                Phone Number
-              </label>
-              <input
-                {...register("phonenumber", { 
-                  required: "Phone number is required",
-                  pattern: { value: /^\d{10}$/, message: "Please enter a valid 10-digit number" }
-                })}
-                className="w-full p-4 border border-black outline-none focus:ring-1 focus:ring-black text-sm font-medium transition-all tabular-nums"
-                placeholder="0767406952"
-              />
-              {errors.phonenumber && <p className="text-red-600 text-[10px] mt-2 uppercase font-bold tracking-tighter">{errors.phonenumber.message}</p>}
-            </div>
+          <div className="space-y-4">
+            <label className="text-xs uppercase tracking-[0.2em] font-bold text-gray-400">Phone Number</label>
+            <input {...register("phonenumber", { required: "Required", pattern: { value: /^\d{10}$/, message: "Valid 10-digit number required" } })}
+              className="w-full py-4 border-b border-gray-200 outline-none focus:border-black transition-colors text-xl font-medium placeholder:text-gray-300 tabular-nums"
+              placeholder="07xxxxxxxx" />
+            {errors.phonenumber && <span className="text-xs text-red-600 font-bold">{errors.phonenumber.message}</span>}
+          </div>
 
-            {/* Note about Email */}
-            <p className="text-[11px] text-gray-400 italic">
-              Email address cannot be changed. Contact support if you need to update it.
-            </p>
+          <div className="pt-10 flex gap-6">
+            <button type="submit" disabled={updateProfileMutation.isPending}
+              className="flex-1 bg-black text-white py-5 text-xs uppercase tracking-[0.2em] font-bold hover:bg-gray-900 transition-colors disabled:opacity-50">
+              {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
+            </button>
+            <button type="button" onClick={() => router.push('/profile')}
+              className="px-10 py-5 text-xs uppercase tracking-[0.2em] font-bold border-2 border-gray-200 hover:border-black transition-colors">
+              Cancel
+            </button>
+          </div>
 
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 pt-4">
-              <button
-                type="submit"
-                disabled={updateProfileMutation.isPending}
-                className="relative flex-1 py-4 text-xs tracking-[0.3em] uppercase font-black text-white border-2 border-black overflow-hidden group bg-black hover:text-black transition-colors duration-500"
-              >
-                <span className="absolute inset-0 bg-white transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500 ease-out"></span>
-                <span className="relative z-10">
-                  {updateProfileMutation.isPending ? "Updating..." : "Save Changes"}
-                </span>
-              </button>
-              
-              <Link
-                href="/profile"
-                className="flex-1 py-4 text-xs tracking-[0.3em] uppercase font-black text-black border-2 border-black text-center hover:bg-black hover:text-white transition-colors"
-              >
-                Cancel
-              </Link>
-            </div>
-
-          </form>
-        </div>
+        </form>
       </div>
     </div>
   );
