@@ -443,13 +443,7 @@
                 "price": {
                   "example": "any"
                 },
-                "isNewArrival": {
-                  "example": "any"
-                },
-                "discountType": {
-                  "example": "any"
-                },
-                "discountValue": {
+                "visible": {
                   "example": "any"
                 },
                 "brand": {
@@ -467,7 +461,13 @@
                 "sizeType": {
                   "example": "any"
                 },
-                "visible": {
+                "discountType": {
+                  "example": "any"
+                },
+                "discountValue": {
+                  "example": "any"
+                },
+                "isNewArrival": {
                   "example": "any"
                 }
               }
@@ -581,6 +581,9 @@
                 },
                 "sizeType": {
                   "example": "any"
+                },
+                "visible": {
+                  "example": "any"
                 }
               }
             }
@@ -592,6 +595,59 @@
           },
           "400": {
             "description": "Bad Request"
+          }
+        }
+      }
+    },
+    "/products/inventory/list": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/products/inventory/update": {
+      "patch": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "sku": {
+                  "example": "any"
+                },
+                "variantSize": {
+                  "example": "any"
+                },
+                "newStock": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
           }
         }
       }

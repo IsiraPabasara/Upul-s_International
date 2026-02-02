@@ -16,7 +16,7 @@ import {
   PackageX,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { Trash2, AlertTriangle } from "lucide-react";
+import { Trash2 } from "lucide-react";
 
 // Types matching your API response
 interface Product {

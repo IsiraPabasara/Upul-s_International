@@ -300,11 +300,11 @@
                             ${selectedAddressId === addr.id ? 'border-black' : ''}`}>
                             {selectedAddressId === addr.id && <div className="w-2 h-2 rounded-full bg-black" />}
                             </div>
-                            <div className="text-sm">
-                            <p className="font-bold text-gray-900">{addr.firstname} {addr.lastname}</p>
-                            <p className="text-gray-600">{addr.addressLine}{addr.apartment ? `, ${addr.apartment}` : ''}</p>
-                            <p className="text-gray-600">{addr.city}, {addr.postalCode}</p>
-                            <p className="text-gray-500 text-xs mt-1">{addr.phoneNumber}</p>
+                            <div className="text-sm flex-1 min-w-0">
+                            <p className="font-bold text-gray-900 break-words">{addr.firstname} {addr.lastname}</p>
+                            <p className="text-gray-600 break-words">{addr.addressLine}{addr.apartment ? `, ${addr.apartment}` : ''}</p>
+                            <p className="text-gray-600 break-words">{addr.city}, {addr.postalCode}</p>
+                            <p className="text-gray-500 text-xs mt-1 break-words">{addr.phoneNumber}</p>
                             </div>
                         </div>
                         ))}

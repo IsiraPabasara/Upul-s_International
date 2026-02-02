@@ -1,7 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-// import Image from 'next/image';
 import Link from 'next/link';
 import { Search, ShoppingCart, User, Heart, Menu, X, Package, UserCircle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -102,45 +101,10 @@ useEffect(() => {
             </button>
 
             <Link href="/" className="flex-shrink-0">
-              {/* <div className="flex flex-col leading-none">
-                <span className="text-2xl md:text-4xl font-serif font-bold text-[#1a1a3a] tracking-tighter">U<span className="text-red-600 text-sm">PUL'S</span></span>
+              <div className="flex flex-col leading-none">
+                <span className="text-2xl md:text-4xl font-serif font-bold text-[#1a1a3a] tracking-tighter">U<span className="text-red-600">PUL'S</span></span>
                 <span className="text-[7px] md:text-[10px] tracking-[0.3em] font-bold text-[#1a1a3a] border-t border-gray-200 pt-0.5 md:pt-1 uppercase">International</span>
-              </div> */}
-                            <div className="flex flex-col leading-none">
-                <div className="inline-flex items-end">
-                  {/* Bigger & wider U */}
-                  <span className="text-4xl md:text-5xl font-serif font-bold text-[#1a1a3a] tracking-tight leading-none mr-0.5">
-                    U
-                  </span>
-
-                  {/* Lines + PUL'S */}
-                  <div className="flex flex-col ml-1 mb-1 md:mb-2">
-                    {/* Decorative lines */}
-                    <div className="mb-0.5">
-                      <div className="h-[2px] w-8 bg-black mb-1"></div>
-                      <div className="h-[2px] w-5 bg-black"></div>
-                    </div>
-
-                    {/* PUL'S aligned with U bottom */}
-                    <span className="text-red-600 text-sm font-serif font-bold tracking-tighter leading-none">
-                      PUL&apos;S
-                    </span>
-                  </div>
-                </div>
-
-                <span className="text-[7px] md:text-[8px] tracking-[0.3em] font-bold text-[#1a1a3a] border-t border-gray-200 pt-0.5 md:pt-1 uppercase">
-                  International
-                </span>
               </div>
-
-              {/* <Image 
-                src="/logo1.png" 
-                alt="UPUL'S International"
-                width={100}
-                height={70}
-                priority
-              /> */}
-
             </Link>
 
             <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-xl">
@@ -185,7 +149,7 @@ useEffect(() => {
           </div>
         </div>
 
-        <nav className="bg-[#f2e6e6] bg-white border-b overflow-x-auto scrollbar-hide shadow-sm w-full">
+        <nav className="bg-[#f2e6e6] border-b overflow-x-auto scrollbar-hide shadow-sm w-full">
           <div className="max-w-8xl mx-auto px-5 flex gap-6 md:gap-10 h-11 items-center text-[12px] md:text-[13px] font-bold uppercase tracking-tight whitespace-nowrap">
             <Link href="/shop?isNewArrival=true" className="shrink-0 hover:opacity-70 transition-opacity">New Arrivals</Link>
             {categories.filter((c: any) => !c.parentId).map((cat: any) => (
