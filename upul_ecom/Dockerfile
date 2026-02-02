@@ -16,6 +16,7 @@ RUN npx prisma generate --schema=./prisma/schema.prisma
 RUN npx nx sync
 RUN npx nx build api --prod
 RUN npx nx build user-ui --prod
+RUN npx nx build admin-ui --prod
 
 # --- Stage 2: Production API ---
 FROM node:20-alpine AS api
@@ -47,4 +48,20 @@ COPY --from=builder /app/package-lock.json ./package-lock.json
 RUN npm ci --omit=dev
 
 EXPOSE 3001
+CMD ["npx", "next", "start"]
+
+# --- Stage 4: Production Admin UI (Next.js) ---
+FROM node:20-alpine AS admin-ui
+WORKDIR /app
+ENV NODE_ENV=production
+
+# Next.js builds to .next folder
+COPY --from=builder /app/apps/admin-ui/.next ./.next
+COPY --from=builder /app/apps/admin-ui/public ./public
+COPY --from=builder /app/apps/admin-ui/package.json ./package.json
+COPY --from=builder /app/package-lock.json ./package-lock.json
+
+RUN npm ci --omit=dev
+
+EXPOSE 3002
 CMD ["npx", "next", "start"]

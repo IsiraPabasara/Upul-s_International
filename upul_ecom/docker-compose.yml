@@ -18,3 +18,14 @@ services:
       - .env
     depends_on:
       - backend
+
+  admin:
+    build:
+      context: .
+      target: admin-ui
+    ports:
+      - "3002:3002"
+    env_file:
+      - .env
+    depends_on:
+      - backend
