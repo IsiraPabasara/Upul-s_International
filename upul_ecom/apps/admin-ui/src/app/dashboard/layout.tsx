@@ -1,9 +1,9 @@
 "use client";
 import { useEffect } from "react";
+import useAdmin from "@/app/hooks/useAdmin";
 import axiosInstance from "@/app/utils/axiosInstance";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from 'next/navigation';
-import useAdmin from "../hooks/useAdmin";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading, isError } = useAdmin();
