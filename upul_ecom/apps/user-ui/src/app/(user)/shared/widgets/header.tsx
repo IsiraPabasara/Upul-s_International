@@ -225,6 +225,7 @@ useEffect(() => {
             </form>
 
             <div className="flex flex-col gap-6 text-xl font-bold uppercase tracking-tighter">
+              <Link href="/" onClick={() => setIsMenuOpen(false)}>Home</Link>
               <Link href="/shop?isNewArrival=true" onClick={() => setIsMenuOpen(false)}>New Arrivals</Link>
               {categories.filter((c: any) => !c.parentId).map((cat: any) => (
                 <Link key={cat.id} href={`/shop?category=${cat.slug}`} onClick={() => setIsMenuOpen(false)}>{cat.name}</Link>
