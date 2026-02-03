@@ -4,17 +4,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import {
-  MapPin,
-  CreditCard,
-  Loader2,
-  Plus,
-  Mail,
-  AlertCircle
-} from 'lucide-react';
+import { MapPin, CreditCard, Loader2, Plus, Mail, AlertCircle } from 'lucide-react';
 
 import { useCart } from '@/app/hooks/useCart';
 import useUser from '@/app/hooks/useUser';
@@ -37,16 +30,19 @@ const checkoutSchema = z.object({
 type CheckoutFormValues = z.infer<typeof checkoutSchema>;
 
 // --- Style Constants ---
-const inputFieldClass = "w-full px-4 py-3.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:border-black focus:ring-1 focus:ring-black outline-none transition-all shadow-sm";
-const inputErrorClass = "w-full px-4 py-3.5 bg-white border border-red-500 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition-all shadow-sm";
-const errorTextClass = "text-red-500 text-[11px] font-bold mt-1.5 flex items-center gap-1.5 animate-in slide-in-from-left-1";
+const inputFieldClass =
+  "w-full px-4 py-3.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:border-black focus:ring-1 focus:ring-black outline-none transition-all shadow-sm";
+const inputErrorClass =
+  "w-full px-4 py-3.5 bg-white border border-red-500 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition-all shadow-sm";
+const errorTextClass =
+  "text-red-500 text-[11px] font-bold mt-1.5 flex items-center gap-1.5 animate-in slide-in-from-left-1";
 
-// --- 2. Main Component ---
 export default function CheckoutPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const queryClient = useQueryClient();
 
-  const { items, clearCart } = useCart();
+  const { items } = useCart();
   const { user, isLoading: isUserLoading } = useUser({ required: false });
 
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
@@ -69,17 +65,17 @@ export default function CheckoutPage() {
     reset,
   } = useForm<CheckoutFormValues>({
     resolver: zodResolver(checkoutSchema),
-    defaultValues: {
-      saveAddress: true
-    }
+    defaultValues: { saveAddress: true },
   });
 
-  // --- Effects ---
+  // ✅ Only redirect away when you are on "/checkout" page AND cart is empty
   useEffect(() => {
-    if (!items || items.length === 0) {
-      router.push('/shop');
+    if (pathname !== '/checkout') return; // VERY IMPORTANT
+
+    if (!isProcessing && (!items || items.length === 0)) {
+      router.replace('/shop');
     }
-  }, [items, router]);
+  }, [items, router, isProcessing, pathname]);
 
   useEffect(() => {
     if (user && user.addresses?.length > 0 && !selectedAddressId) {
@@ -89,7 +85,6 @@ export default function CheckoutPage() {
     }
   }, [user, selectedAddressId]);
 
-  // --- Handlers ---
   const handleSaveNewAddress = async (data: CheckoutFormValues) => {
     try {
       setIsProcessing(true);
@@ -101,7 +96,7 @@ export default function CheckoutPage() {
         city: data.city,
         postalCode: data.postalCode,
         phoneNumber: data.phoneNumber,
-        isDefault: !!data.saveAddress
+        isDefault: !!data.saveAddress,
       };
 
       const res = await axiosInstance.post('/api/auth/add-address', payload);
@@ -109,11 +104,13 @@ export default function CheckoutPage() {
       if (res.data.success) {
         toast.success("Address saved successfully");
         await queryClient.invalidateQueries({ queryKey: ['user'] });
+
         const newAddressList = res.data.addresses;
         if (Array.isArray(newAddressList) && newAddressList.length > 0) {
           const newAddr = newAddressList[newAddressList.length - 1];
           setSelectedAddressId(newAddr.id);
         }
+
         setIsAddingNewAddress(false);
         reset();
       }
@@ -127,8 +124,10 @@ export default function CheckoutPage() {
 
   const onPlaceOrder = async (data: CheckoutFormValues) => {
     setIsProcessing(true);
+
     try {
       let orderPayload;
+
       if (user) {
         if (isAddingNewAddress) {
           await handleSaveNewAddress(data);
@@ -136,9 +135,9 @@ export default function CheckoutPage() {
         }
         if (!selectedAddressId) {
           toast.error("Please select a shipping address");
-          setIsProcessing(false);
           return;
         }
+
         orderPayload = {
           type: 'USER',
           userId: user.id,
@@ -148,17 +147,17 @@ export default function CheckoutPage() {
             sku: item.sku,
             quantity: item.quantity,
             size: item.size,
-            color: item.color
+            color: item.color,
           })),
           email: user.email,
-          paymentMethod: 'COD'
+          paymentMethod: 'COD',
         };
       } else {
         if (!data.email) {
           toast.error("Email is required for guests");
-          setIsProcessing(false);
           return;
         }
+
         orderPayload = {
           type: 'GUEST',
           email: data.email,
@@ -176,17 +175,19 @@ export default function CheckoutPage() {
             sku: item.sku,
             quantity: item.quantity,
             size: item.size,
-            color: item.color
+            color: item.color,
           })),
-          paymentMethod: 'COD'
+          paymentMethod: 'COD',
         };
       }
 
       const res = await axiosInstance.post('/api/orders', orderPayload);
+
       if (res.data.success) {
         toast.success("Order placed successfully!");
-        clearCart();
-        router.push(`/checkout/success?orderNumber=${res.data.orderId}`);
+
+        // ✅ Navigate FIRST. Do NOT clear cart here.
+        router.replace(`/checkout/success?orderNumber=${res.data.orderId}&success=true`);
       }
     } catch (error: any) {
       console.error(error);
@@ -438,26 +439,50 @@ export default function CheckoutPage() {
             <h2 className="text-lg font-bold mb-6">Order Summary</h2>
 
             <div className="max-h-[300px] overflow-y-auto space-y-4 mb-6 pr-2">
-              {items.map((item) => {
+              {/* ... inside items.map loop ... */}
+                {items.map((item) => {
                 const lineTotal = (Number(item.price) || 0) * (Number(item.quantity) || 0);
+                const hasDiscount = item.originalPrice != null && item.originalPrice > item.price;
+
                 return (
-                  <div key={item.sku} className="flex gap-4">
+                    <div key={item.sku} className="flex gap-4">
                     <div className="w-16 h-20 bg-gray-100 rounded-md overflow-hidden shrink-0">
-                      <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                        <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-bold line-clamp-2">{item.name}</p>
-                      <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-sm font-bold line-clamp-2">{item.name}</p>
+                        
+                        {/* ✅ UNIT PRICE DISPLAY */}
+                        <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[11px] font-medium text-gray-700">
+                            LKR {item.price.toLocaleString()} each
+                        </span>
+                        {hasDiscount && (
+                            <span className="text-[10px] text-gray-400 line-through">
+                            LKR {item.originalPrice!.toLocaleString()}
+                            </span>
+                        )}
+                        </div>
+
+                        <p className="text-xs text-gray-500 mt-1">
                         {item.size ? `Size: ${item.size}` : ''} {item.color ? `• Color: ${item.color}` : ''}
-                      </p>
-                      <div className="flex justify-between items-center mt-2">
+                        </p>
+                        
+                        <div className="flex justify-between items-center mt-2">
                         <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
-                        <p className="text-sm font-bold">LKR {lineTotal.toLocaleString()}</p>
-                      </div>
+                        <div className="text-right">
+                            <p className="text-sm font-bold">LKR {lineTotal.toLocaleString()}</p>
+                            {hasDiscount && (
+                            <p className="text-[10px] text-green-600 font-medium">
+                                Saved LKR {((item.originalPrice! - item.price) * item.quantity).toLocaleString()}
+                            </p>
+                            )}
+                        </div>
+                        </div>
                     </div>
-                  </div>
+                    </div>
                 );
-              })}
+                })}
             </div>
 
             <div className="border-t pt-4 space-y-2 text-sm">

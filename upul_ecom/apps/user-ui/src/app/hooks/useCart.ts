@@ -6,7 +6,8 @@ export interface CartItem {
   sku: string;
   productId: string;
   name: string;
-  price: number;
+  price: number;           // The current selling price (discounted)
+  originalPrice: number;   // The base price (before discount)
   image: string;
   quantity: number;
   size?: string;
@@ -26,8 +27,10 @@ interface CartState {
   syncWithUser: () => Promise<void>;
   setValidationErrors: (errors: Record<string, string>) => void;
   clearValidationErrors: () => void;
-  // NEW ACTION
   updatePrices: (priceUpdates: Record<string, number>) => void;
+  // Getters
+  getSubtotal: () => number;
+  getTotalSavings: () => number;
 }
 
 export const useCart = create<CartState>()(
@@ -43,10 +46,13 @@ export const useCart = create<CartState>()(
         set((state) => {
           const existing = state.items.find((i) => i.sku === newItem.sku);
           const nextIsOpen = openCart ? true : state.isOpen;
+          
           if (existing) {
             return {
               items: state.items.map((i) =>
-                i.sku === newItem.sku ? { ...i, quantity: i.quantity + newItem.quantity } : i
+                i.sku === newItem.sku 
+                  ? { ...i, quantity: i.quantity + newItem.quantity, price: newItem.price, originalPrice: newItem.originalPrice } 
+                  : i
               ),
               isOpen: nextIsOpen,
             };
@@ -84,6 +90,7 @@ export const useCart = create<CartState>()(
         const localItems = get().items;
         try {
           const res = await axiosInstance.post('/api/cart/merge', { localItems });
+          // The backend now sends back sanitized items including originalPrice
           set({ items: res.data });
           get().clearValidationErrors();
         } catch (error) {
@@ -93,10 +100,23 @@ export const useCart = create<CartState>()(
 
       setValidationErrors: (errors) => set({ validationErrors: errors }),
       clearValidationErrors: () => set({ validationErrors: {} }),
+
+      // --- Helper Getters ---
+      getSubtotal: () => {
+        return get().items.reduce((acc, item) => acc + item.price * item.quantity, 0);
+      },
+
+      getTotalSavings: () => {
+        return get().items.reduce((acc, item) => {
+          const savingsPerUnit = (item.originalPrice || item.price) - item.price;
+          return acc + (savingsPerUnit * item.quantity);
+        }, 0);
+      },
     }),
     {
       name: 'eshop-cart-storage',
       storage: createJSONStorage(() => localStorage),
+      // We only persist the items array to keep the storage clean
       partialize: (state) => ({ items: state.items }),
     }
   )
