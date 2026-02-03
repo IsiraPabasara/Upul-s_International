@@ -26,6 +26,7 @@ export default function CartSlider() {
     removeItem,
     validationErrors,
     setValidationErrors,
+    updatePrices,
   } = useCart();
 
   const [mounted, setMounted] = useState(false);
@@ -90,30 +91,39 @@ export default function CartSlider() {
   };
 
   const handleCheckoutClick = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (items.length === 0) return;
+  e.preventDefault();
+  if (items.length === 0) return;
 
-    setIsVerifying(true);
-    setValidationErrors({});
+  setIsVerifying(true);
+  setValidationErrors({});
 
-    try {
-      const { data } = await axiosInstance.post('/api/cart/verify', { items });
+  try {
+    const { data } = await axiosInstance.post('/api/cart/verify', { items });
 
-      if (data.isValid) {
-        toggleCart();
-        router.push('/checkout');
-      } else {
-        setValidationErrors(data.errors || {});
-        toast.error('Some items are no longer available. Please review your cart.');
+    if (data.isValid) {
+      toggleCart();
+      router.push('/checkout');
+    } else {
+      // 1. If the backend sent updated prices, update our store immediately
+      if (data.updatedPrices && Object.keys(data.updatedPrices).length > 0) {
+        updatePrices(data.updatedPrices);
+        toast.error('Prices have changed. We have updated your cart.');
       }
-    } catch (error) {
-      console.error('Verification failed', error);
-      toast.error('Something went wrong. Please try again.');
-    } finally {
-      setIsVerifying(false);
-    }
-  };
 
+      // 2. Set the errors so the UI shows the red messages
+      setValidationErrors(data.errors || {});
+      
+      if (!data.updatedPrices || Object.keys(data.updatedPrices).length === 0) {
+          toast.error('Some items are unavailable. Please review your cart.');
+      }
+    }
+  } catch (error) {
+    console.error('Verification failed', error);
+    toast.error('Could not verify cart. Try again.');
+  } finally {
+    setIsVerifying(false);
+  }
+};
   return (
     <>
       {/* Overlay */}

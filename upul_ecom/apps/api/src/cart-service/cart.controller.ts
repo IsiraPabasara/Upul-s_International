@@ -159,32 +159,30 @@ export const removeCartItem = async (req: any, res: Response, next: NextFunction
 
 export const verifyCart = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { items } = req.body; // Expecting array of { productId, quantity, size? }
-
+    const { items } = req.body; 
     const errors: Record<string, string> = {};
+    const updatedPrices: Record<string, number> = {}; 
     let isValid = true;
 
-    // We fetch all relevant products at once to minimize DB calls
     const productIds = items.map((i: any) => i.productId);
     
     const products = await prisma.product.findMany({
       where: { id: { in: productIds } },
       select: {
         id: true,
-        name: true,
         visible: true,
         availability: true,
         stock: true,
-        variants: true, // Need this to check size stock
+        price: true, // Master price
+        variants: true, 
       }
     });
 
-    // Create a Map for easy lookup
     const productMap = new Map(products.map(p => [p.id, p]));
 
     for (const item of items) {
       const product = productMap.get(item.productId);
-      const errorKey = item.sku; // We map errors by SKU (unique per line item)
+      const errorKey = item.sku;
 
       // 1. Check Existence & Visibility
       if (!product || !product.visible) {
@@ -193,36 +191,40 @@ export const verifyCart = async (req: Request, res: Response, next: NextFunction
         continue;
       }
 
-      // 2. Check General Availability Flag
+      // 2. Price Validation Logic
+      // If product has variants, you might want to check variant-specific pricing 
+      // otherwise, use the master product price.
+      const currentDbPrice = Number(product.price);
+      
+      if (Number(item.price) !== currentDbPrice) {
+        isValid = false;
+        updatedPrices[errorKey] = currentDbPrice;
+        errors[errorKey] = `Price updated: LKR ${currentDbPrice.toLocaleString()}`;
+      }
+
+      // 3. Check General Availability
       if (!product.availability) {
-        errors[errorKey] = "Product is marked as out of stock";
+        errors[errorKey] = "Out of stock";
         isValid = false;
         continue;
       }
 
-      // 3. Check Specific Stock (Size vs Standard)
+      // 4. Check Stock
       if (item.size) {
-        // It's a variant (e.g., "Small")
         const variant = product.variants.find(v => v.size === item.size);
-        
-        if (!variant) {
-          errors[errorKey] = "This size is no longer available";
-          isValid = false;
-        } else if (variant.stock < item.quantity) {
-          errors[errorKey] = `Only ${variant.stock} left in stock`;
+        if (!variant || variant.stock < item.quantity) {
+          errors[errorKey] = variant ? `Only ${variant.stock} left` : "Size unavailable";
           isValid = false;
         }
       } else {
-        // It's a standard product (no variants)
         if (product.stock < item.quantity) {
-          errors[errorKey] = `Only ${product.stock} left in stock`;
+          errors[errorKey] = `Only ${product.stock} left`;
           isValid = false;
         }
       }
     }
 
-    return res.json({ isValid, errors });
-
+    return res.json({ isValid, errors, updatedPrices });
   } catch (error) {
     return next(error);
   }
