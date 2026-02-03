@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
-import { ChevronLeft } from "lucide-react";
+import { LogOut, User, MapPin, Package, ArrowRight } from "lucide-react";
 import useUser from "@/app/hooks/useUser";
 import axiosInstance from "@/app/utils/axiosInstance";
 import { useQueryClient } from "@tanstack/react-query";
@@ -12,7 +12,7 @@ import toast from "react-hot-toast";
 import { useWishlist } from "@/app/hooks/useWishlist";
 
 const ProfilePage = () => {
-  const { user, isLoading } = useUser();
+  const { user, isLoading } = useUser({required: true});
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   
@@ -24,8 +24,6 @@ const ProfilePage = () => {
     try {
       await axiosInstance.get('/api/auth/logout-user');
       queryClient.clear();
-      
-      // Clear Zustand cart state and localStorage
       useCart.getState().clearCart();
       useWishlist.getState().clearWishlist();
       useWishlist.persist.clearStorage();
@@ -40,28 +38,27 @@ const ProfilePage = () => {
     }
   };
 
-  if (isLoading) return <div className="p-20 text-center uppercase tracking-[0.3em] text-[10px] text-gray-400">Loading Account...</div>;
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center text-xs uppercase tracking-[0.3em] font-bold">Loading Profile...</div>;
 
   const defaultAddress = user?.addresses?.find((addr: any) => addr.isDefault) || user?.addresses?.[0];
 
   return (
-    <div className="w-full min-h-screen bg-white font-sans pb-20 relative">
+    <div className="w-full min-h-screen bg-white font-outfit pb-32">
       
-      {/* Logout Confirmation Modal */}
+      {/* Logout Modal */}
       {showLogoutConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => !isLoggingOut && setShowLogoutConfirm(false)} />
-          <div className="relative bg-white border border-gray-100 p-12 max-w-[420px] w-full shadow-sm text-center">
-            <h3 className="text-[13px] tracking-[0.3em] uppercase font-bold mb-4 text-gray-800">Confirm Logout</h3>
-            <p className="text-[12px] text-gray-400 mb-10 font-light leading-relaxed">Are you sure you want to log out of your account?</p>
-            <div className="flex flex-col gap-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-white/90 backdrop-blur-md" onClick={() => !isLoggingOut && setShowLogoutConfirm(false)} />
+          <div className="relative bg-black text-white p-12 max-w-md w-full shadow-2xl text-center">
+            <h3 className="text-sm tracking-[0.2em] uppercase font-bold mb-4">Confirm Logout</h3>
+            <p className="text-sm text-gray-400 mb-10 leading-relaxed">Are you sure you want to end your session?</p>
+            <div className="flex flex-col gap-4">
               <button onClick={handleLogout} disabled={isLoggingOut}
-                className="relative w-full py-4 text-[10px] tracking-[0.3em] uppercase font-bold text-white border border-black overflow-hidden group bg-black hover:text-black transition-colors duration-500">
-                <span className="absolute inset-0 bg-white transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500 ease-out"></span>
-                <span className="relative z-10">{isLoggingOut ? "Logging out..." : "Logout"}</span>
+                className="w-full py-4 text-xs tracking-[0.3em] uppercase font-bold bg-white text-black hover:bg-gray-200 transition-colors">
+                {isLoggingOut ? "Processing..." : "Logout"}
               </button>
               <button onClick={() => setShowLogoutConfirm(false)} disabled={isLoggingOut}
-                className="w-full py-3 text-[10px] tracking-[0.2em] uppercase font-bold text-gray-500 hover:text-black transition-colors">
+                className="w-full py-4 text-xs tracking-[0.3em] uppercase font-bold text-gray-500 hover:text-white transition-colors">
                 Cancel
               </button>
             </div>
@@ -69,89 +66,96 @@ const ProfilePage = () => {
         </div>
       )}
 
-      <div className={`max-w-[1200px] mx-auto px-6 md:px-12 pt-12 transition-opacity duration-500 ${showLogoutConfirm ? 'opacity-20 pointer-events-none' : 'opacity-100'}`}>
+      <div className="max-w-6xl mx-auto px-6 pt-20">
         
-        {/* Navigation */}
-        <div className="flex mb-8">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 border-b border-black pb-8">
+          <div>
+            <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tighter mb-3">My Account</h1>
+            <p className="text-sm text-gray-500 uppercase tracking-[0.15em]">Welcome back, <span className="text-black font-bold">{user?.firstname}</span></p>
+          </div>
           <button onClick={() => setShowLogoutConfirm(true)}
-            className="flex items-center gap-1 text-[13px] tracking-[0.2em] uppercase text-gray-700 hover:text-black transition-colors">
-            <ChevronLeft size={12} /> Logout
+            className="hidden md:flex items-center gap-2 text-xs uppercase tracking-[0.2em] font-bold text-red-600 hover:text-red-800 transition-colors mt-6 md:mt-0">
+            <LogOut size={16} /> Sign Out
           </button>
         </div>
 
-        <h1 className="text-[22px] tracking-[0.4em] uppercase mb-10 text-gray-800 font-light">
-          Your Account
-        </h1>
-
-        <div className="flex flex-col lg:flex-row gap-20 lg:gap-32">
+        {/* Dashboard Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
           
-          {/* Left Side */}
-          <div className="flex flex-col flex-1 gap-20">
-            
-            {/* Profile */}
-            <section className="flex flex-col">
-              <div className="flex justify-between items-end border-b border-gray-400 pb-3 mb-8">
-                <h2 className="text-[15px] font-bold tracking-tight text-gray-800">Profile</h2>
-                <Link href="/profile/user" className="text-[10px] tracking-widest text-gray-600 uppercase hover:text-black transition-colors">Edit</Link>
-              </div>
-              <div className="flex flex-col gap-2 text-[13px] text-gray-500">
-                <p><span className="font-bold text-gray-800 mr-2">First Name:</span> {user?.firstname}</p>
-                <p><span className="font-bold text-gray-800 mr-2">Last Name:</span> {user?.lastname}</p>
-                <p><span className="font-bold text-gray-800 mr-2">E-mail:</span> {user?.email}</p>
-                <p><span className="font-bold text-gray-800 mr-2">Phone Number:</span> <span className="">{user?.phonenumber}</span></p>
-              </div>
-            </section>
-
-            {/* Addresses */}
-            <section className="flex flex-col">
-              <div className="flex justify-between items-end border-b border-gray-400 pb-3 mb-8">
-                <h2 className="text-[15px] font-bold tracking-tight text-gray-800">Addresses</h2>
-                <Link href="/profile/address" className="text-[10px] tracking-widest text-gray-600 uppercase hover:text-black transition-colors">View All</Link>
-              </div>
-              
-              {defaultAddress ? (
-                <div className="flex flex-col border border-gray-500 p-8 rounded-sm w-full max-w-[380px]">
-                  <p className="text-[9px] uppercase tracking-[0.2em] text-gray-500 mb-6 font-bold">Default Address</p>
-                  <div className="flex flex-col text-[13px] text-gray-500 space-y-1">
-                    <p className="font-bold text-gray-800 mb-2 text-[14px]">{defaultAddress.firstname} {defaultAddress.lastname}</p>
-                    <p>{defaultAddress.addressLine}</p>
-                    <p>{defaultAddress.postalCode} {defaultAddress.city}</p>
-                    <p className="text-gray-400">United States</p>
-                    <p className="pt-4 text-gray-800 font-medium tracking-wide">{defaultAddress.phoneNumber}</p>
-                  </div>
+          {/* Column 1: Profile */}
+          <div className="flex flex-col gap-6">
+            <div className="flex items-center gap-3 mb-2">
+                <User size={20} className="text-black" />
+                <h2 className="text-sm font-bold uppercase tracking-[0.2em]">Personal Info</h2>
+            </div>
+            <div className="p-10 border border-gray-200 hover:border-black transition-all duration-500 min-h-[240px] flex flex-col justify-between group bg-gray-50/50 hover:bg-white">
+                <div className="space-y-2 overflow-hidden">
+                    <p className="text-xl font-bold text-black truncate">{user?.firstname} {user?.lastname}</p>
+                    <p className="text-base text-gray-600 truncate">{user?.email}</p>
+                    <p className="text-base text-gray-600">{user?.phonenumber}</p>
                 </div>
-              ) : (
-                <p className="text-[13px] text-gray-400 italic font-light">No addresses saved yet.</p>
-              )}
-            </section>
+                <Link href="/profile/user" className="mt-8 text-xs uppercase tracking-[0.2em] font-bold border-b-2 border-transparent group-hover:border-black w-fit transition-all text-gray-400 group-hover:text-black">
+                    Edit Details
+                </Link>
+            </div>
           </div>
 
-          {/* Right Side */}
-          <div className="flex flex-col w-full lg:w-[420px]">
-            <section className="flex flex-col">
-              <div className="flex justify-between items-end border-b border-gray-400 pb-3 mb-8">
-                <h2 className="text-[15px] font-bold tracking-tight text-gray-800">Order History</h2>
-                <Link href="/profile/orders" className="text-[10px] tracking-widest text-gray-600 uppercase hover:text-black transition-colors">View All</Link>
-              </div>
-              
-              <div className="flex flex-col gap-8">
-                <p className="text-[10px] uppercase tracking-[0.25em] text-gray-300 font-bold">Orders</p>
-                <p className="text-[13px] text-gray-400 font-light leading-relaxed">You haven't placed any orders yet.</p>
-                
-                <div className="flex pt-4">
-                  <button className="relative px-12 py-4 text-[10px] tracking-[0.3em] uppercase font-bold text-white border border-black overflow-hidden group bg-black hover:text-black transition-colors duration-500">
-                    <span className="absolute inset-0 bg-white transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500 ease-out"></span>
-                    <span className="relative z-10">Continue Shopping</span>
-                  </button>
+          {/* Column 2: Address (Fixed Overflow) */}
+          <div className="flex flex-col gap-6">
+            <div className="flex items-center gap-3 mb-2">
+                <MapPin size={20} className="text-black" />
+                <h2 className="text-sm font-bold uppercase tracking-[0.2em]">Primary Address</h2>
+            </div>
+            <div className="p-10 border border-gray-200 hover:border-black transition-all duration-500 min-h-[240px] flex flex-col justify-between group bg-gray-50/50 hover:bg-white w-full">
+                {defaultAddress ? (
+                    <div className="space-y-2 w-full overflow-hidden">
+                        <p className="text-base font-bold text-black break-words">{defaultAddress.firstname} {defaultAddress.lastname}</p>
+                        <p className="text-base text-gray-600 leading-relaxed break-words">
+                            {defaultAddress.addressLine}
+                        </p>
+                        <p className="text-base text-gray-600 leading-relaxed break-words">
+                            {defaultAddress.city}, {defaultAddress.postalCode}
+                        </p>
+                        <p className="text-sm text-gray-400 mt-2 font-mono">{defaultAddress.phoneNumber}</p>
+                    </div>
+                ) : (
+                    <p className="text-base text-gray-400 italic">No default address set.</p>
+                )}
+                <Link href="/profile/address" className="mt-8 text-xs uppercase tracking-[0.2em] font-bold border-b-2 border-transparent group-hover:border-black w-fit transition-all text-gray-400 group-hover:text-black">
+                    Manage Addresses
+                </Link>
+            </div>
+          </div>
+
+          {/* Column 3: Orders */}
+          <div className="flex flex-col gap-6">
+            <div className="flex items-center gap-3 mb-2">
+                <Package size={20} className="text-black" />
+                <h2 className="text-sm font-bold uppercase tracking-[0.2em]">Recent Activity</h2>
+            </div>
+            <div className="p-10 border border-gray-200 hover:border-black transition-all duration-500 min-h-[240px] flex flex-col justify-between group bg-gray-50/50 hover:bg-white">
+                <div className="flex flex-col justify-center h-full">
+                    <p className="text-base text-gray-600 mb-4">View and track your current and past orders.</p>
+                    <Link href="/shop" className="text-sm font-bold underline decoration-gray-300 hover:decoration-black w-fit">Continue Shopping</Link>
                 </div>
-              </div>
-            </section>
+                <Link href="/profile/orders" className="mt-8 flex items-center gap-2 text-xs uppercase tracking-[0.2em] font-bold border-b-2 border-transparent group-hover:border-black w-fit transition-all text-gray-400 group-hover:text-black">
+                    Order History <ArrowRight size={14} />
+                </Link>
+            </div>
           </div>
 
         </div>
+
+        {/* Mobile Logout */}
+        <button onClick={() => setShowLogoutConfirm(true)}
+            className="md:hidden mt-20 w-full py-5 border-2 border-red-100 text-red-600 text-xs uppercase tracking-[0.2em] font-bold bg-red-50">
+            Sign Out
+        </button>
+
       </div>
     </div>
   );
 };
-
+ 
 export default ProfilePage;

@@ -18,12 +18,21 @@ export interface CartItem {
 interface CartState {
   items: CartItem[];
   isOpen: boolean; // Controls the Slider visibility
+
+  // ✅ Add Error State
+  validationErrors: Record<string, string>;
+
   toggleCart: () => void;
-  addItem: (item: CartItem) => void;
+  // 👇 Updated signature to accept optional openCart boolean
+  addItem: (item: CartItem, openCart?: boolean) => void;
   removeItem: (sku: string) => void;
   updateQuantity: (sku: string, qty: number) => void;
   clearCart: () => void;
   syncWithUser: () => Promise<void>; // The magic merge function
+
+  // ✅ Add Actions
+  setValidationErrors: (errors: Record<string, string>) => void;
+  clearValidationErrors: () => void;
 }
 
 export const useCart = create<CartState>()(
@@ -32,35 +41,68 @@ export const useCart = create<CartState>()(
       items: [],
       isOpen: false,
 
+      // ✅ Initial state
+      validationErrors: {},
+
       toggleCart: () => set((state) => ({ isOpen: !state.isOpen })),
 
-      addItem: (newItem) => {
+      // 👇 Updated implementation
+      addItem: (newItem, openCart = true) => {
         set((state) => {
           const existing = state.items.find((i) => i.sku === newItem.sku);
+
+          // If openCart is true, force it open. 
+          // If false, keep current state (don't force open, but don't force close if user has it open).
+          const nextIsOpen = openCart ? true : state.isOpen;
+
           if (existing) {
             // Update quantity if exists
             return {
               items: state.items.map((i) =>
-                i.sku === newItem.sku ? { ...i, quantity: i.quantity + newItem.quantity } : i
+                i.sku === newItem.sku
+                  ? { ...i, quantity: i.quantity + newItem.quantity }
+                  : i
               ),
-              isOpen: true // Auto open cart on add
+              isOpen: nextIsOpen, 
             };
           }
-          return { items: [...state.items, newItem], isOpen: true };
+
+          return { 
+            items: [...state.items, newItem], 
+            isOpen: nextIsOpen 
+          };
         });
+
+        // ✅ Clear errors on modification
+        get().clearValidationErrors();
       },
 
-      removeItem: (sku) =>
+      removeItem: (sku) => {
         set((state) => ({
           items: state.items.filter((i) => i.sku !== sku),
-        })),
+        }));
 
-      updateQuantity: (sku, qty) =>
+        // ✅ Clear errors on modification
+        get().clearValidationErrors();
+      },
+
+      updateQuantity: (sku, qty) => {
         set((state) => ({
-          items: state.items.map((i) => (i.sku === sku ? { ...i, quantity: qty } : i)),
-        })),
+          items: state.items.map((i) =>
+            i.sku === sku ? { ...i, quantity: qty } : i
+          ),
+        }));
 
-      clearCart: () => set({ items: [] }),
+        // ✅ Clear errors on modification
+        get().clearValidationErrors();
+      },
+
+      clearCart: () => {
+        set({ items: [] });
+
+        // ✅ Clear errors on modification
+        get().clearValidationErrors();
+      },
 
       // Call this when user logs in
       syncWithUser: async () => {
@@ -68,18 +110,27 @@ export const useCart = create<CartState>()(
         try {
           // Send local items to backend to merge
           const res = await axiosInstance.post('/api/cart/merge', { localItems });
+
           // Update store with the "final" merged list from DB
           set({ items: res.data });
+
+          // ✅ Clear errors because cart is now re-synced
+          get().clearValidationErrors();
         } catch (error) {
-          console.error("Failed to sync cart", error);
+          console.error('Failed to sync cart', error);
         }
       },
+
+      // ✅ Error actions
+      setValidationErrors: (errors) => set({ validationErrors: errors }),
+      clearValidationErrors: () => set({ validationErrors: {} }),
     }),
     {
       name: 'eshop-cart-storage', // key in localStorage
       storage: createJSONStorage(() => localStorage),
-      // Don't persist 'isOpen' state (cart should be closed on refresh)
-      partialize: (state) => ({ items: state.items }), 
+
+      // ✅ Only persist items (errors should be checked fresh; cart closed on refresh)
+      partialize: (state) => ({ items: state.items }),
     }
   )
 );

@@ -21,6 +21,8 @@ module.exports = {
       fontFamily: {
         Roboto: ["var(--font-roboto)"],
         Poppins: ["var(--font-poppins)"],
+        outfit: ['var(--font-outfit)'],
+        cormorant: ['var(--font-cormorant)'],
       }
     },
   },

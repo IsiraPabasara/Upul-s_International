@@ -1,7 +1,7 @@
 'use client'
 import { useCart } from '@/app/hooks/useCart';
 import { useWishlist } from '@/app/hooks/useWishlist';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query'; // Added useQueryClient
 import axios, { AxiosError } from 'axios';
 import { Eye, EyeOff } from 'lucide-react'; 
 import Link from 'next/link';
@@ -20,6 +20,8 @@ const Login = () => {
     const [passwordVisible, setPasswordVisible] = useState(false)
     const [serverError, setServerError] = useState<string | null>(null)
     const router = useRouter();
+    const queryClient = useQueryClient(); // Initialize QueryClient
+    
     const { syncWithUser: syncCart } = useCart();
     const { syncWithUser: syncWishlist } = useWishlist();
     
@@ -52,10 +54,15 @@ const Login = () => {
             } else {
                 localStorage.removeItem("rememberedEmail");
             }
+
+            // IMPORTANT: Invalidate the user query to update Header and other components
+            await queryClient.invalidateQueries({ queryKey: ["user"] });
+
             await Promise.all([
                 syncCart(),
                 syncWishlist() 
             ]);
+
             toast.success("Login successful!");
             router.push("/");
         },
@@ -67,21 +74,19 @@ const Login = () => {
     })
 
     const onSubmit = (data: FormData) => {
-        setServerError(null); // Clear server error on new attempt
+        setServerError(null);
         loginMutation.mutate(data);
     };
 
     return (
         <div className='w-full min-h-screen bg-white flex flex-col items-center justify-center font-sans'>
             <div className='w-full max-w-[450px] px-8'>
-                
                 <div className="mb-14 text-center"> 
                     <h2 className='text-2xl tracking-[0.4em] uppercase mb-6 text-black font-semibold'>Login</h2>
                     <p className='text-[13px] text-black/60 tracking-wide font-medium'>Enter your email and password to login:</p>
                 </div>
 
                 <form onSubmit={handleSubmit(onSubmit)}>
-                    {/* EMAIL FIELD */}
                     <div className='mb-6'>
                         <input 
                             type='email' 
@@ -89,21 +94,14 @@ const Login = () => {
                             className={`w-full p-4 border outline-none text-sm placeholder:text-black/40 transition-colors font-medium ${errors.email ? 'border-red-500' : 'border-black focus:border-black'}`}
                             {...register("email", { 
                                 required: "Email is required",
-                                pattern: {
-                                    value: /\S+@\S+\.\S+/,
-                                    message: "Invalid email format"
-                                }
+                                pattern: { value: /\S+@\S+\.\S+/, message: "Invalid email format" }
                             })}
                         />
-                        {/* Validation Error */}
                         {errors.email && (
-                            <p className="text-red-500 text-[10px] mt-1 font-bold uppercase tracking-widest">
-                                {errors.email.message}
-                            </p>
+                            <p className="text-red-500 text-[10px] mt-1 font-bold uppercase tracking-widest">{errors.email.message}</p>
                         )}
                     </div>
 
-                    {/* PASSWORD FIELD */}
                     <div className='mb-6'>
                         <div className="relative">
                             <input
@@ -119,27 +117,17 @@ const Login = () => {
                                 {passwordVisible ? <EyeOff size={18} /> : <Eye size={18} />}
                             </button>
                         </div>
-                        {/* Validation Error */}
                         {errors.password && (
-                            <p className="text-red-500 text-[10px] mt-1 font-bold uppercase tracking-widest">
-                                {errors.password.message}
-                            </p>
+                            <p className="text-red-500 text-[10px] mt-1 font-bold uppercase tracking-widest">{errors.password.message}</p>
                         )}
                     </div>
 
-                    {/* REMEMBER ME */}
                     <div className='flex items-center mb-10'>
                         <label className='flex items-center cursor-pointer select-none group'>
                             <div className="relative">
-                                <input 
-                                    type='checkbox' 
-                                    className='sr-only' 
-                                    {...register("rememberMe")}
-                                />
+                                <input type='checkbox' className='sr-only' {...register("rememberMe")} />
                                 <div className={`w-4 h-4 border-2 border-black transition-all flex items-center justify-center ${isRemembered ? 'bg-black' : 'bg-white'}`}>
-                                    {isRemembered && (
-                                        <div className="w-1.5 h-1.5 bg-white" /> 
-                                    )}
+                                    {isRemembered && <div className="w-1.5 h-1.5 bg-white" />}
                                 </div>
                             </div>
                             <span className='ml-3 text-[11px] text-black font-black uppercase tracking-widest'>Remember me</span>
@@ -165,12 +153,9 @@ const Login = () => {
                         </p>
                     </div>
 
-                    {/* SERVER ERROR */}
                     {serverError && (
                         <div className="mt-6 p-3 border border-red-500 bg-red-50">
-                            <p className='text-red-600 text-[11px] text-center font-black uppercase tracking-widest'>
-                                {serverError}
-                            </p>
+                            <p className='text-red-600 text-[11px] text-center font-black uppercase tracking-widest'>{serverError}</p>
                         </div>
                     )}
                 </form>

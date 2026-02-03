@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { MapPin, Plus, Trash2, Pencil, ChevronLeft, Loader2 } from "lucide-react";
+import { ChevronLeft, Plus, Trash2, Edit2, Check } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import useUser from "@/app/hooks/useUser";
@@ -26,41 +26,25 @@ const AddressManager = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
 
-  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<AddressFormData>({
-    defaultValues: { isDefault: false }
-  });
-
+  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<AddressFormData>();
   const isDefaultChecked = watch("isDefault");
+
   const invalidateUser = () => queryClient.invalidateQueries({ queryKey: ["user"] });
 
-  // --- Mutations ---
   const addMutation = useMutation({
     mutationFn: (data: AddressFormData) => axiosInstance.post("/api/auth/add-address", data),
-    onSuccess: () => {
-      invalidateUser();
-      reset();
-      setIsEditing(false);
-      toast.success("Address added successfully");
-    },
-    onError: (err: any) => toast.error(err.response?.data?.message || "Failed to add address"),
+    onSuccess: () => { invalidateUser(); reset(); setIsEditing(false); toast.success("Address added"); },
+    onError: (err: any) => toast.error(err.response?.data?.message || "Failed"),
   });
 
   const updateMutation = useMutation({
     mutationFn: (data: AddressFormData) => axiosInstance.put(`/api/auth/update-address/${selectedAddressId}`, data),
-    onSuccess: () => {
-      invalidateUser();
-      setIsEditing(false);
-      setSelectedAddressId(null);
-      toast.success("Address updated");
-    },
+    onSuccess: () => { invalidateUser(); setIsEditing(false); setSelectedAddressId(null); toast.success("Address updated"); },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => axiosInstance.delete(`/api/auth/delete-address/${id}`),
-    onSuccess: () => {
-      invalidateUser();
-      toast.success("Address removed");
-    },
+    onSuccess: () => { invalidateUser(); toast.success("Address removed"); },
   });
 
   const setDefaultMutation = useMutation({
@@ -69,142 +53,86 @@ const AddressManager = () => {
   });
 
   const onSubmit = (data: AddressFormData) => {
-    if (selectedAddressId) {
-      updateMutation.mutate(data);
-    } else {
-      addMutation.mutate(data);
-    }
+    if (selectedAddressId) updateMutation.mutate(data);
+    else addMutation.mutate(data);
   };
 
   const handleEditClick = (address: any) => {
     setSelectedAddressId(address.id);
     setIsEditing(true);
-    // Reset form with address values
-    Object.keys(address).forEach((key) => {
-      setValue(key as keyof AddressFormData, address[key]);
-    });
+    Object.keys(address).forEach((key) => setValue(key as keyof AddressFormData, address[key]));
   };
 
-  if (isLoading) return <div className="p-20 text-center uppercase tracking-[0.3em] text-[10px] text-black">Loading...</div>;
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center text-xs uppercase tracking-[0.3em] font-bold">Loading...</div>;
 
   return (
-    <div className="w-full min-h-screen bg-white font-sans pb-20">
-      <div className="max-w-[1200px] mx-auto px-6 md:px-12 pt-12">
+    <div className="w-full min-h-screen bg-white font-outfit pb-32">
+      <div className="max-w-6xl mx-auto px-6 pt-20">
         
-        {/* Navigation */}
-        <div className="flex mb-12">
-          <Link href="/profile" className="flex items-center gap-1 text-[10px] tracking-[0.2em] uppercase text-black hover:text-black/50 transition-colors">
-            <ChevronLeft size={12} /> Back to Account
-          </Link>
-        </div>
+        <Link href="/profile" className="inline-flex items-center gap-2 text-xs tracking-[0.2em] uppercase text-gray-500 hover:text-black transition-colors mb-12">
+          <ChevronLeft size={16} /> Back to Dashboard
+        </Link>
 
-        <div className="flex justify-between items-center mb-16 border-b-2 border-black pb-6">
-          <h1 className="text-[17px] md:text-[20px] tracking-[0.3em] md:tracking-[0.4em] uppercase text-black ">
-            Addresses
-          </h1>
+        <div className="flex justify-between items-end mb-16 border-b border-black pb-8">
+          <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tighter">Addresses</h1>
           {!isEditing && (
-            <button
-              onClick={() => { setIsEditing(true); setSelectedAddressId(null); reset(); }}
-              className="relative px-2.5 md:px-8 py-3 text-[10px] tracking-[0.2em] uppercase font-bold text-white border-2 border-black overflow-hidden group bg-black hover:text-black transition-colors duration-500"
-            >
-              <span className="absolute -inset-[2px] bg-white transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500 ease-out"></span>
-              <span className="relative z-10 flex items-center justify-center gap-2">
-                  <Plus size={14} /> Add New
-              </span>
+            <button onClick={() => { setIsEditing(true); setSelectedAddressId(null); reset(); }}
+              className="flex items-center gap-2 text-[0.6rem] md:text-xs uppercase tracking-[0.2em] font-bold bg-black text-white px-3 py-3 hover:bg-gray-800 transition-all">
+              <Plus size={14} /> Add New
             </button>
           )}
         </div>
 
         {isEditing ? (
-          <div className="max-w-[600px]">
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* FIRST NAME */}
-                <div className="flex flex-col">
-                  <label className="text-[10px] uppercase tracking-widest mb-2">First Name</label>
-                  <input 
-                    {...register("firstname", { required: "First name is required" })} 
-                    className={`p-4 border outline-none text-sm font-medium transition-colors ${errors.firstname ? 'border-red-500' : 'border-black'}`} 
-                  />
-                  {errors.firstname && <p className="text-red-500 text-[9px] mt-1 uppercase font-bold tracking-tighter">{errors.firstname.message}</p>}
+          <div className="max-w-2xl mx-auto">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-10">
+              <div className="grid grid-cols-2 gap-8">
+                <div className="space-y-2">
+                    <label className="text-xs uppercase font-bold text-gray-400 tracking-widest">First Name</label>
+                    <input {...register("firstname", { required: "Required" })} className="w-full py-3 border-b border-gray-200 outline-none focus:border-black transition-colors text-base font-medium" />
                 </div>
-
-                {/* LAST NAME */}
-                <div className="flex flex-col">
-                  <label className="text-[10px] uppercase tracking-widest mb-2">Last Name</label>
-                  <input 
-                    {...register("lastname", { required: "Last name is required" })} 
-                    className={`p-4 border outline-none text-sm font-medium transition-colors ${errors.lastname ? 'border-red-500' : 'border-black'}`} 
-                  />
-                  {errors.lastname && <p className="text-red-500 text-[9px] mt-1 uppercase font-bold tracking-tighter">{errors.lastname.message}</p>}
-                </div>
-
-                {/* ADDRESS */}
-                <div className="md:col-span-2 flex flex-col">
-                  <label className="text-[10px] uppercase tracking-widest mb-2">Address Line</label>
-                  <input 
-                    {...register("addressLine", { required: "Address is required" })} 
-                    className={`p-4 border outline-none text-sm font-medium transition-colors ${errors.addressLine ? 'border-red-500' : 'border-black'}`} 
-                  />
-                  {errors.addressLine && <p className="text-red-500 text-[9px] mt-1 uppercase font-bold tracking-tighter">{errors.addressLine.message}</p>}
-                </div>
-
-                {/* CITY */}
-                <div className="flex flex-col">
-                  <label className="text-[10px] uppercase tracking-widest mb-2">City</label>
-                  <input 
-                    {...register("city", { required: "City is required" })} 
-                    className={`p-4 border outline-none text-sm font-medium transition-colors ${errors.city ? 'border-red-500' : 'border-black'}`} 
-                  />
-                  {errors.city && <p className="text-red-500 text-[9px] mt-1 uppercase font-bold tracking-tighter">{errors.city.message}</p>}
-                </div>
-
-                {/* POSTAL CODE */}
-                <div className="flex flex-col">
-                  <label className="text-[10px] uppercase tracking-widest mb-2">Postal Code</label>
-                  <input 
-                    {...register("postalCode", { required: "Required" })} 
-                    className={`p-4 border outline-none text-sm font-medium transition-colors ${errors.postalCode ? 'border-red-500' : 'border-black'}`} 
-                  />
-                  {errors.postalCode && <p className="text-red-500 text-[9px] mt-1 uppercase font-bold tracking-tighter">{errors.postalCode.message}</p>}
-                </div>
-
-                {/* PHONE */}
-                <div className="md:col-span-2 flex flex-col">
-                  <label className="text-[10px] uppercase tracking-widest mb-2">Phone Number</label>
-                  <input 
-                    {...register("phoneNumber", { 
-                      required: "Phone number is required", 
-                      pattern: { value: /^\d+$/, message: "Digits only" } 
-                    })} 
-                    className={`p-4 border outline-none text-sm font-medium transition-colors ${errors.phoneNumber ? 'border-red-500' : 'border-black'}`} 
-                  />
-                  {errors.phoneNumber && <p className="text-red-500 text-[9px] mt-1 uppercase font-bold tracking-tighter">{errors.phoneNumber.message}</p>}
+                <div className="space-y-2">
+                    <label className="text-xs uppercase font-bold text-gray-400 tracking-widest">Last Name</label>
+                    <input {...register("lastname", { required: "Required" })} className="w-full py-3 border-b border-gray-200 outline-none focus:border-black transition-colors text-base font-medium" />
                 </div>
               </div>
 
-              {/* Default Checkbox */}
-              <label className="flex items-center cursor-pointer select-none group w-fit">
-                <input type='checkbox' className='sr-only' {...register("isDefault")} />
-                <div className={`w-5 h-5 border-2 border-black transition-all flex items-center justify-center ${isDefaultChecked ? 'bg-black' : 'bg-white'}`}>
-                  {isDefaultChecked && <div className="w-2 h-2 bg-white" />}
+              <div className="space-y-2">
+                  <label className="text-xs uppercase font-bold text-gray-400 tracking-widest">Address</label>
+                  <input {...register("addressLine", { required: "Required" })} className="w-full py-3 border-b border-gray-200 outline-none focus:border-black transition-colors text-base font-medium" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-8">
+                <div className="space-y-2">
+                    <label className="text-xs uppercase font-bold text-gray-400 tracking-widest">City</label>
+                    <input {...register("city", { required: "Required" })} className="w-full py-3 border-b border-gray-200 outline-none focus:border-black transition-colors text-base font-medium" />
                 </div>
-                <span className='ml-3 text-[11px] text-black uppercase tracking-widest'>Set as default address</span>
+                <div className="space-y-2">
+                    <label className="text-xs uppercase font-bold text-gray-400 tracking-widest">Postal Code</label>
+                    <input {...register("postalCode", { required: "Required" })} className="w-full py-3 border-b border-gray-200 outline-none focus:border-black transition-colors text-base font-medium" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                  <label className="text-xs uppercase font-bold text-gray-400 tracking-widest">Phone</label>
+                  <input {...register("phoneNumber", { required: "Required" })} className="w-full py-3 border-b border-gray-200 outline-none focus:border-black transition-colors text-base font-medium" />
+              </div>
+
+              <label className="flex items-center gap-3 cursor-pointer pt-4 group w-fit">
+                <div className={`w-5 h-5 border-2 border-black flex items-center justify-center transition-colors ${isDefaultChecked ? 'bg-black' : 'bg-white'}`}>
+                    {isDefaultChecked && <Check size={12} className="text-white" />}
+                </div>
+                <input type='checkbox' className='hidden' {...register("isDefault")} />
+                <span className='text-xs uppercase font-bold tracking-widest group-hover:text-gray-600 transition-colors'>Set as default</span>
               </label>
 
-              <div className="flex gap-4 pt-6">
-                <button 
-                  type="submit" 
-                  disabled={addMutation.isPending || updateMutation.isPending}
-                  className="relative flex-1 py-4 text-xs tracking-[0.3em] uppercase text-white border-2 border-black overflow-hidden group bg-black hover:text-black transition-colors duration-500 disabled:opacity-50"
-                >
-                  <span className="absolute inset-0 bg-white transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500 ease-out"></span>
-                  <span className="relative z-10 flex items-center justify-center gap-2">
-                    {(addMutation.isPending || updateMutation.isPending) && <Loader2 size={14} className="animate-spin" />}
-                    {selectedAddressId ? "Update Address" : "Save Address"}
-                  </span>
+              <div className="flex gap-6 pt-10">
+                <button type="submit" disabled={addMutation.isPending || updateMutation.isPending}
+                  className="flex-1 bg-black text-white py-5 text-xs uppercase tracking-[0.2em] font-bold hover:bg-gray-900 transition-colors">
+                  {selectedAddressId ? "Update Address" : "Save Address"}
                 </button>
-                <button type="button" onClick={() => setIsEditing(false)} className="flex-1 py-4 text-xs tracking-[0.3em] uppercase text-black border-2 border-black hover:bg-black hover:text-white transition-colors">
+                <button type="button" onClick={() => setIsEditing(false)} 
+                  className="px-12 py-5 border-2 border-black text-xs uppercase tracking-[0.2em] font-bold hover:bg-gray-50 transition-colors">
                   Cancel
                 </button>
               </div>
@@ -213,53 +141,47 @@ const AddressManager = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
             {user?.addresses?.map((addr: any) => (
-              <div key={addr.id} className={`flex flex-col border-2 p-8 transition-all ${addr.isDefault ? "border-black bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,0.05)]" : "border-black/10 bg-white hover:border-black"}`}>
-                <div className="flex justify-between items-start mb-6">
-                   <div className="p-2 bg-black text-white"><MapPin size={16} /></div>
-                   {addr.isDefault && (
-                    <span className="text-[10px] uppercase tracking-widest border-b-2 border-black pb-0.5 font-bold">Default</span>
-                   )}
-                </div>
+              <div key={addr.id} className={`relative p-10 border-2 transition-all duration-300 min-w-0 flex flex-col justify-between
+                 ${addr.isDefault ? "border-black shadow-[10px_10px_0px_0px_rgba(0,0,0,0.03)]" : "border-gray-100 hover:border-black"}`}>
                 
-                <div className="flex flex-col flex-1 text-black min-w-0">
-                  <p className="text-[16px] uppercase tracking-tight mb-2 break-words font-semibold">
-                    {addr.firstname} {addr.lastname}
-                  </p>
-                  <p className="text-[14px] font-medium leading-relaxed break-words whitespace-pre-wrap text-black/70">
-                    {addr.addressLine}
-                  </p>
-                  <p className="text-[14px] font-medium leading-relaxed break-words text-black/70">
-                    {addr.city}, {addr.postalCode}
-                  </p>
-                  <p className="text-[13px] mt-4 tabular-nums font-bold tracking-widest">{addr.phoneNumber}</p>
+                {addr.isDefault && (
+                    <span className="absolute top-0 left-0 bg-black text-white text-[10px] font-bold uppercase tracking-[0.15em] px-4 py-1.5">
+                        Default
+                    </span>
+                )}
+
+                <div className="mt-6 mb-10 min-w-0">
+                    <p className="font-bold text-xl mb-2 truncate">{addr.firstname} {addr.lastname}</p>
+                    <p className="text-base text-gray-600 leading-relaxed break-words">{addr.addressLine}</p>
+                    <p className="text-base text-gray-600">{addr.city}, {addr.postalCode}</p>
+                    <p className="text-sm font-mono text-gray-400 mt-4 tracking-wide">{addr.phoneNumber}</p>
                 </div>
 
-                <div className="flex gap-6 mt-10 pt-6 border-t border-black/10">
-                  <button onClick={() => handleEditClick(addr)} className="text-[10px] uppercase tracking-widest flex items-center gap-1.5 hover:text-black/50 transition-colors font-bold">
-                    <Pencil size={12} /> Edit
-                  </button>
-                  <button onClick={() => { if(confirm("Delete this address?")) deleteMutation.mutate(addr.id)}} className="text-[10px] uppercase tracking-widest flex items-center gap-1.5 text-red-600 hover:text-red-400 transition-colors font-bold">
-                    <Trash2 size={12} /> Delete
-                  </button>
-                  {!addr.isDefault && (
-                    <button onClick={() => setDefaultMutation.mutate(addr.id)} className="text-[10px] ml-auto uppercase tracking-widest underline underline-offset-4 hover:text-black/50 transition-colors font-bold">
-                      Set Default
+                {/* 👇 MODIFIED: Removed 'opacity-0' and 'group-hover' classes */}
+                <div className="flex gap-6 border-t border-gray-100 pt-6">
+                    <button onClick={() => handleEditClick(addr)} className="text-[10px] uppercase font-bold tracking-[0.1em] flex items-center gap-1 hover:text-gray-500">
+                        <Edit2 size={12} /> Edit
                     </button>
-                  )}
+                    {!addr.isDefault && (
+                        <button onClick={() => { if(confirm("Delete?")) deleteMutation.mutate(addr.id)}} className="text-[10px] uppercase font-bold tracking-[0.1em] flex items-center gap-1 text-red-600 hover:text-red-800">
+                            <Trash2 size={12} /> Delete
+                        </button>
+                    )}
+                    {!addr.isDefault && (
+                        <button onClick={() => setDefaultMutation.mutate(addr.id)} className="ml-auto text-[10px] uppercase font-bold tracking-[0.1em] underline decoration-gray-300 hover:decoration-black">
+                            Make Default
+                        </button>
+                    )}
                 </div>
               </div>
             ))}
-
+            
             {user?.addresses?.length === 0 && (
-              <div className="md:col-span-2 lg:col-span-3 py-32 text-center border-2 border-dashed border-black/20">
-                <p className="text-black uppercase tracking-[0.3em] text-[12px]">No addresses found.</p>
-                <button 
-                  onClick={() => { setIsEditing(true); setSelectedAddressId(null); reset(); }}
-                  className="mt-6 text-[10px] uppercase tracking-widest border-b-2 border-black hover:text-black/50 transition-colors font-bold"
-                >
-                  Add your first address
-                </button>
-              </div>
+                <div onClick={() => { setIsEditing(true); reset(); }} 
+                   className="flex flex-col items-center justify-center p-16 border-2 border-dashed border-gray-200 text-gray-400 cursor-pointer hover:border-black hover:text-black transition-colors min-h-[300px]">
+                    <Plus size={32} className="mb-6" />
+                    <p className="text-xs uppercase tracking-[0.2em] font-bold">Add Your First Address</p>
+                </div>
             )}
           </div>
         )}

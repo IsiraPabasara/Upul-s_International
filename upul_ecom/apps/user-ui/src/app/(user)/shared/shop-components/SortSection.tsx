@@ -15,11 +15,11 @@ export default function SortSection() {
 
   return (
     <div className="flex items-center gap-2">
-      <label className="text-xs font-medium text-gray-500 uppercase hidden sm:block">Sort By:</label>
+      <label className="text-xs font-medium text-gray-500 uppercase font-outfit hidden sm:block">Sort By:</label>
       <select 
         value={currentSort} 
         onChange={handleSortChange}
-        className="text-sm border-none bg-transparent font-semibold focus:ring-0 cursor-pointer outline-none hover:text-gray-600"
+        className="text-sm border-none bg-transparent font-semibold focus:ring-0 cursor-pointer outline-none font-outfit hover:text-gray-600"
       >
         <option value="newest">Newest Arrivals</option>
         <option value="featured">Featured</option>
