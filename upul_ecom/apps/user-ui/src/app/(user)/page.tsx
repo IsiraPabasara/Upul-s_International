@@ -116,8 +116,8 @@ const LookbookDesktop = () => {
 // Mobile (swipe version)
 const LookbookMobile = () => {
   const images = [
-    "https://images.unsplash.com/photo-1496747611176-843222e1e57c?q=80&w=2673&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1600091166971-7f9faad6c1e2?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTh8fGJsYXplcnxlbnwwfHwwfHx8MA%3D%3D",
+    "https://ik.imagekit.io/aqi4rj9dnl/caot1.1",
+    "https://ik.imagekit.io/aqi4rj9dnl/coat2.1",
     
   ];
 
