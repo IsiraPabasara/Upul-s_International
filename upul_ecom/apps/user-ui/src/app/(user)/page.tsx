@@ -25,30 +25,30 @@ const FeaturedCategories = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 w-full">
-          <div className="md:col-span-7 h-[500px] md:h-[650px] relative group overflow-hidden bg-gray-100">
+          <div className="md:col-span-4 h-[400px] md:h-[65vh] relative group overflow-hidden bg-gray-100">
             <img
-              src="https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=2670&auto=format&fit=crop"
+              src="https://www.forever21.com/cdn/shop/files/K-Women_1.jpg?v=1770142866&width=500"
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
             />
-            <div className="absolute bottom-6 left-6 bg-white px-6 py-4 z-10">
+            {/* <div className="absolute bottom-6 left-6 bg-white px-6 py-4 z-10">
               <span className="block text-xs font-bold uppercase tracking-widest text-gray-400">01</span>
               <span className="block text-xl font-cormorant font-bold text-black">Outerwear</span>
-            </div>
+            </div> */}
           </div>
 
-          <div className="md:col-span-5 flex flex-col gap-4 md:gap-6 h-auto md:h-[650px]">
-            <div className="h-[300px] md:h-auto md:flex-1 relative group overflow-hidden bg-gray-100">
+          <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto md:h-[65vh]">
+            <div className="h-[400px] md:h-auto md:flex-1 relative group overflow-hidden bg-gray-100">
               <img
-                src="https://images.unsplash.com/photo-1622519407650-3df9883f76a5?q=80&w=764&auto=format&fit=crop"
+                src="https://www.forever21.com/cdn/shop/files/K-Men_2.jpg?v=1770146744&width=500"
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
               />
-              <div className="absolute bottom-6 left-6 bg-white/90 px-6 py-4 z-10">
+              {/* <div className="absolute bottom-6 left-6 bg-white/90 px-6 py-4 z-10">
               <span className="block text-[10px] font-bold uppercase tracking-widest text-gray-400">02</span>
               <span className="block text-xl font-cormorant font-bold text-black">Men</span>
-            </div>
+            </div> */}
             </div>
 
-            <div className="h-[300px] md:h-auto md:flex-1 relative group overflow-hidden bg-gray-100">
+            {/* <div className="h-[300px] md:h-auto md:flex-1 relative group overflow-hidden bg-gray-100">
               <img
                 src="https://images.unsplash.com/photo-1490114538077-0a7f8cb49891?q=80&w=1170&auto=format&fit=crop"
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
@@ -58,7 +58,18 @@ const FeaturedCategories = () => {
               <span className="block text-[10px] font-bold uppercase tracking-widest text-gray-400">03</span>
               <span className="block text-xl font-cormorant font-bold text-black">Accessories</span>
             </div>
-            </div>
+            </div> */}
+          </div>
+          
+          <div className="md:col-span-4 h-[400px] md:h-[65vh] relative group overflow-hidden bg-gray-100">
+            <img
+              src="https://www.forever21.com/cdn/shop/files/K-Accessories_1.jpg?v=1770142866&width=500"
+              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+            />
+            {/* <div className="absolute bottom-6 left-6 bg-white px-6 py-4 z-10">
+              <span className="block text-xs font-bold uppercase tracking-widest text-gray-400">01</span>
+              <span className="block text-xl font-cormorant font-bold text-black">Outerwear</span>
+            </div> */}
           </div>
         </div>
       </div>
@@ -207,11 +218,16 @@ export default function HomePage() {
       <Hero />
       {/* <Marquee /> */}
      
-      <CollectionPreview />
+      <div className='py-20'>
+        <CollectionPreview />
+      </div>
        <div className='mt-[px]'>
         <BrandMarquee/>
       </div>
       <FeaturedCategories />
+      <div className='mb-20'>
+        <CollectionPreview />
+      </div>
       <Lookbook />
       
       

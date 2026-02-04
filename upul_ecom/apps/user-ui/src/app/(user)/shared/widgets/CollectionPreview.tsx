@@ -29,7 +29,7 @@ const CollectionPreview = () => {
   };
 
   return (
-    <section className="bg-white py-20 border-b border-gray-50 font-outfit">
+    <section className="bg-white border-b border-gray-50 font-outfit">
       <div className="max-w-8xl mx-auto px-5">
         
         {/* Header */}
