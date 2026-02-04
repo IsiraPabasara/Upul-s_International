@@ -221,7 +221,7 @@ useEffect(() => {
             <input
               type="text"
               placeholder="Search..."
-              className="flex-1 px-4 py-0 text-lg outline-none border-none placeholder-gray-400"
+              className="flex-1 px-4 py-0 text-base outline-none border-none placeholder-gray-400"
               onChange={(e) => setSearchTerm(e.target.value)}
             />
             <button 
