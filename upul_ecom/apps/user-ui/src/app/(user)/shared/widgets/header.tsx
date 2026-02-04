@@ -185,7 +185,7 @@ useEffect(() => {
           </div>
         </div>
 
-        <nav className="bg-[#f2e6e6] bg-white border-b overflow-x-auto scrollbar-hide shadow-sm w-full">
+        <nav className="bg-white border-b overflow-x-auto scrollbar-hide shadow-sm w-full">
           <div className="max-w-8xl mx-auto px-5 flex gap-6 md:gap-10 h-11 items-center text-[12px] md:text-[13px] font-bold uppercase tracking-tight whitespace-nowrap">
             <Link href="/shop?isNewArrival=true" className="shrink-0 hover:opacity-70 transition-opacity">New Arrivals</Link>
             {categories.filter((c: any) => !c.parentId).map((cat: any) => (
@@ -207,24 +207,32 @@ useEffect(() => {
       >
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between px-6 py-5 border-b">
-            <span className="text-xl font-black tracking-widest uppercase">Menu</span>
+            <span className="text-lg font-black tracking-widest uppercase">Menu</span>
             <button onClick={() => setIsMenuOpen(false)} className="p-1">
               <X size={28} />
             </button>
           </div>
 
           <div className="flex-1 overflow-y-auto px-6 py-8">
-            <form onSubmit={handleSearch} className="flex mb-10">
-              <input
-                type="text"
-                placeholder="Search..."
-                className="flex-1 border-b border-gray-300 py-3 focus:outline-none focus:border-black text-lg"
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              <button type="submit" className="px-4"><Search size={22} /></button>
-            </form>
+            <form 
+            onSubmit={handleSearch} 
+            className="flex items-center w-full border border-gray-200 rounded-lg p- mb-8 shadow-sm hover:shadow-md transition-shadow bg-white"
+          >
+            <input
+              type="text"
+              placeholder="Search..."
+              className="flex-1 px-4 py-0 text-lg outline-none border-none placeholder-gray-400"
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <button 
+              type="submit" 
+              className="p-3 bg-black text-white rounded-md hover:bg-zinc-800 transition-colors"
+            >
+              <Search size={20} />
+            </button>
+          </form>
 
-            <div className="flex flex-col gap-6 text-xl font-bold uppercase tracking-tighter">
+            <div className="flex flex-col gap-4 text-md font-bold uppercase tracking-tighter">
               <Link href="/" onClick={() => setIsMenuOpen(false)}>Home</Link>
               <Link href="/shop?isNewArrival=true" onClick={() => setIsMenuOpen(false)}>New Arrivals</Link>
               {categories.filter((c: any) => !c.parentId).map((cat: any) => (
@@ -235,18 +243,18 @@ useEffect(() => {
               
               <hr className="border-gray-100 my-4" />
               
-              <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-4">
                 {isLoggedIn ? (
                   <>
-                    <Link href="/profile" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 text-xl">
-                      <UserCircle size={24} strokeWidth={1.5} /> My Profile
+                    <Link href="/profile" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 text-md">
+                      <UserCircle size={18} strokeWidth={1.5} /> My Profile
                     </Link>
-                    <Link href="/profile/orders" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 text-xl">
-                      <Package size={24} strokeWidth={1.5} /> My Orders
+                    <Link href="/profile/orders" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 text-md">
+                      <Package size={18} strokeWidth={1.5} /> My Orders
                     </Link>
                   </>
                 ) : (
-                  <Link href="/login" onClick={() => setIsMenuOpen(false)} className="flex items-center justify-center w-full bg-black text-white py-4 rounded-sm font-bold uppercase tracking-[0.2em]">
+                  <Link href="/login" onClick={() => setIsMenuOpen(false)} className="flex items-center text-sm justify-center w-full bg-black text-white py-4 rounded-sm font-bold uppercase tracking-[0.2em]">
                     Sign In / Register
                   </Link>
                 )}

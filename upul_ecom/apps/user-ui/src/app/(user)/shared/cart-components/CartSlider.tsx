@@ -23,7 +23,7 @@ export default function CartSlider() {
     isOpen,
     toggleCart,
     updateQuantity,
-    removeItem,
+    removeItem, // This only updates Zustand (Local)
     validationErrors,
     setValidationErrors,
     updatePrices,
@@ -40,7 +40,6 @@ export default function CartSlider() {
     setMounted(true);
   }, []);
 
-  // Sync scroll-lock with the header to prevent shifting
   useEffect(() => {
     const header = document.querySelector('header');
     if (isOpen) {
@@ -49,7 +48,6 @@ export default function CartSlider() {
       document.body.style.paddingRight = `${scrollBarWidth}px`;
       if (header) header.style.paddingRight = `${scrollBarWidth}px`;
     } else {
-      // Small delay to match the 300ms transition duration
       const timeout = setTimeout(() => {
         document.body.style.overflow = 'unset';
         document.body.style.paddingRight = '0px';
@@ -63,6 +61,24 @@ export default function CartSlider() {
 
   const subtotal = getSubtotal();
   const totalSavings = getTotalSavings();
+
+  // --- 1. FIXED: Handle Remove Item (Local + DB) ---
+  const handleRemoveItem = async (sku: string) => {
+    // 1. Update Local State Immediately (Optimistic UI)
+    removeItem(sku);
+    setValidationErrors({});
+
+    // 2. Update Database if User is Logged In
+    if (user) {
+      try {
+        // Assuming your route is DELETE /api/cart/:sku based on your controller
+        await axiosInstance.delete(`/api/cart/${sku}`); 
+      } catch (error) {
+        console.error('Failed to remove item from DB', error);
+        // Optional: toast.error("Could not sync deletion");
+      }
+    }
+  };
 
   const handleUpdateQuantity = async (sku: string, newQty: number, maxStock: number) => {
     if (newQty < 1) return;
@@ -93,14 +109,25 @@ export default function CartSlider() {
         toggleCart();
         router.push('/checkout');
       } else {
+        const errors = data.errors || {};
+        
+        // Show individual error toasts for each item
+        Object.entries(errors).forEach(([sku, message]) => {
+          const item = items.find(i => i.sku === sku);
+          if (item) {
+            toast.error(`${item.name}: ${message}`, { duration: 4000 });
+          }
+        });
+
+        // Update prices if they changed
         if (data.updatedPrices && Object.keys(data.updatedPrices).length > 0) {
           updatePrices(data.updatedPrices);
-          toast.error('Prices have changed.');
         }
-        setValidationErrors(data.errors || {});
+        
+        setValidationErrors(errors);
       }
     } catch (error) {
-      toast.error('Could not verify cart.');
+      toast.error('Unable to verify cart. Please try again.');
     } finally {
       setIsVerifying(false);
     }
@@ -108,7 +135,6 @@ export default function CartSlider() {
 
   return (
     <div className={`fixed inset-0 z-[100] ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
-      {/* 1. Backdrop Overlay (Matching Sidebar Logic) */}
       <div 
         className={`absolute inset-0 bg-black/40 backdrop-blur-[2px] transition-opacity duration-300 ${
           isOpen ? 'opacity-100' : 'opacity-0'
@@ -116,7 +142,6 @@ export default function CartSlider() {
         onClick={toggleCart} 
       />
 
-      {/* 2. Slider Panel (Matching Sidebar Slide-in) */}
       <aside
         className={`absolute top-0 right-0 w-full md:w-[450px] h-full bg-white shadow-2xl transition-transform duration-300 ease-out transform ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
@@ -149,8 +174,10 @@ export default function CartSlider() {
                 return (
                   <div
                     key={item.sku}
-                    className={`flex gap-4 border-b border-gray-100 pb-6 last:border-0 ${
-                      errorMsg ? 'bg-red-50/50 -m-2 p-2 rounded-lg' : ''
+                    className={`flex gap-4 border rounded-lg p-4 pb-6 transition-colors ${
+                      errorMsg 
+                        ? 'border-red-300 bg-red-50/50' 
+                        : 'border-gray-100 bg-white'
                     }`}
                   >
                     <div className="w-20 h-24 bg-gray-100 rounded-md overflow-hidden flex-shrink-0">
@@ -160,11 +187,22 @@ export default function CartSlider() {
                     <div className="flex-1 flex flex-col justify-between">
                       <div className="flex justify-between items-start">
                         <h3 className="font-semibold text-sm line-clamp-2">{item.name}</h3>
-                        <button onClick={() => removeItem(item.sku)} className="text-gray-400 hover:text-red-500 transition-colors">
+                        {/* 2. FIXED: Use the new handleRemoveItem function */}
+                        <button onClick={() => handleRemoveItem(item.sku)} className="text-gray-400 hover:text-red-500 transition-colors">
                           <Trash2 size={16} />
                         </button>
                       </div>
                       
+                      {item.size && (
+                        <p className="text-xs text-gray-500 mt-0.5">Size: {item.size}</p>
+                      )}
+
+                      {errorMsg && (
+                        <p className="text-xs text-red-600 font-medium mt-1 bg-red-100 px-2 py-1 rounded">
+                          {errorMsg}
+                        </p>
+                      )}
+
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-xs font-medium text-gray-900">LKR {item.price.toLocaleString()}</span>
                         {hasDiscount && <span className="text-[10px] text-gray-400 line-through">LKR {item.originalPrice.toLocaleString()}</span>}
