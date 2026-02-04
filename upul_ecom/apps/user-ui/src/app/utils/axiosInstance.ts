@@ -9,7 +9,7 @@ declare module "axios" {
 }
 
 const axiosInstance = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_SERVER_URL,
+    baseURL: "",
     withCredentials:true,
 });
 
@@ -65,7 +65,7 @@ axiosInstance.interceptors.response.use(
             isRefreshing = true;
 
             try{
-                await axios.post(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/auth/refresh-token`, {}, {withCredentials: true});
+                await axios.post(`/api/auth/refresh-token`, {}, {withCredentials: true});
                 isRefreshing=false;
                 onRefreshSuccess();
 
