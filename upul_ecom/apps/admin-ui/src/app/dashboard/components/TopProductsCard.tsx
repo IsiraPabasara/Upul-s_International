@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import axiosInstance from "@/app/utils/axiosInstance";
-import { ChevronLeft, ChevronRight, Loader2, Trophy, ArrowRight, Flame } from "lucide-react";
+import { ChevronLeft, Loader2, Trophy, ArrowRight, Flame } from "lucide-react";
 import Image from "next/image";
 import CustomSelect from "./CustomSelect";
 

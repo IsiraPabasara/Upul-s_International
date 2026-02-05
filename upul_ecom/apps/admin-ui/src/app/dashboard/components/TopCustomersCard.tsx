@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import axiosInstance from "@/app/utils/axiosInstance";
-import { Loader2, Trophy, Medal, User, Crown } from "lucide-react";
+import { Loader2, Medal, User, Crown } from "lucide-react";
 import CustomSelect from "./CustomSelect";
 
 interface Customer {
