@@ -46,10 +46,11 @@ export default function TopProductsCard() {
   };
 
   return (
-    <div className="w-full bg-white dark:bg-slate-950 rounded-[2.5rem] p-6 border border-gray-100 dark:border-slate-800 shadow-xl shadow-slate-200/40 dark:shadow-none flex flex-col relative h-[700px] transition-all duration-300 hover:shadow-2xl hover:shadow-slate-200/60 hover:-translate-y-1">
+    // 📱 Responsive Height: 500px on mobile, 700px on desktop
+    <div className="w-full bg-white dark:bg-slate-950 rounded-[2.5rem] p-6 border border-gray-100 dark:border-slate-800 shadow-xl shadow-slate-200/40 dark:shadow-none flex flex-col relative h-[500px] lg:h-[700px] transition-all duration-300">
       
       {/* Header */}
-      <div className="flex justify-between items-center mb-6 z-20">
+      <div className="flex justify-between items-center mb-4 lg:mb-6 z-20">
         <div>
           <h3 className="text-xl font-extrabold text-slate-800 dark:text-white tracking-tight">Top Selling</h3>
           <p className="text-xs text-slate-400 font-medium mt-0.5">Most popular picks</p>
@@ -63,7 +64,6 @@ export default function TopProductsCard() {
         </div>
       </div>
 
-      {/* Main Content Area */}
       <div className="flex-1 relative min-h-0">
         {isLoading ? (
           <div className="absolute inset-0 flex items-center justify-center">
@@ -78,10 +78,11 @@ export default function TopProductsCard() {
           <div className="h-full flex flex-col animate-in fade-in zoom-in duration-500">
             
             {/* 1. IMAGE CONTAINER */}
-            <div className="relative w-full flex-1 aspect-[2/3] bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-900/50 rounded-[2rem] mb-6 overflow-hidden group mx-auto border border-gray-100/50 dark:border-slate-800">
+            {/* 📱 Mobile: aspect-square (to save height). 🖥️ Desktop: aspect-[2/3] (Tall & Elegant) */}
+            <div className="relative w-full flex-1 aspect-square lg:aspect-[2/3] bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-800 rounded-[2rem] mb-4 lg:mb-6 overflow-hidden group mx-auto border border-gray-100/50 dark:border-slate-700/50 shadow-inner">
                
-               {/* Premium Rank Badge */}
-               <div className="absolute top-4 left-4 bg-white/80 backdrop-blur-md dark:bg-slate-800/80 text-slate-900 dark:text-white font-bold text-xs px-3 py-1.5 rounded-full shadow-sm z-10 border border-white/50 dark:border-slate-600 flex items-center gap-1.5">
+               {/* Badge */}
+               <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md dark:bg-slate-950/90 text-slate-900 dark:text-white font-bold text-xs px-3 py-1.5 rounded-full shadow-sm z-10 border border-white/50 dark:border-slate-700 flex items-center gap-1.5">
                  <span className="text-yellow-500">🏆</span> #{currentIndex + 1} Best Seller
                </div>
 
@@ -89,38 +90,36 @@ export default function TopProductsCard() {
                  src={currentProduct.image} 
                  alt={currentProduct.name}
                  fill
-                 className="object-contain w-full  mix-blend-multiply dark:mix-blend-normal"
+                 // mix-blend-multiply hides white bg on light mode. 
+                 // dark:mix-blend-normal ensures it doesn't vanish on dark mode.
+                 className="object-contain w-full mix-blend-multiply dark:mix-blend-normal"
                />
             </div>
 
-            {/* 2. CONTENT STACK */}
-            <div className="flex flex-col px-1">
+            {/* 2. CONTENT */}
+            <div className="flex flex-col px-1 mt-auto">
               
-              {/* Brand & Stock Row */}
               <div className="flex items-center justify-between text-xs font-bold tracking-wider uppercase mb-2">
                 <span className="text-slate-400">{currentProduct.brand}</span>
-                <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full ${currentProduct.stock > 0 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
+                <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full ${currentProduct.stock > 0 ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400" : "bg-rose-50 text-rose-700"}`}>
                    <span className={`w-1.5 h-1.5 rounded-full ${currentProduct.stock > 0 ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`} />
                    {currentProduct.stock > 0 ? `${currentProduct.stock} Left` : "Out of Stock"}
                 </div>
               </div>
 
-              {/* Title */}
-              <h4 className="font-bold text-slate-900 dark:text-white text-2xl leading-tight truncate mb-1">
+              <h4 className="font-bold text-slate-900 dark:text-white text-xl lg:text-2xl leading-tight truncate mb-1">
                 {currentProduct.name}
               </h4>
 
-              {/* Price */}
-              <p className="font-black text-3xl text-blue-600 dark:text-blue-400 tracking-tight">
+              <p className="font-black text-2xl lg:text-3xl text-slate-900 dark:text-white tracking-tight">
                 Rs. {currentProduct.price.toLocaleString()}
               </p>
 
-              {/* Footer Controls */}
-              <div className="mt-6 pt-5 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between">
+              {/* Footer */}
+              <div className="mt-4 lg:mt-6 pt-4 lg:pt-5 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between">
                  
-                 {/* 🔥 HIGHLIGHTED SALES STAT */}
                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-xl bg-orange-100 dark:bg-orange-900/20 text-orange-600 dark:text-orange-500 flex items-center justify-center">
                         <Flame size={20} fill="currentColor" className="animate-pulse" />
                     </div>
                     <div className="flex flex-col">
@@ -131,12 +130,11 @@ export default function TopProductsCard() {
                     </div>
                  </div>
 
-                 {/* Navigation Buttons */}
                  <div className="flex gap-2">
-                   <button onClick={prevSlide} className="w-11 h-11 rounded-full border-2 border-gray-100 dark:border-slate-800 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-700 transition-all active:scale-95">
+                   <button onClick={prevSlide} className="w-11 h-11 rounded-full border-2 border-gray-100 dark:border-slate-800 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-all active:scale-95">
                      <ChevronLeft size={20} strokeWidth={2.5} />
                    </button>
-                   <button onClick={nextSlide} className="w-11 h-11 rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 dark:shadow-none active:scale-95">
+                   <button onClick={nextSlide} className="w-11 h-11 rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center hover:bg-slate-800 dark:hover:bg-slate-200 transition-all shadow-lg shadow-slate-200 dark:shadow-none active:scale-95">
                      <ArrowRight size={20} strokeWidth={2.5} />
                    </button>
                  </div>

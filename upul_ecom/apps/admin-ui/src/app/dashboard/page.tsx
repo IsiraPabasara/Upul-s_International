@@ -3,81 +3,36 @@
 import { useState } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import axiosInstance from "@/app/utils/axiosInstance";
+import { DollarSign, ShoppingBag, Users, Package, Loader2 } from "lucide-react";
+
+// Components
 import StatCard from "./components/StatCard";
 import SalesCategoryChart from "./components/SalesCategoryChart";
-import CustomSelect from "./components/CustomSelect";
-import {
-  DollarSign,
-  ShoppingBag,
-  Users,
-  Package,
-  Loader2,
-  Calendar,
-} from "lucide-react";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import CustomSelect from "./components/CustomSelect"; // Ensure this path is correct
 import TopProductsCard from "./components/TopProductsCard";
 import TopCustomersCard from "./components/TopCustomersCard";
-
-const GraphSkeleton = () => {
-  const barHeights = [
-    "h-1/3",
-    "h-2/3",
-    "h-1/2",
-    "h-3/4",
-    "h-full",
-    "h-2/3",
-    "h-1/4",
-  ];
-
-  return (
-    <div className="h-full w-full flex flex-col justify-end animate-pulse">
-      <div className="h-1 w-full bg-blue-100/50 rounded-full mb-8" />
-
-      <div className="flex items-end justify-between h-64 px-2 gap-2 opacity-10">
-        {barHeights.map((height, i) => (
-          <div
-            key={i}
-            className={`${height} w-full bg-slate-400 rounded-t-3xl`}
-          />
-        ))}
-      </div>
-
-      <div className="h-4 w-full bg-slate-100/50 mt-4 rounded" />
-    </div>
-  );
-};
+import MainAnalyticsChart from "./components/MainAnalyticsChart";
 
 export default function DashboardOverview() {
+  // 1. STATE MANAGEMENT
   const [activeMetric, setActiveMetric] = useState<
     "revenue" | "orders" | "customers" | "products"
   >("revenue");
 
+  // Date & Range State
   const [mainRange, setMainRange] = useState<string>("weekly");
   const currentYear = new Date().getFullYear();
   const [startYear, setStartYear] = useState(currentYear - 1);
   const endYear = currentYear;
   const [categoryRange, setCategoryRange] = useState<string>("weekly");
 
+  // Generate Year Options
   const availableYears = [];
   for (let y = currentYear; y >= 2021; y--) {
     availableYears.push(y);
   }
 
-  const rangeOptions = [
-    { label: "This Week", value: "weekly" },
-    { label: "This Month", value: "monthly" },
-    { label: "This Year", value: "yearly" },
-    { label: "Custom Range", value: "custom" },
-  ];
-
+  // A. Stat Cards Data
   const { data: cardData, isLoading: cardsLoading } = useQuery({
     queryKey: ["dashboard-cards"],
     queryFn: async () =>
@@ -85,6 +40,7 @@ export default function DashboardOverview() {
     staleTime: 30000,
   });
 
+  // B. Main Chart Data
   const {
     data: mainChartData,
     isLoading: mainLoading,
@@ -101,6 +57,7 @@ export default function DashboardOverview() {
     staleTime: 30000,
   });
 
+  // C. Category Chart Data
   const {
     data: categoryData,
     isLoading: categoryLoading,
@@ -114,40 +71,20 @@ export default function DashboardOverview() {
         )
       ).data,
     placeholderData: keepPreviousData,
+    staleTime: 30000,
   });
 
-  if (cardsLoading || !cardData)
+  // 3. LOADING STATE (Full Screen Spinner)
+  if (cardsLoading || !cardData) {
     return (
-      <div className="h-96 flex items-center justify-center">
-        <Loader2 className="animate-spin text-blue-600 h-8 w-8" />
+      <div className="h-[80vh] flex items-center justify-center">
+        <Loader2 className="animate-spin text-blue-600 h-12 w-12" />
       </div>
     );
-
-  const getMetricLabel = () => {
-    switch (activeMetric) {
-      case "revenue":
-        return "Revenue";
-      case "orders":
-        return "Orders";
-      case "customers":
-        return "New Customers";
-      case "products":
-        return "New Products";
-      default:
-        return "Value";
-    }
-  };
-
-  const getRangeText = () => {
-    if (mainRange === "weekly") return "last 7 days";
-    if (mainRange === "monthly") return "last 30 days";
-    if (mainRange === "yearly") return "last 12 months";
-    return `from ${startYear} to ${endYear}`;
-  };
+  }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
-      {/* 1. STAT CARDS (Now with Animation & Gradient) */}
+    <div className="space-y-8 animate-in fade-in duration-700 pb-10">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           title="Total Revenue"
@@ -189,143 +126,45 @@ export default function DashboardOverview() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* 2. MAIN CHART */}
-        <div className="lg:col-span-2 bg-white dark:bg-slate-950 p-8 rounded-[2rem] border border-gray-100 dark:border-slate-800 shadow-sm relative">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+        <div className="lg:col-span-2">
+          <MainAnalyticsChart
+            data={mainChartData ? mainChartData[activeMetric].history : []}
+            isLoading={mainLoading}
+            isFetching={isMainFetching}
+            activeMetric={activeMetric}
+            range={mainRange}
+            setRange={setMainRange}
+            startYear={startYear}
+            setStartYear={setStartYear}
+            endYear={endYear}
+            availableYears={availableYears}
+          />
+        </div>
+
+        {/* RIGHT: Category Chart (Takes 1 Column) */}
+        {/* 🎨 STYLE MATCH: Uses exact same classes as TopProducts/MainChart for consistency */}
+        <div className="bg-white dark:bg-slate-950 p-6 rounded-[2.5rem] border border-gray-100 dark:border-slate-800 shadow-xl shadow-slate-200/40 dark:shadow-none flex flex-col h-[500px] lg:h-[600px] transition-all duration-300">
+          <div className="flex justify-between items-center mb-4 z-20">
             <div>
-              <h3 className="text-xl font-bold text-slate-800 dark:text-white capitalize flex items-center gap-2">
-                {getMetricLabel()} Overview
-                {isMainFetching && !mainLoading && (
-                  <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-                )}
+              <h3 className="text-xl font-extrabold text-slate-800 dark:text-white tracking-tight">
+                Sales by Category
               </h3>
-              <p className="text-sm text-slate-500 font-medium mt-1">
-                Performance over the {getRangeText()}
+              <p className="text-xs text-slate-400 font-medium mt-0.5">
+                Distribution
               </p>
             </div>
 
-            <div className="flex flex-col items-end gap-2 z-20">
-              {/* Custom Dropdown */}
+            <div className="w-32 scale-90 origin-right">
               <CustomSelect
-                value={mainRange}
-                onChange={setMainRange}
-                options={rangeOptions}
+                value={categoryRange}
+                onChange={setCategoryRange}
+                options={[
+                  { label: "This Week", value: "weekly" },
+                  { label: "This Month", value: "monthly" },
+                  { label: "This Year", value: "yearly" },
+                ]}
               />
-
-              {mainRange === "custom" && (
-                <div className="flex items-center gap-2 animate-in slide-in-from-top-2 duration-300">
-                  <div className="flex items-center bg-blue-50 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-blue-100 dark:border-slate-700">
-                    <Calendar size={14} className="text-blue-600 mr-2" />
-                    <select
-                      value={startYear}
-                      onChange={(e) => setStartYear(Number(e.target.value))}
-                      className="bg-transparent text-xs font-bold text-blue-700 dark:text-blue-400 outline-none cursor-pointer"
-                    >
-                      {availableYears.map((year) => (
-                        <option key={year} value={year}>
-                          {year}
-                        </option>
-                      ))}
-                    </select>
-                    <span className="mx-2 text-xs text-gray-400">to</span>
-                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                      {endYear}
-                    </span>
-                  </div>
-                </div>
-              )}
             </div>
-          </div>
-
-          <div className="h-80 w-full">
-            {mainLoading ? (
-              <GraphSkeleton />
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={
-                    mainChartData ? mainChartData[activeMetric].history : []
-                  }
-                >
-                  <defs>
-                    <linearGradient id="colorMain" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke="#f1f5f9"
-                  />
-                  <XAxis
-                    dataKey="name"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#94a3b8", fontSize: 11, fontWeight: 500 }}
-                    dy={10}
-                    interval={
-                      mainRange === "custom" || mainRange === "monthly"
-                        ? "preserveStartEnd"
-                        : 0
-                    }
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#94a3b8", fontSize: 11, fontWeight: 500 }}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: "16px",
-                      border: "none",
-                      boxShadow: "0 10px 40px -10px rgba(0,0,0,0.1)",
-                      padding: "12px 16px",
-                    }}
-                    itemStyle={{ color: "#1e293b", fontWeight: 700 }}
-                    labelStyle={{
-                      color: "#64748b",
-                      marginBottom: "4px",
-                      fontSize: "12px",
-                    }}
-                    formatter={(value: number | undefined) => [
-                      activeMetric === "revenue"
-                        ? `Rs. ${(value ?? 0).toLocaleString()}`
-                        : (value ?? 0).toLocaleString(),
-                      getMetricLabel(),
-                    ]}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    stroke="#3b82f6"
-                    strokeWidth={4}
-                    fillOpacity={1}
-                    fill="url(#colorMain)"
-                    animationDuration={1500}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
-
-        {/* 3. CATEGORY CHART */}
-        <div className="bg-white dark:bg-slate-950 p-6 rounded-[2rem] border border-gray-100 dark:border-slate-800 shadow-sm flex flex-col h-[480px]">
-          <div className="flex justify-between items-center mb-2 z-20">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-white">
-              Sales by Category
-            </h3>
-            {/* Custom Dropdown (Reduced options for Category) */}
-            <CustomSelect
-              value={categoryRange}
-              onChange={setCategoryRange}
-              options={[
-                { label: "This Week", value: "weekly" },
-                { label: "This Month", value: "monthly" },
-                { label: "This Year", value: "yearly" },
-              ]}
-            />
           </div>
 
           <SalesCategoryChart
@@ -339,7 +178,10 @@ export default function DashboardOverview() {
         </div>
       </div>
 
-      {/* 🛑 4. NEW ROW: Top Products & Recent Transactions */}
+      {/* =====================================================================================
+          ROW 3: LEADERBOARDS (Top Products + Top Customers)
+          Responsive: Stacked on Mobile, 1:2 Ratio on Desktop
+      ===================================================================================== */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* LEFT: Top Selling Product (1 Column) */}
         <div className="h-auto">
@@ -348,8 +190,6 @@ export default function DashboardOverview() {
 
         {/* RIGHT: Top Buyers (2 Columns) */}
         <div className="lg:col-span-2 h-auto">
-          {" "}
-          {/* Changed to auto height to match sibling */}
           <TopCustomersCard />
         </div>
       </div>
