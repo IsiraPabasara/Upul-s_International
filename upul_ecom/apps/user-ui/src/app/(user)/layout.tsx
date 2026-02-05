@@ -8,7 +8,7 @@ export default function WebsiteLayout({ children }: { children: React.ReactNode 
     <section>
       <Header/>
       <CartSlider />
-      <WelcomePopup imageSrc="/popup2.png" resetDuration={15 * 60 * 1000} showDelay={5 * 1000} />
+      <WelcomePopup resetDuration={15 * 60 * 1000} showDelay={5 * 1000} />
       <main>{children}</main>
       <Footer/>
     </section>

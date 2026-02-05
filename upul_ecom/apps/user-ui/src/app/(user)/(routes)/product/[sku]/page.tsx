@@ -219,6 +219,7 @@ export default function ProductPage() {
       productId: product.id,
       name: product.name,
       price: finalPrice,
+      originalPrice: product.price,
       image: product.images?.[0]?.url || '',
       quantity: quantity,
       size: hasVariants ? selectedSize : undefined,

@@ -90,32 +90,38 @@ const AddressManager = () => {
                 <div className="space-y-2">
                     <label className="text-xs uppercase font-bold text-gray-400 tracking-widest">First Name</label>
                     <input {...register("firstname", { required: "Required" })} className="w-full py-3 border-b border-gray-200 outline-none focus:border-black transition-colors text-base font-medium" />
+                    {errors.firstname && <p className="text-red-500 text-xs font-bold">{errors.firstname.message}</p>}
                 </div>
                 <div className="space-y-2">
                     <label className="text-xs uppercase font-bold text-gray-400 tracking-widest">Last Name</label>
                     <input {...register("lastname", { required: "Required" })} className="w-full py-3 border-b border-gray-200 outline-none focus:border-black transition-colors text-base font-medium" />
+                    {errors.lastname && <p className="text-red-500 text-xs font-bold">{errors.lastname.message}</p>}
                 </div>
               </div>
 
               <div className="space-y-2">
                   <label className="text-xs uppercase font-bold text-gray-400 tracking-widest">Address</label>
                   <input {...register("addressLine", { required: "Required" })} className="w-full py-3 border-b border-gray-200 outline-none focus:border-black transition-colors text-base font-medium" />
+                  {errors.addressLine && <p className="text-red-500 text-xs font-bold">{errors.addressLine.message}</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-8">
                 <div className="space-y-2">
                     <label className="text-xs uppercase font-bold text-gray-400 tracking-widest">City</label>
                     <input {...register("city", { required: "Required" })} className="w-full py-3 border-b border-gray-200 outline-none focus:border-black transition-colors text-base font-medium" />
+                    {errors.city && <p className="text-red-500 text-xs font-bold">{errors.city.message}</p>}
                 </div>
                 <div className="space-y-2">
                     <label className="text-xs uppercase font-bold text-gray-400 tracking-widest">Postal Code</label>
                     <input {...register("postalCode", { required: "Required" })} className="w-full py-3 border-b border-gray-200 outline-none focus:border-black transition-colors text-base font-medium" />
+                    {errors.postalCode && <p className="text-red-500 text-xs font-bold">{errors.postalCode.message}</p>}
                 </div>
               </div>
 
               <div className="space-y-2">
                   <label className="text-xs uppercase font-bold text-gray-400 tracking-widest">Phone</label>
                   <input {...register("phoneNumber", { required: "Required" })} className="w-full py-3 border-b border-gray-200 outline-none focus:border-black transition-colors text-base font-medium" />
+                  {errors.phoneNumber && <p className="text-red-500 text-xs font-bold">{errors.phoneNumber.message}</p>}
               </div>
 
               <label className="flex items-center gap-3 cursor-pointer pt-4 group w-fit">

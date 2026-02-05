@@ -1,42 +1,63 @@
 import { Request, Response, NextFunction } from "express";
 import prisma from "../../../../packages/libs/prisma";
 
-// Helper to sanitize items (Fixes Prisma Validation Error)
+/**
+ * HELPER: Calculates the correct discounted price for a product
+ */
+const calculateEffectivePrice = (product: any) => {
+  let effectivePrice = product.price;
+
+  if (product.discountType === "PERCENTAGE") {
+    effectivePrice = product.price - (product.price * (product.discountValue / 100));
+  } else if (product.discountType === "FIXED") {
+    effectivePrice = product.price - product.discountValue;
+  }
+
+  return Math.max(0, effectivePrice);
+};
+
+/**
+ * HELPER: Ensures data matches Prisma schema and forces number types
+ */
 const sanitizeItem = (item: any) => ({
   productId: item.productId,
   sku: item.sku,
-  name: item.name || "Product", // Fallback for safety
-  price: Number(item.price), // Ensure number
+  name: item.name || "Product",
+  price: Number(item.price), 
+  originalPrice: item.originalPrice ? Number(item.originalPrice) : Number(item.price),
   image: item.image || "",
   quantity: Number(item.quantity),
-  // 👇 CRITICAL FIX: Ensure these are never undefined
   size: item.size || null, 
   color: item.color || null,
 });
 
+// --- 1. Get Cart ---
+export const getCart = async (req: any, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?.id;
+    const cart = await prisma.cart.findUnique({ where: { userId } });
+    return res.json(cart ? cart.items : []);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+// --- 2. Merge Cart (Login Sync) ---
 export const mergeCart = async (req: any, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.id;
     const { localItems } = req.body;
 
-    // 1. Find or Create User's Cart
     let cart = await prisma.cart.findUnique({ where: { userId } });
     if (!cart) {
-      cart = await prisma.cart.create({
-        data: { userId, items: [] }
-      });
+      cart = await prisma.cart.create({ data: { userId, items: [] } });
     }
 
-    // 2. Merge Logic
-    // We cast to any[] to avoid TS strictness blocking the merge logic
     let finalItems: any[] = [...(cart.items as any[])];
 
     if (localItems && Array.isArray(localItems)) {
       for (const localItem of localItems) {
-        const existingIndex = finalItems.findIndex(
-          (dbItem) => dbItem.sku === localItem.sku
-        );
-
+        const existingIndex = finalItems.findIndex((dbItem) => dbItem.sku === localItem.sku);
         if (existingIndex > -1) {
           finalItems[existingIndex].quantity += localItem.quantity;
         } else {
@@ -45,13 +66,10 @@ export const mergeCart = async (req: any, res: Response, next: NextFunction) => 
       }
     }
 
-    // 3. SANITIZE before saving (The Fix)
-    // This ensures no 'undefined' fields crash Prisma
     const cleanItems = finalItems.map(sanitizeItem);
-
     const updatedCart = await prisma.cart.update({
       where: { userId },
-      data: { items: cleanItems } // 👈 Send clean data
+      data: { items: cleanItems }
     });
 
     return res.json(updatedCart.items);
@@ -60,18 +78,7 @@ export const mergeCart = async (req: any, res: Response, next: NextFunction) => 
   }
 };
 
-export const getCart = async (req: any, res: Response, next: NextFunction) => {
-  try {
-    const userId = req.user?.id;
-    const cart = await prisma.cart.findUnique({ where: { userId } });
-    
-    return res.json(cart ? cart.items : []);
-  } catch (error) {
-    return next(error);
-  }
-};
-
-// --- 1. Add Item (Logged In) ---
+// --- 3. Add to Cart ---
 export const addToCart = async (req: any, res: Response, next: NextFunction) => {
   try {
     const userId = req.user!.id;
@@ -91,9 +98,7 @@ export const addToCart = async (req: any, res: Response, next: NextFunction) => 
       items.push(item);
     }
 
-    // 3. SANITIZE before saving
     const cleanItems = items.map(sanitizeItem);
-
     const updated = await prisma.cart.update({
       where: { userId },
       data: { items: cleanItems }
@@ -105,7 +110,7 @@ export const addToCart = async (req: any, res: Response, next: NextFunction) => 
   }
 };
 
-// --- 2. Update Quantity (Logged In) ---
+// --- 4. Update Quantity ---
 export const updateCartItem = async (req: any, res: Response, next: NextFunction) => {
   try {
     const userId = req.user!.id;
@@ -113,7 +118,6 @@ export const updateCartItem = async (req: any, res: Response, next: NextFunction
 
     const cart = await prisma.cart.findUniqueOrThrow({ where: { userId } });
     
-    // Update and Sanitize
     const items = (cart.items as any[]).map(item => {
       if (item.sku === sku) {
         return sanitizeItem({ ...item, quantity });
@@ -132,15 +136,13 @@ export const updateCartItem = async (req: any, res: Response, next: NextFunction
   }
 };
 
-// --- 3. Remove Item (Logged In) ---
+// --- 5. Remove Item ---
 export const removeCartItem = async (req: any, res: Response, next: NextFunction) => {
   try {
     const userId = req.user!.id;
     const { sku } = req.params;
 
     const cart = await prisma.cart.findUniqueOrThrow({ where: { userId } });
-
-    // Filter and Sanitize remaining items
     const items = (cart.items as any[])
       .filter(item => item.sku !== sku)
       .map(sanitizeItem);
@@ -156,73 +158,58 @@ export const removeCartItem = async (req: any, res: Response, next: NextFunction
   }
 };
 
-
+// --- 6. Verify Cart (The Security Check) ---
 export const verifyCart = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { items } = req.body; // Expecting array of { productId, quantity, size? }
-
+    const { items } = req.body; 
     const errors: Record<string, string> = {};
+    const updatedPrices: Record<string, number> = {}; 
     let isValid = true;
 
-    // We fetch all relevant products at once to minimize DB calls
     const productIds = items.map((i: any) => i.productId);
-    
     const products = await prisma.product.findMany({
-      where: { id: { in: productIds } },
-      select: {
-        id: true,
-        name: true,
-        visible: true,
-        availability: true,
-        stock: true,
-        variants: true, // Need this to check size stock
-      }
+      where: { id: { in: productIds } }
     });
 
-    // Create a Map for easy lookup
     const productMap = new Map(products.map(p => [p.id, p]));
 
     for (const item of items) {
       const product = productMap.get(item.productId);
-      const errorKey = item.sku; // We map errors by SKU (unique per line item)
+      const errorKey = item.sku;
 
-      // 1. Check Existence & Visibility
+      // Check Existence & Visibility
       if (!product || !product.visible) {
-        errors[errorKey] = "Product is no longer available";
+        errors[errorKey] = "Item no longer available";
         isValid = false;
         continue;
       }
 
-      // 2. Check General Availability Flag
-      if (!product.availability) {
-        errors[errorKey] = "Product is marked as out of stock";
+      // Calculate the Discounted Price dynamically
+      const dbPrice = calculateEffectivePrice(product);
+      
+      // Price Validation (Compare with Frontend Price)
+      if (Number(item.price).toFixed(2) !== dbPrice.toFixed(2)) {
         isValid = false;
-        continue;
+        updatedPrices[errorKey] = dbPrice;
+        errors[errorKey] = `Price updated to LKR ${dbPrice.toLocaleString()}`;
       }
 
-      // 3. Check Specific Stock (Size vs Standard)
+      // Stock Validation
       if (item.size) {
-        // It's a variant (e.g., "Small")
         const variant = product.variants.find(v => v.size === item.size);
-        
-        if (!variant) {
-          errors[errorKey] = "This size is no longer available";
-          isValid = false;
-        } else if (variant.stock < item.quantity) {
-          errors[errorKey] = `Only ${variant.stock} left in stock`;
+        if (!variant || variant.stock < item.quantity) {
+          errors[errorKey] = variant ? `Only ${variant.stock} left` : "Size unavailable";
           isValid = false;
         }
       } else {
-        // It's a standard product (no variants)
         if (product.stock < item.quantity) {
-          errors[errorKey] = `Only ${product.stock} left in stock`;
+          errors[errorKey] = `Only ${product.stock} left`;
           isValid = false;
         }
       }
     }
 
-    return res.json({ isValid, errors });
-
+    return res.json({ isValid, errors, updatedPrices });
   } catch (error) {
     return next(error);
   }

@@ -79,7 +79,7 @@ const Login = () => {
     };
 
     return (
-        <div className='w-full min-h-screen bg-white flex flex-col items-center justify-center font-sans'>
+        <div className='w-full min-h-[70vh] mt-[50px] bg-white flex flex-col items-center justify-center font-sans'>
             <div className='w-full max-w-[450px] px-8'>
                 <div className="mb-14 text-center"> 
                     <h2 className='text-2xl tracking-[0.4em] uppercase mb-6 text-black font-semibold'>Login</h2>

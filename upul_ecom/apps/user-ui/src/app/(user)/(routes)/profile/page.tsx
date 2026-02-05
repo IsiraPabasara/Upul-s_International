@@ -71,8 +71,8 @@ const ProfilePage = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 border-b border-black pb-8">
           <div>
-            <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tighter mb-3">My Account</h1>
-            <p className="text-sm text-gray-500 uppercase tracking-[0.15em]">Welcome back, <span className="text-black font-bold">{user?.firstname}</span></p>
+            <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tighter mb-3">My Account</h1>
+            <p className="text-xs md:text-sm text-gray-500 uppercase tracking-[0.15em]">Welcome back, <span className="text-black font-bold">{user?.firstname}</span></p>
           </div>
           <button onClick={() => setShowLogoutConfirm(true)}
             className="hidden md:flex items-center gap-2 text-xs uppercase tracking-[0.2em] font-bold text-red-600 hover:text-red-800 transition-colors mt-6 md:mt-0">
@@ -87,13 +87,13 @@ const ProfilePage = () => {
           <div className="flex flex-col gap-6">
             <div className="flex items-center gap-3 mb-2">
                 <User size={20} className="text-black" />
-                <h2 className="text-sm font-bold uppercase tracking-[0.2em]">Personal Info</h2>
+                <h2 className="text-sm md:text-sm font-bold uppercase tracking-[0.2em]">Personal Info</h2>
             </div>
             <div className="p-10 border border-gray-200 hover:border-black transition-all duration-500 min-h-[240px] flex flex-col justify-between group bg-gray-50/50 hover:bg-white">
                 <div className="space-y-2 overflow-hidden">
-                    <p className="text-xl font-bold text-black truncate">{user?.firstname} {user?.lastname}</p>
-                    <p className="text-base text-gray-600 truncate">{user?.email}</p>
-                    <p className="text-base text-gray-600">{user?.phonenumber}</p>
+                    <p className="text-md md:text-xl font-bold text-black truncate">{user?.firstname} {user?.lastname}</p>
+                    <p className="text-sm md:text-base text-gray-600 truncate">{user?.email}</p>
+                    <p className="text-sm md:text-base text-gray-600">{user?.phonenumber}</p>
                 </div>
                 <Link href="/profile/user" className="mt-8 text-xs uppercase tracking-[0.2em] font-bold border-b-2 border-transparent group-hover:border-black w-fit transition-all text-gray-400 group-hover:text-black">
                     Edit Details
@@ -110,11 +110,11 @@ const ProfilePage = () => {
             <div className="p-10 border border-gray-200 hover:border-black transition-all duration-500 min-h-[240px] flex flex-col justify-between group bg-gray-50/50 hover:bg-white w-full">
                 {defaultAddress ? (
                     <div className="space-y-2 w-full overflow-hidden">
-                        <p className="text-base font-bold text-black break-words">{defaultAddress.firstname} {defaultAddress.lastname}</p>
-                        <p className="text-base text-gray-600 leading-relaxed break-words">
+                        <p className="text-md md:text-xl font-bold text-black break-words">{defaultAddress.firstname} {defaultAddress.lastname}</p>
+                        <p className="text-sm md:text-base text-gray-600 leading-relaxed break-words">
                             {defaultAddress.addressLine}
                         </p>
-                        <p className="text-base text-gray-600 leading-relaxed break-words">
+                        <p className="text-sm md:text-base text-gray-600 leading-relaxed break-words">
                             {defaultAddress.city}, {defaultAddress.postalCode}
                         </p>
                         <p className="text-sm text-gray-400 mt-2 font-mono">{defaultAddress.phoneNumber}</p>
@@ -136,7 +136,7 @@ const ProfilePage = () => {
             </div>
             <div className="p-10 border border-gray-200 hover:border-black transition-all duration-500 min-h-[240px] flex flex-col justify-between group bg-gray-50/50 hover:bg-white">
                 <div className="flex flex-col justify-center h-full">
-                    <p className="text-base text-gray-600 mb-4">View and track your current and past orders.</p>
+                    <p className="text-sm md:text-base text-gray-600 mb-4">View and track your current and past orders.</p>
                     <Link href="/shop" className="text-sm font-bold underline decoration-gray-300 hover:decoration-black w-fit">Continue Shopping</Link>
                 </div>
                 <Link href="/profile/orders" className="mt-8 flex items-center gap-2 text-xs uppercase tracking-[0.2em] font-bold border-b-2 border-transparent group-hover:border-black w-fit transition-all text-gray-400 group-hover:text-black">
@@ -149,7 +149,7 @@ const ProfilePage = () => {
 
         {/* Mobile Logout */}
         <button onClick={() => setShowLogoutConfirm(true)}
-            className="md:hidden mt-20 w-full py-5 border-2 border-red-100 text-red-600 text-xs uppercase tracking-[0.2em] font-bold bg-red-50">
+            className="md:hidden mt-20 w-full py-5 border-red-100 text-white text-xs uppercase tracking-[0.2em] font-bold bg-black">
             Sign Out
         </button>
 
