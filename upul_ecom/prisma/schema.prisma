@@ -135,6 +135,7 @@ type CartItem {
   sku       String
   name      String
   price     Float
+  originalPrice Float?
   image     String
   quantity  Int
   size      String?

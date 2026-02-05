@@ -14,6 +14,7 @@ const transporter = nodemailer.createTransport({
 
 const SHOP_EMAIL = process.env.SMTP_USER;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+const ADMIN_URL = process.env.ADMIN_URL || 'http://localhost:3002';
 
 // --- Helpers ---
 
@@ -205,7 +206,7 @@ export const sendShopNewOrderNotification = async (order: any) => {
       <p style="font-size: 16px;"><b>Phone:</b> <a href="tel:${order.shippingAddress.phoneNumber}">${order.shippingAddress.phoneNumber}</a></p>
       
       <div style="margin-top: 20px;">
-        <a href="${FRONTEND_URL}/admin/orders/${order.id}" style="color: blue; text-decoration: underline;">Open Admin Panel</a>
+        <a href="${ADMIN_URL}/admin/orders/${order.id}" style="color: blue; text-decoration: underline;">Open Admin Panel</a>
       </div>
     `);
 

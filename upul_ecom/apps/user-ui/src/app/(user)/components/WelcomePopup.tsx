@@ -4,16 +4,15 @@ import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 
 interface WelcomePopupProps {
-  imageSrc: string;
   resetDuration?: number; // in milliseconds, default 15 min
   showDelay?: number; // in milliseconds, default 10 seconds
 }
 
 export default function WelcomePopup({ 
-  imageSrc, 
   resetDuration = 15 * 60 * 1000, // 15 minutes default
   showDelay = 5 * 1000 // 10 seconds default
 }: WelcomePopupProps) {
+  const imageSrc = 'https://ik.imagekit.io/aqi4rj9dnl/popup2.png';
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
