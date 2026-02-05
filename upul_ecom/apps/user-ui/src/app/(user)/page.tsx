@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useRef, useEffect } from 'react';
+import React, {useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import BrandMarquee from './shared/widgets/brandsMarquee';
 import Hero from './shared/widgets/banner';
-import CollectionPreview from './shared/widgets/CollectionPreview';
+import NewArrivalPreview from './shared/widgets/NewArrivalPreview';
+import MenCategoryPreview from './shared/widgets/MenCategoryPreview';
+
 
 
 
@@ -219,14 +221,14 @@ export default function HomePage() {
       {/* <Marquee /> */}
      
       <div className='py-20'>
-        <CollectionPreview />
+        <NewArrivalPreview />
       </div>
        <div className='mt-[px]'>
         <BrandMarquee/>
       </div>
       <FeaturedCategories />
       <div className='mb-20'>
-        <CollectionPreview />
+        <MenCategoryPreview />
       </div>
       <Lookbook />
       

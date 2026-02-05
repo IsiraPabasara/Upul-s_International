@@ -5,14 +5,14 @@ import Link from 'next/link';
 import axiosInstance from '@/app/utils/axiosInstance';
 import ProductCard from '../shop-components/ProductCard';
 
-const CollectionPreview = () => {
+const MenCategoryPreview = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['new-arrivals-preview'],
+    queryKey: ['men-preview'],
     queryFn: async () => {
       // Your fetch logic here
-      const res = await axiosInstance.get('/api/products/shop?isNewArrival=true&limit=8', { isPublic: true });
+      const res = await axiosInstance.get('/api/products/shop?category=men&limit=8', { isPublic: true });
       return res.data;
     },
     staleTime: 1000 * 60 * 5,
@@ -36,7 +36,7 @@ const CollectionPreview = () => {
         <div className="flex items-end justify-between mb-10 pb-4 border-b border-gray-100">
           <div className="flex flex-col gap-1">
             <h2 className="text-xl md:text-2xl font-bold uppercase tracking-tight text-gray-900">
-              New Arrivals
+              Men
             </h2>
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
               Latest from the studio
@@ -44,7 +44,7 @@ const CollectionPreview = () => {
           </div>
 
           <Link
-            href="/shop?isNewArrival=true"
+            href="/shop?category=men"
             className="text-[10px] font-black uppercase tracking-widest border border-black px-6 py-3 hover:bg-black hover:text-white transition-all"
           >
             View All
@@ -109,4 +109,4 @@ const CollectionPreview = () => {
   );
 };
 
-export default CollectionPreview
+export default MenCategoryPreview
