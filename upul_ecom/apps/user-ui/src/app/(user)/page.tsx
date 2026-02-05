@@ -17,17 +17,17 @@ const FeaturedCategories = () => {
   return (
     <section className="bg-white py-20 font-outfit">
       <div className="max-w-8xl mx-auto px-5">
-        <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
-          <h2 className="text-4xl md:text-6xl font-cormorant font-medium tracking-tight text-black leading-none">
+        <div className="flex flex-row md:flex-row justify-between items-end mb-16 gap-6">
+          <h2 className="text-3xl sm:text-4xl md:text-6xl font-cormorant font-medium tracking-tight text-black leading-none">
             The Curated <br /> Edit.
           </h2>
-          <Link href="/shop" className="text-xs font-bold uppercase tracking-[0.2em] border-b border-black pb-1 hover:opacity-50 transition-opacity">
+          <Link href="/shop" className="text-xs font-bold uppercase tracking-[0.1em] sm:tracking-[0.2em] border-b border-black pb-1 hover:opacity-50 transition-opacity">
             View All Categories
           </Link>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 w-full">
-          <div className="md:col-span-4 h-[400px] md:h-[65vh] relative group overflow-hidden bg-gray-100">
+          <div className="md:col-span-4 aspect-square relative group overflow-hidden bg-gray-100">
             <img
               src="https://www.forever21.com/cdn/shop/files/K-Women_1.jpg?v=1770142866&width=500"
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
@@ -38,8 +38,8 @@ const FeaturedCategories = () => {
             </div> */}
           </div>
 
-          <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto md:h-[65vh]">
-            <div className="h-[400px] md:h-auto md:flex-1 relative group overflow-hidden bg-gray-100">
+          <div className="md:col-span-4 flex flex-col gap-4 md:gap-6">
+            <div className="flex-1 aspect-square relative group overflow-hidden bg-gray-100">
               <img
                 src="https://www.forever21.com/cdn/shop/files/K-Men_2.jpg?v=1770146744&width=500"
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
@@ -63,7 +63,7 @@ const FeaturedCategories = () => {
             </div> */}
           </div>
           
-          <div className="md:col-span-4 h-[400px] md:h-[65vh] relative group overflow-hidden bg-gray-100">
+          <div className="md:col-span-4 aspect-square relative group overflow-hidden bg-gray-100">
             <img
               src="https://www.forever21.com/cdn/shop/files/K-Accessories_1.jpg?v=1770142866&width=500"
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"

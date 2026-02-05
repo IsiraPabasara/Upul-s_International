@@ -523,6 +523,14 @@ export default function CheckoutPage() {
         </div>
 
       </div>
+
+      <style jsx>{`
+        @media (max-width: 768px) {
+          input {
+            font-size: 16px !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
