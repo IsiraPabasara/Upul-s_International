@@ -1,6 +1,7 @@
 import './global.css';
 import { Poppins, Roboto, Outfit, Cormorant_Garamond } from 'next/font/google';
 import Providers from './providers';
+import { ThemeProvider } from './context/ThemeContext'; 
 
 export const metadata = {
   title: 'Welcome to admin-ui',
@@ -45,9 +46,14 @@ export default function RootLayout({
           ${poppins.variable}
           ${outfit.variable}
           ${cormorantGaramond.variable}
+          bg-gray-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300
         `}
       >
-        <Providers>{children}</Providers>
+        <Providers>
+          <ThemeProvider>
+            {children}
+          </ThemeProvider>
+        </Providers>
       </body>
     </html>
   );
