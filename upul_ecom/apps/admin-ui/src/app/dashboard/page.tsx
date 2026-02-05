@@ -85,7 +85,7 @@ export default function DashboardOverview() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700 pb-10">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
         <StatCard
           title="Total Revenue"
           value={cardData.revenue.value}
@@ -196,3 +196,5 @@ export default function DashboardOverview() {
     </div>
   );
 }
+
+
