@@ -3,7 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight, Scissors, Award, Ruler } from 'lucide-react';
 
 const BlazerPage = () => {
   return (
@@ -16,7 +16,7 @@ const BlazerPage = () => {
           {/* Background Images with logic from Home */}
           <div className="absolute inset-0">
             <img
-              src="https://images.unsplash.com/photo-1593032465175-481ac7f401a0?q=80&w=2080&auto=format&fit=crop"
+              src="http://scontent.fcmb3-2.fna.fbcdn.net/v/t39.30808-6/474770952_3965994000343084_8890485516314969605_n.jpg?_nc_cat=109&ccb=1-7&_nc_sid=127cfc&_nc_eui2=AeGkgNm7jrOyIXb_2fvYyUudUSPhk4iuh7RRI-GTiK6HtKYSgIvlpJHq7kStnaYCUoqrG65DlovxGCSKCP6nwGX0&_nc_ohc=vYsCUydazIgQ7kNvwEmEcd_&_nc_oc=AdnMyp7V8ewSphCGJT-ixx9yBIBVUoKNHhjs0NDM82JBgSvDfcd6uGK4yeVvMpetb_AEPHswvi2O3Sk0vK6AkzAu&_nc_zt=23&_nc_ht=scontent.fcmb3-2.fna&_nc_gid=MNcZc9hYC7HJrHFL6NJFYQ&oh=00_AfvKjA9d8ftN-u7-erMu06jrTDQ2hEIJOeCdlDzdZYRPOw&oe=698BB09E"
               alt="Premium Blazer Collection"
               className="hidden md:block w-full h-full object-cover opacity-90"
             />
@@ -29,40 +29,43 @@ const BlazerPage = () => {
           </div>
 
           {/* Content Layer with Home Hero Typography */}
-          <div className="relative z-10 h-full max-w-8xl mx-auto flex flex-col justify-between px-5 pb-16 pt-32">
-            <div className="flex justify-between items-start">
-              <motion.p 
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="text-xs sm:text-[0.3rem] md:text-[0.6rem] lg:text-sm md:mb-10 xl:mb-0 xl:text-base font-bold uppercase tracking-[0.2em] border-l-2 border-white pl-4 max-w-[200px] md:max-w-[300px]"
-              >
-                Redefining modern silhouette
-              </motion.p>
-            </div>
+          <div className="relative z-10 h-full max-w-8xl mx-auto flex flex-col justify-between px-5 pb-10 md:pb-16 pt-20 md:pt-24 lg:pt-32">
+  
+          <div className="flex justify-between items-start">
+            <motion.p 
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="text-xs sm:text-[0.3rem] md:text-[0.6rem] lg:text-sm xl:text-base font-bold uppercase tracking-[0.2em] border-l-2 border-white pl-4 max-w-[200px] md:max-w-[300px]"
+            >
+              Redefining modern silhouette
+            </motion.p>
+          </div>
 
-            <div>
-              <motion.h1
-                initial={{ y: 80, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
-                className="text-[14vw] sm:text-[clamp(4rem,8vw,9rem)] md:text-[clamp(3.5rem,2vw,7rem)] lg:text-[clamp(6rem,9vw,10rem)] xl:text-[clamp(6rem,9vw,11rem)] leading-[0.8] font-cormorant font-black tracking-tighter uppercase"
-              >
-                Bespoke <br />
-                <span className="italic font-light">Blazers</span>
-              </motion.h1>
+          <div>
+            {/* 2. Tightened leading (line height) for the H1 to prevent it from pushing the bottom row down */}
+            <motion.h1
+              initial={{ y: 80, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+              className="text-[14vw] sm:text-[clamp(4rem,8vw,9rem)] md:text-[clamp(3.5rem,8vw,6rem)] lg:text-[clamp(6rem,9vw,10rem)] xl:text-[clamp(6rem,9vw,11rem)] leading-[0.75] font-cormorant font-black tracking-tighter uppercase"
+            >
+              Bespoke <br />
+              <span className="italic font-light">Blazers</span>
+            </motion.h1>
 
-              <div className="flex flex-col md:flex-row justify-between items-end mt-4 border-t border-white/20 pt-6">
-                <span className="text-[0.6rem] md:text-[0.65rem] lg:text-xs xl:text-sm uppercase tracking-[0.2em]">
-                  Est. 1940 — Ratnapura / Bandarawela
-                </span>
-                
-                <Link href="/shop" className="group flex items-center gap-2 text-xs md:text-[0.7rem] lg:text-sm xl:text-base font-bold uppercase tracking-widest mt-6 md:mt-0">
-                  Book Now
-                  <ArrowUpRight className="group-hover:-translate-y-1 group-hover:translate-x-1 transition-transform" />
-                </Link>
-              </div>
+            {/* 3. Reduced mt-4 to mt-2 for tablet to keep everything compact */}
+            <div className="flex flex-col md:flex-row justify-between items-end mt-2 md:mt-4 border-t border-white/20 pt-4 md:pt-6">
+              <span className="text-[0.6rem] md:text-[0.65rem] lg:text-xs xl:text-sm uppercase tracking-[0.2em]">
+                Est. 1940 — Ratnapura / Bandarawela
+              </span>
+              
+              <Link href="/shop" className="group flex items-center gap-2 text-xs md:text-[0.7rem] lg:text-sm xl:text-base font-bold uppercase tracking-widest mt-4 md:mt-0">
+                Book Now
+                <ArrowUpRight className="group-hover:-translate-y-1 group-hover:translate-x-1 transition-transform" />
+              </Link>
             </div>
           </div>
+        </div>
         </div>
 
         {/* CSS to exactly match Home Hero Ratios */}
@@ -116,8 +119,101 @@ const BlazerPage = () => {
         </div>
       </section>
 
+      
+
+      {/* --- HOW IT WORKS / THE PROCESS --- */}
+<section className="py-24 px-5 bg-white">
+  <div className="max-w-8xl mx-auto">
+    {/* Section Header */}
+    <div className="text-center mb-20">
+      <h2 className="text-4xl md:text-5xl font-cormorant text-black uppercase tracking-tight">
+        How it works
+      </h2>
+      <div className="w-12 h-[1px] bg-black mx-auto mt-4 opacity-30" />
+    </div>
+
+    {/* Steps Grid */}
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-12 lg:gap-24">
+      
+      {/* Step 1 */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        className="flex flex-col items-center text-center group"
+      >
+        <div className="mb-8 relative">
+          <div className="absolute inset-0 bg-gray-50 rounded-full scale-150 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="relative z-10 p-4 border border-gray-100 rounded-full group-hover:border-black transition-colors duration-500">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-black">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <path d="M3 9h18M3 15h18M9 3v18M15 3v18" />
+            </svg>
+          </div>
+        </div>
+        <h3 className="font-outfit text-[11px] font-black uppercase tracking-[0.2em] mb-4 text-black">
+          Select the Blazer Fabric
+        </h3>
+        <p className="text-gray-500 text-sm leading-relaxed max-w-xs font-light">
+          New Trendy blazers fabrics for every season. Find a wide range of fabrics every season for your tailored blazers.
+        </p>
+      </motion.div>
+
+      {/* Step 2 */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ delay: 0.2 }}
+        className="flex flex-col items-center text-center group"
+      >
+        <div className="mb-8 relative">
+          <div className="absolute inset-0 bg-gray-50 rounded-full scale-150 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="relative z-10 p-4 border border-gray-100 rounded-full group-hover:border-black transition-colors duration-500">
+            {/* Custom Blazer SVG Icon */}
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-black">
+               <path d="M6 2L3 10V20C3 21.1 3.9 22 5 22H19C20.1 22 21 21.1 21 20V10L18 2H6Z" />
+               <path d="M6 2L12 10L18 2" />
+               <path d="M12 10V22" />
+            </svg>
+          </div>
+        </div>
+        <h3 className="font-outfit text-[11px] font-black uppercase tracking-[0.2em] mb-4 text-black">
+          Design Your Custom Blazer
+        </h3>
+        <p className="text-gray-500 text-sm leading-relaxed max-w-xs font-light">
+          Personalize your blazer details: lapels, threads, inner lining, pocket squares... Endless options!
+        </p>
+      </motion.div>
+
+      {/* Step 3 */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ delay: 0.4 }}
+        className="flex flex-col items-center text-center group"
+      >
+        <div className="mb-8 relative">
+          <div className="absolute inset-0 bg-gray-50 rounded-full scale-150 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="relative z-10 p-4 border border-gray-100 rounded-full group-hover:border-black transition-colors duration-500">
+            <Ruler size={40} strokeWidth={1} className="text-black" />
+          </div>
+        </div>
+        <h3 className="font-outfit text-[11px] font-black uppercase tracking-[0.2em] mb-4 text-black">
+          Insert Your Measurements
+        </h3>
+        <p className="text-gray-500 text-sm leading-relaxed max-w-xs font-light">
+          So you can get the perfect fitting custom sport coat online, or visit us in-store for a professional session.
+        </p>
+      </motion.div>
+
+    </div>
+  </div>
+</section>
+
       {/* --- CURATED STYLES GRID --- */}
-      <section className="bg-[#fcfcfc] py-24 px-5">
+      {/* <section className="bg-[#fcfcfc] py-24 px-5">
         <div className="max-w-8xl mx-auto">
           <div className="flex justify-between items-end mb-16 border-b border-gray-200 pb-8">
             <h3 className="font-cormorant text-4xl text-black uppercase tracking-tight">The Collection Edit</h3>
@@ -156,7 +252,34 @@ const BlazerPage = () => {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
+
+      <section className="py-32 bg-[#fafafa] px-5">
+              <div className="max-w-8xl mx-auto">
+                <div className="text-center mb-24">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.5em] text-gray-400">The 2026 Lookbook</span>
+                  <h2 className="text-5xl md:text-7xl font-cormorant mt-4">Curated Silhouettes</h2>
+                </div>
+      
+                <div className="columns-1 md:columns-2 lg:columns-3 gap-8 space-y-8">
+                  {[
+                    "https://scontent.fcmb3-2.fna.fbcdn.net/v/t39.30808-6/474770952_3965994000343084_8890485516314969605_n.jpg?_nc_cat=109&ccb=1-7&_nc_sid=127cfc&_nc_eui2=AeGkgNm7jrOyIXb_2fvYyUudUSPhk4iuh7RRI-GTiK6HtKYSgIvlpJHq7kStnaYCUoqrG65DlovxGCSKCP6nwGX0&_nc_ohc=vYsCUydazIgQ7kNvwEmEcd_&_nc_oc=AdnMyp7V8ewSphCGJT-ixx9yBIBVUoKNHhjs0NDM82JBgSvDfcd6uGK4yeVvMpetb_AEPHswvi2O3Sk0vK6AkzAu&_nc_zt=23&_nc_ht=scontent.fcmb3-2.fna&_nc_gid=MNcZc9hYC7HJrHFL6NJFYQ&oh=00_AfvKjA9d8ftN-u7-erMu06jrTDQ2hEIJOeCdlDzdZYRPOw&oe=698BB09E",
+                    "https://scontent.fcmb3-2.fna.fbcdn.net/v/t39.30808-6/475881868_3968782026730948_6852112193673731329_n.jpg?_nc_cat=111&ccb=1-7&_nc_sid=127cfc&_nc_eui2=AeHocVI46VZoLOFpxUzfYlcRyhrjN9cacdPKGuM31xpx05_ywG-WzKGSToaQAwzc1J-bu-hBSoyRvbmrTBL5KRif&_nc_ohc=ZCsMFrCmxmYQ7kNvwGoOq7O&_nc_oc=Adl4rmaOoC0AhJEymVMFdIkEeKmCqZWi2WOtQka2Lsm-6ZrHmSkiX9k1zL4aX9iactZaLnpFWj5wZMondOJwC_de&_nc_zt=23&_nc_ht=scontent.fcmb3-2.fna&_nc_gid=GImV4NCQOwa-ypk-XwitgQ&oh=00_Afu5rzjRSdIb27mPWzF1bI8cvjY2Uq5O1q3ducAegpoarA&oe=698BCD9C",
+                    "https://scontent.fcmb3-2.fna.fbcdn.net/v/t39.30808-6/475727000_3968781986730952_6660118627184426245_n.jpg?_nc_cat=110&ccb=1-7&_nc_sid=127cfc&_nc_eui2=AeFKb45Y44aAEwRyTXqceRLDrCBLynbtk5WsIEvKdu2TlWFNsCGM6LNJy47LWiyO0TLdhFjcg19Obd6tJTkZMYyh&_nc_ohc=gZyga5b2PIAQ7kNvwECNdG_&_nc_oc=Adk-iaho0xocOh5tjJvw3vgs1qzW_AKiMlDlA1JgmaTa-JMzNgnTXim6RWM0OU2wKz3C6WSUAX6y7H1-doNSLtxb&_nc_zt=23&_nc_ht=scontent.fcmb3-2.fna&_nc_gid=DNI9yxkNMDEUmmE6Ht2DyA&oh=00_AfuhFf8vsFQk2GEVo6IhZwSBFNVbydGtblSI_mw03krxtA&oe=698BB032",
+                    "https://scontent.fcmb3-3.fna.fbcdn.net/v/t39.30808-6/478088326_3977118219230662_1170138477442918277_n.jpg?_nc_cat=108&ccb=1-7&_nc_sid=127cfc&_nc_eui2=AeEUH0Fr5KqgLt_DGkdVzi_qzTNGX4ZgNATNM0ZfhmA0BO-xLS-ONh4Pcp6yx4mzyoJi8Ra0RuCyk7LFVnc2jN0Q&_nc_ohc=_cyBfNU3Q1AQ7kNvwGjK-lW&_nc_oc=AdkdlctuZqP5KklpsD0vzb56Oj3dLdXzT219zmv5XMrRNlfIPpTEv8IogI1-86rvqQnFbolfClMJNaWTFkfpfZO3&_nc_zt=23&_nc_ht=scontent.fcmb3-3.fna&_nc_gid=oMdEQHppSjg7CtwQbf70fQ&oh=00_AftG1VH1ap0FlusVkGeTSuqfxd121CLK-Y3Sn4eRvE8axg&oe=698BACDC",
+                    "https://scontent.fcmb3-3.fna.fbcdn.net/v/t39.30808-6/474927423_3969424746666676_5049846291240147153_n.jpg?_nc_cat=101&ccb=1-7&_nc_sid=127cfc&_nc_eui2=AeGLWeWwqtRyFTS4vPF_EyA-USmGZ0i12JVRKYZnSLXYlSfq2gdK2S9fQRioFtIxQUTKDLUArfqWZmwNAntKpxqd&_nc_ohc=ql6BaCfiQVoQ7kNvwEktG3l&_nc_oc=Adn07YutozlDXdL_Jbs4R_1aHqMAy2DYXk6LHBhrWrwIPYLkq7R7YTeKK-yaLkNRcwVAz-ogS3iOMh_qY33LmXd9&_nc_zt=23&_nc_ht=scontent.fcmb3-3.fna&_nc_gid=8ThHqsF1Thm8sJclSQ3ogA&oh=00_AfvRtzw1ZLl_xfYSbaDgJ8naOJCjudfZdk2wzsZ4ZA4Cfg&oe=698BB985",
+                    "https://scontent.fcmb12-1.fna.fbcdn.net/v/t39.30808-6/475641208_3969424456666705_2383408710235459154_n.jpg?_nc_cat=104&ccb=1-7&_nc_sid=127cfc&_nc_eui2=AeFyAUm2PWeRWcS0OF2d2tr-gBKooaxKXeaAEqihrEpd5q4LHASI8OYp-PGFuC7tusqP1Z6r4KnMMDdPGjjMyCk2&_nc_ohc=bkVcQq2ogcoQ7kNvwH1WfZ0&_nc_oc=AdnzMwrnocAGruHU8FK5u-7OPp7B_zB90eq4PLbI2Js0s4nLJkv3D56b6fJx69DuMsBCYxfQVqb72V878dPbq4Iy&_nc_zt=23&_nc_ht=scontent.fcmb12-1.fna&_nc_gid=AFDv7lAY8-h106GA7KAZBA&oh=00_AftqU-97mKxffODZJUyKGlcirlLKN3sohsvVC6pOwXKXZg&oe=698BCD39"
+                  ].map((url, i) => (
+                    <div 
+                      key={i} 
+                      className="break-inside-avoid overflow-hidden bg-gray-200"
+                    >
+                      <img src={url} className="w-full" alt="Collection" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
 
       {/* --- CALL TO ACTION --- */}
       <section className="py-32 bg-black text-center px-5">
@@ -176,6 +299,8 @@ const BlazerPage = () => {
           </div>
         </motion.div>
       </section>
+
+      
 
     </main>
   );
