@@ -91,7 +91,7 @@ const Login = () => {
                         <input 
                             type='email' 
                             placeholder='E-mail'
-                            className={`w-full p-4 border outline-none text-sm placeholder:text-black/40 transition-colors font-medium ${errors.email ? 'border-red-500' : 'border-black focus:border-black'}`}
+                            className={`w-full p-4 border outline-none text-base md:text-sm placeholder:text-black/40 transition-colors font-medium ${errors.email ? 'border-red-500' : 'border-black focus:border-black'}`}
                             {...register("email", { 
                                 required: "Email is required",
                                 pattern: { value: /\S+@\S+\.\S+/, message: "Invalid email format" }
@@ -107,7 +107,7 @@ const Login = () => {
                             <input
                                 type={passwordVisible ? "text" : "password"}
                                 placeholder='Password'
-                                className={`w-full p-4 border outline-none text-sm placeholder:text-black/40 transition-colors font-medium ${errors.password ? 'border-red-500' : 'border-black focus:border-black'}`}
+                                className={`w-full p-4 border outline-none text-base md:text-sm placeholder:text-black/40 transition-colors font-medium ${errors.password ? 'border-red-500' : 'border-black focus:border-black'}`}
                                 {...register("password", { 
                                     required: "Password is required",
                                     minLength: { value: 6, message: "Minimum 6 characters" } 
@@ -160,6 +160,14 @@ const Login = () => {
                     )}
                 </form>
             </div>
+
+            <style jsx>{`
+                @media (max-width: 768px) {
+                    input {
+                        font-size: 16px !important;
+                    }
+                }
+            `}</style>
         </div>
     )
 }

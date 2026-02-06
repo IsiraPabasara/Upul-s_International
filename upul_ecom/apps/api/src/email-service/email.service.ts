@@ -1,16 +1,4 @@
-import nodemailer from 'nodemailer';
-
-// 1. Configure Transporter
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: Number(process.env.SMTP_PORT) || 465,
-  secure: true,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+import { queueEmail } from './email-queue';
 
 const SHOP_EMAIL = process.env.SMTP_USER;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -74,14 +62,16 @@ export const sendOrderConfirmation = async (order: any) => {
       ${getButtonHtml(trackingLink, "View Order Details")}
     `);
 
-    await transporter.sendMail({
-      from: `"Upul International" <${process.env.SMTP_USER}>`,
+    await queueEmail({
       to: order.email,
       subject: `Invoice & Confirmation #${order.orderNumber}`,
       html,
+      orderNumber: order.orderNumber,
+      emailType: 'confirmation',
     });
   } catch (error) {
-    console.error("Failed to send confirmation email:", error);
+    console.error("Failed to queue confirmation email:", error);
+    throw error;
   }
 };
 
@@ -97,14 +87,16 @@ export const sendOrderProcessing = async (order: any) => {
       ${getButtonHtml(trackingLink)}
     `);
 
-    await transporter.sendMail({
-      from: `"Upul International" <${process.env.SMTP_USER}>`,
+    await queueEmail({
       to: order.email,
       subject: `Order #${order.orderNumber} is Processing`,
       html,
+      orderNumber: order.orderNumber,
+      emailType: 'processing',
     });
   } catch (error) {
-    console.error("Failed to send processing email:", error);
+    console.error("Failed to queue processing email:", error);
+    throw error;
   }
 };
 
@@ -125,14 +117,16 @@ export const sendShippingUpdate = async (order: any) => {
       ${getButtonHtml(trackingLink)}
     `);
 
-    await transporter.sendMail({
-      from: `"Upul International" <${process.env.SMTP_USER}>`,
+    await queueEmail({
       to: order.email,
       subject: `Order #${order.orderNumber} Shipped!`,
       html,
+      orderNumber: order.orderNumber,
+      emailType: 'shipped',
     });
   } catch (error) {
-    console.error("Failed to send shipping email:", error);
+    console.error("Failed to queue shipping email:", error);
+    throw error;
   }
 };
 
@@ -148,14 +142,16 @@ export const sendOrderDelivered = async (order: any) => {
       ${getButtonHtml(trackingLink, "Leave a Review")}
     `);
 
-    await transporter.sendMail({
-      from: `"Upul International" <${process.env.SMTP_USER}>`,
+    await queueEmail({
       to: order.email,
       subject: `Order Delivered #${order.orderNumber}`,
       html,
+      orderNumber: order.orderNumber,
+      emailType: 'delivered',
     });
   } catch (error) {
-    console.error("Failed to send delivery email:", error);
+    console.error("Failed to queue delivery email:", error);
+    throw error;
   }
 };
 
@@ -167,14 +163,16 @@ export const sendOrderReturned = async (order: any) => {
       <p>If you requested this return, your refund (if applicable) is being processed.</p>
     `);
 
-    await transporter.sendMail({
-      from: `"Upul International" <${process.env.SMTP_USER}>`,
+    await queueEmail({
       to: order.email,
       subject: `Order Returned #${order.orderNumber}`,
       html,
+      orderNumber: order.orderNumber,
+      emailType: 'returned',
     });
   } catch (error) {
-    console.error("Failed to send return email:", error);
+    console.error("Failed to queue return email:", error);
+    throw error;
   }
 };
 
@@ -186,14 +184,16 @@ export const sendOrderCancelled = async (order: any) => {
       <p>If you have already paid or believe this is an error, please contact us immediately.</p>
     `);
 
-    await transporter.sendMail({
-      from: `"Upul International" <${process.env.SMTP_USER}>`,
+    await queueEmail({
       to: order.email,
       subject: `Order Cancelled #${order.orderNumber}`,
       html,
+      orderNumber: order.orderNumber,
+      emailType: 'cancelled',
     });
   } catch (error) {
-    console.error("Failed to send cancellation email:", error);
+    console.error("Failed to queue cancellation email:", error);
+    throw error;
   }
 };
 
@@ -210,13 +210,15 @@ export const sendShopNewOrderNotification = async (order: any) => {
       </div>
     `);
 
-    await transporter.sendMail({
-      from: `"System Alert" <${process.env.SMTP_USER}>`,
-      to: SHOP_EMAIL, 
+    await queueEmail({
+      to: SHOP_EMAIL!,
       subject: `🔔 New Order #${order.orderNumber} - LKR ${order.totalAmount}`,
       html,
+      orderNumber: order.orderNumber,
+      emailType: 'admin-alert',
     });
   } catch (error) {
-    console.error("Failed to send shop alert:", error);
+    console.error("Failed to queue shop alert:", error);
+    throw error;
   }
 };
