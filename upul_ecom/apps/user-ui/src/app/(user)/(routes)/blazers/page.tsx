@@ -18,12 +18,12 @@ const BlazerPage = () => {
             <img
               src="https://images.unsplash.com/photo-1593032465175-481ac7f401a0?q=80&w=2080&auto=format&fit=crop"
               alt="Premium Blazer Collection"
-              className="hidden md:block w-full h-full object-cover opacity-70"
+              className="hidden md:block w-full h-full object-cover opacity-90"
             />
             <img
-              src="https://images.unsplash.com/photo-1593032465175-481ac7f401a0?q=80&w=1000&auto=format&fit=crop"
+              src="https://ik.imagekit.io/aqi4rj9dnl/475852916_3968769883398829_4365346044412579781_n(1).jpg.jpeg"
               alt="Premium Blazer Mobile"
-              className="block md:hidden w-full h-full object-cover opacity-60"
+              className="block md:hidden w-full h-full object-cover opacity-85"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30" />
           </div>
@@ -105,7 +105,7 @@ const BlazerPage = () => {
           </div>
           <div className="w-full md:w-1/2 aspect-[4/5] relative bg-gray-100">
             <img 
-              src="https://ik.imagekit.io/aqi4rj9dnl/Gemini_Generated_Image_xo4arexo4arexo4a.png"
+              src="https://ik.imagekit.io/aqi4rj9dnl/upul-1.0"
               className="w-full h-full object-cover shadow-2xl"
               alt="Fine Fabric"
             />
