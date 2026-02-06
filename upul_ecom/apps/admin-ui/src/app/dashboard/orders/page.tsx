@@ -4,15 +4,21 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import axiosInstance from "@/app/utils/axiosInstance";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation"; // 👈 Import Navigation Hooks
 import { 
   Eye, Loader2, CreditCard, Banknote, FilterX, Search, 
-  ChevronLeft, ChevronRight, X // 👈 1. Import 'X' Icon
+  ChevronLeft, ChevronRight, X 
 } from "lucide-react";
 
 import OrderStats from "./components/OrderStats"; 
 
 export default function AdminOrdersPage() {
-  const [filterStatus, setFilterStatus] = useState("ALL");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // 1. GET FILTER FROM URL (Default to 'ALL' if missing)
+  const filterStatus = searchParams.get("filter") || "ALL";
+  
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -24,6 +30,22 @@ export default function AdminOrdersPage() {
       return res.data;
     },
   });
+
+  // 2. HANDLE FILTER CHANGE (Update URL)
+  const handleFilterChange = (status: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (status === "ALL") {
+      params.delete("filter"); // Remove param for 'ALL'
+    } else {
+      params.set("filter", status);
+    }
+    // Update URL without refreshing the page
+    router.push(`?${params.toString()}`);
+    
+    // Reset local view states
+    setCurrentPage(1); 
+    setSearchQuery(""); 
+  };
 
   const processedOrders = orders?.filter((order: any) => {
     const matchesStatus = 
@@ -43,12 +65,6 @@ export default function AdminOrdersPage() {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
-
-  const handleFilterChange = (status: string) => {
-    setFilterStatus(status);
-    setCurrentPage(1); 
-    setSearchQuery(""); 
-  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -80,6 +96,7 @@ export default function AdminOrdersPage() {
           </div>
         </div>
 
+        {/* 👇 Pass URL-based Filter */}
         <OrderStats 
           orders={orders} 
           currentFilter={filterStatus} 
@@ -101,7 +118,6 @@ export default function AdminOrdersPage() {
                   {processedOrders?.length || 0}
                 </span>
 
-                {/* 👇 2. NEW CLEAR FILTER BUTTON */}
                 {filterStatus !== "ALL" && (
                   <button 
                     onClick={() => handleFilterChange("ALL")}
@@ -150,7 +166,7 @@ export default function AdminOrdersPage() {
                         <p className="text-xs opacity-70 mt-1">Try adjusting your search or filters.</p>
                         {(searchQuery || filterStatus !== "ALL") && (
                             <button 
-                              onClick={() => { setSearchQuery(""); setFilterStatus("ALL"); }}
+                              onClick={() => { setSearchQuery(""); handleFilterChange("ALL"); }}
                               className="mt-4 text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-4 py-2 rounded-lg font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition"
                             >
                               Reset All Filters
@@ -209,6 +225,7 @@ export default function AdminOrdersPage() {
 
                       <td className="px-6 py-4 text-right">
                         <Link
+                          // 👇 3. Preserve the current filter in the 'Back' link logic (Next.js handles URL history automatically)
                           href={`/dashboard/orders/${order.id}`}
                           className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-200 dark:hover:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all shadow-sm"
                         >

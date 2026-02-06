@@ -22,7 +22,6 @@ const productSubItems = [
   { label: "Size Standards", href: "/dashboard/products/sizetypes", icon: Ruler },
 ];
 
-// ⭐ NEW: Add Props Interface
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
@@ -33,8 +32,17 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { isDark, toggleTheme } = useTheme();
   const [isProductsOpen, setIsProductsOpen] = useState(false);
 
+  // Helper to determine if a route is active (Exact or Sub-path)
+  const isRouteActive = (href: string) => {
+    if (href === "/dashboard") {
+      return pathname === href; // Strict match for Dashboard home
+    }
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
+
   useEffect(() => {
-    if (pathname.includes("/product")) {
+    // Keep Products menu open if we are in any product sub-route
+    if (pathname.includes("/product") || pathname.includes("/dashboard/products")) {
       setIsProductsOpen(true);
     }
     // Close sidebar on mobile when route changes
@@ -47,7 +55,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       <aside className={`
         fixed inset-y-0 left-0 z-40 w-72 bg-white border-r border-gray-200 flex flex-col transition-transform duration-300 ease-in-out
         dark:bg-slate-950 dark:border-slate-800
-        ${/* Logic: On Mobile, toggle based on isOpen. On Desktop (md), always show (translate-x-0) */ ""}
         ${isOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0
       `}>
         
@@ -55,37 +62,24 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="h-20 flex items-center justify-between px-6 border-b border-gray-100 dark:border-slate-800 shrink-0">
           <div className="flex flex-col leading-none">
             <div className="inline-flex items-end">
-              {/* Bigger & wider U */}
-              {/* Added: dark:text-white */}
               <span className="text-4xl md:text-5xl font-serif font-bold text-[#1a1a3a] dark:text-white tracking-tight leading-none mr-0.5">
                 U
               </span>
-
-              {/* Lines + PUL'S */}
               <div className="flex flex-col ml-1 mb-1 md:mb-2">
-                {/* Decorative lines */}
                 <div className="mb-0.5">
-                  {/* Added: dark:bg-white */}
                   <div className="h-[2px] w-8 bg-black dark:bg-white mb-1"></div>
-                  {/* Added: dark:bg-white */}
                   <div className="h-[2px] w-5 bg-black dark:bg-white"></div>
                 </div>
-
-                {/* PUL'S aligned with U bottom */}
-                {/* Added: dark:text-red-500 (Lightened slightly for better contrast on dark) */}
                 <span className="text-red-600 dark:text-red-500 text-sm font-serif font-bold tracking-tighter leading-none">
                   PUL&apos;S
                 </span>
               </div>
             </div>
-
-            {/* Added: dark:text-gray-300 and dark:border-gray-600 */}
             <span className="text-[7px] md:text-[8px] tracking-[0.3em] font-bold text-[#1a1a3a] dark:text-gray-300 border-t border-gray-200 dark:border-gray-700 pt-0.5 md:pt-1 uppercase">
               International
             </span>
           </div>
           
-          {/* Close Button (Mobile Only) */}
           <button onClick={onClose} className="md:hidden p-1 text-slate-400 hover:text-red-500 transition">
             <X size={24} />
           </button>
@@ -94,14 +88,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         {/* SCROLLABLE NAV */}
         <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-1">
           {mainNavItems.map((item) => {
-            const isActive = pathname === item.href;
+            // 🟢 UPDATED LOGIC HERE
+            const isActive = isRouteActive(item.href);
+            
             return (
               <Link 
                 key={item.href} 
                 href={item.href}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group
                   ${isActive 
-                    ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400" 
+                    ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 font-bold shadow-sm" 
                     : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-200"
                   }
                 `}
@@ -114,40 +110,41 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
           {/* PRODUCTS SECTION */}
           <div className="pt-2">
-            <div className={`flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors group
+            <div className={`flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors group cursor-pointer
                ${pathname.includes("/product") ? "bg-blue-50 dark:bg-blue-900/10" : "hover:bg-slate-50 dark:hover:bg-slate-900"}
-            `}>
-              <Link 
-                href="/dashboard/products"
-                className="flex-1 flex items-center gap-3 text-sm font-medium text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-200"
-              >
-                 <Package size={20} className={pathname.includes("/product") ? "text-blue-600 dark:text-blue-400" : "text-slate-400 dark:text-slate-500"} />
-                 <span>Products</span>
-              </Link>
-              <button
-                onClick={(e) => { e.preventDefault(); setIsProductsOpen(!isProductsOpen); }}
-                className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 transition"
-              >
+            `}
+            onClick={() => setIsProductsOpen(!isProductsOpen)}
+            >
+              <div className="flex-1 flex items-center gap-3 text-sm font-medium text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-200">
+                  <Package size={20} className={pathname.includes("/product") ? "text-blue-600 dark:text-blue-400" : "text-slate-400 dark:text-slate-500"} />
+                  <span>Products</span>
+              </div>
+              <div className="p-1 text-slate-400">
                 {isProductsOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-              </button>
+              </div>
             </div>
 
             <div className={`overflow-hidden transition-all duration-300 ${isProductsOpen ? 'max-h-96 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
               <div className="space-y-0.5 ml-4 pl-3 border-l-2 border-slate-100 dark:border-slate-800">
-                {productSubItems.map((subItem) => (
-                  <Link
-                    key={subItem.href}
-                    href={subItem.href}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors
-                      ${pathname === subItem.href 
-                        ? "text-blue-700 bg-blue-50/50 font-medium dark:text-blue-400 dark:bg-blue-900/10" 
-                        : "text-slate-500 hover:text-slate-900 hover:bg-slate-50 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-900"
-                      }
-                    `}
-                  >
-                    {subItem.label}
-                  </Link>
-                ))}
+                {productSubItems.map((subItem) => {
+                  // 🟢 UPDATED LOGIC FOR SUB ITEMS TOO
+                  const isSubActive = isRouteActive(subItem.href);
+
+                  return (
+                    <Link
+                      key={subItem.href}
+                      href={subItem.href}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors
+                        ${isSubActive 
+                          ? "text-blue-700 bg-blue-50/50 font-bold dark:text-blue-400 dark:bg-blue-900/10" 
+                          : "text-slate-500 hover:text-slate-900 hover:bg-slate-50 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-900"
+                        }
+                      `}
+                    >
+                      {subItem.label}
+                    </Link>
+                  );
+                })}
               </div>
             </div>
           </div>
