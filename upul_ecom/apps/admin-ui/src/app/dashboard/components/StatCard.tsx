@@ -1,7 +1,7 @@
 "use client";
 
 import { LucideIcon, ArrowUpRight, ArrowDownRight } from "lucide-react";
-import { LineChart, Line, ResponsiveContainer } from "recharts";
+import { LineChart, Line, ResponsiveContainer, YAxis } from "recharts";
 import { cn } from "@/lib/utils";
 import CountUp from "./CountUp";
 
@@ -29,90 +29,88 @@ export default function StatCard({
   const isPositive = trend >= 0;
 
   // 🎨 DYNAMIC GRAPH COLOR
-  // If Active: White (because background is blue)
-  // If Inactive & Positive: Green (Emerald)
-  // If Inactive & Negative: Red (Rose)
-  const graphColor = isActive 
-    ? "rgba(255,255,255,0.8)" 
-    : isPositive 
-      ? "#10b981" 
-      : "#f43f5e";
+  const graphColor = isActive
+    ? "rgba(255,255,255,0.8)"
+    : isPositive
+    ? "#10b981"
+    : "#f43f5e";
 
   return (
     <div
       onClick={onClick}
       className={cn(
-        "relative overflow-hidden rounded-[2rem] cursor-pointer transition-all duration-300 border group select-none",
-        "px-4 py-7 sm:px-6 sm:py-10",
-        // Dark Mode: Better contrast
+        // FLEX LAYOUT: 'flex-col' stacks items top-to-bottom
+        "relative w-full h-full min-h-[180px] flex flex-col justify-between overflow-hidden",
+        "rounded-[1.5rem] sm:rounded-[2rem] cursor-pointer transition-all duration-300 border group select-none",
+        "p-5 sm:p-6",
         isActive
           ? "bg-blue-600 border-blue-500 shadow-xl shadow-blue-200/50 dark:shadow-none -translate-y-1"
-          : "bg-white border-gray-100 hover:border-blue-100 dark:bg-slate-900 dark:border-slate-800 dark:hover:border-slate-700"
+          : "bg-white border-gray-100 hover:border-blue-100 dark:bg-slate-900 dark:border-slate-800 dark:hover:border-slate-700 hover:shadow-lg dark:hover:shadow-none"
       )}
     >
       {/* Background Decor */}
       <div
         className={cn(
           "absolute -top-24 -right-24 w-48 h-48 rounded-full blur-3xl transition-opacity duration-500 pointer-events-none",
-          isActive ? "bg-white/10" : "bg-blue-500/5 dark:bg-blue-500/10",
+          isActive ? "bg-white/10" : "bg-blue-500/5 dark:bg-blue-500/10"
         )}
       />
 
-      <div className="flex flex-col sm:block items-center sm:items-stretch text-center sm:text-left h-full relative z-10 bottom-2">
+      {/* --- CONTENT SECTION (Top) --- */}
+      <div className="relative z-20 flex flex-col gap-4">
         
-        {/* Header Row */}
-        <div className="flex justify-center sm:justify-between items-center w-full mb-3 sm:mb-6 gap-3">
-          {/* Icon */}
+        {/* 1. Header: Icon & Trend Badge */}
+        <div className="flex justify-between items-start">
           <div
             className={cn(
-              "p-2.5 sm:p-3 rounded-2xl transition-all duration-300 border shadow-sm",
+              "p-2.5 sm:p-3 rounded-2xl transition-all duration-300 border shadow-sm shrink-0",
               isActive
                 ? "bg-white/20 border-white/10 text-white"
-                : "bg-gray-50 border-gray-100 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300",
+                : "bg-gray-50 border-gray-100 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300"
             )}
           >
             <Icon className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2.5} />
           </div>
 
-          {/* Trend Badge */}
           <div
             className={cn(
-              "flex items-center text-[10px] sm:text-xs font-bold px-2 sm:px-3 py-1 sm:py-1.5 rounded-full border shadow-sm backdrop-blur-md",
+              "flex items-center text-[10px] sm:text-xs font-bold px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-full border shadow-sm backdrop-blur-md whitespace-nowrap",
               isActive
                 ? "bg-white text-emerald-600"
-                : "bg-white border-gray-100 dark:bg-slate-800 dark:border-slate-700",
+                : "bg-white border-gray-100 dark:bg-slate-800 dark:border-slate-700"
             )}
           >
             <span
               className={cn(
-                "flex items-center",
-                isPositive ? "text-emerald-500" : "text-rose-500",
+                "flex items-center gap-0.5",
+                isPositive ? "text-emerald-500" : "text-rose-500"
               )}
             >
               {isPositive ? (
-                <ArrowUpRight size={12} className="mr-0.5 stroke-[3px]" />
+                <ArrowUpRight size={14} className="stroke-[3px]" />
               ) : (
-                <ArrowDownRight size={12} className="mr-0.5 stroke-[3px]" />
+                <ArrowDownRight size={14} className="stroke-[3px]" />
               )}
               {Math.abs(trend)}%
             </span>
           </div>
         </div>
 
-        {/* Value Section */}
-        <div className="flex flex-col items-center sm:items-start mb-6 sm:mb-0">
+        {/* 2. Main Value & Title */}
+        {/* Removed max-w constraints so text can use full width */}
+        <div className="flex flex-col items-start w-full">
           <span
             className={cn(
-              "text-xs sm:text-sm font-semibold mb-0.5 sm:mb-1 transition-colors truncate",
-              isActive ? "text-blue-100" : "text-slate-400",
+              "text-xs sm:text-sm font-bold uppercase tracking-wide mb-1 transition-colors truncate w-full",
+              isActive ? "text-blue-100" : "text-slate-400"
             )}
           >
             {title}
           </span>
           <h4
             className={cn(
-              "text-xl sm:text-3xl font-extrabold tracking-tight truncate",
-              isActive ? "text-white" : "text-slate-800 dark:text-white",
+              "text-2xl sm:text-3xl xl:text-4xl font-extrabold tracking-tight truncate w-full",
+              isActive ? "text-white" : "text-slate-800 dark:text-white"
             )}
           >
             <CountUp value={value} prefix={prefix} />
@@ -120,15 +118,21 @@ export default function StatCard({
         </div>
       </div>
 
-      {/* 3. Graph with Dynamic Color */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-1/2 h-10 sm:h-16 sm:w-[140px] sm:left-auto sm:right-0 sm:bottom-4 sm:translate-x-0 pointer-events-none">
+      {/* --- GRAPH SECTION (Bottom) --- */}
+      {/* 1. Removed 'absolute'. Now it sits in the flow.
+          2. Added 'mt-4' to push it away from the numbers.
+          3. Set a fixed small height (h-10).
+      */}
+      <div className="w-full h-20 mt-4  z-10 relative pointer-events-none">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data}>
-            <Line 
-              type="monotone" 
-              dataKey="value" 
-              stroke={graphColor} // 👈 Using the dynamic color variable
-              strokeWidth={3} 
+            {/* Hidden YAxis prevents clipping of high/low points */}
+            <YAxis domain={['dataMin', 'dataMax']} hide={true} padding={{ top: 5, bottom: 5 }} />
+            <Line
+              type="monotone"
+              dataKey="value"
+              stroke={graphColor}
+              strokeWidth={2}
               dot={false}
               isAnimationActive={true}
             />

@@ -10,21 +10,49 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import {  Calendar} from "lucide-react";
+import { Calendar } from "lucide-react";
 import CustomSelect from "./CustomSelect";
 
-// 🎨 Custom Tooltip Component (Glassmorphism)
+// 🎨 UPDATED Custom Tooltip Component (Full Labels)
 const CustomTooltip = ({ active, payload, label, activeMetric }: any) => {
   if (active && payload && payload.length) {
+    const value = payload[0].value.toLocaleString();
+
     return (
-      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-gray-100 dark:border-slate-800 p-4 rounded-2xl shadow-xl shadow-blue-500/10 dark:shadow-none">
+      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-gray-100 dark:border-slate-800 p-4 rounded-2xl shadow-xl shadow-blue-500/10 dark:shadow-none min-w-[140px]">
         <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
           {label}
         </p>
-        <p className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2">
-          {activeMetric === "revenue" && <span className="text-blue-500">Rs.</span>}
-          {payload[0].value.toLocaleString()}
-        </p>
+        <div className="flex items-baseline gap-1.5">
+          {/* Prefix for Revenue */}
+          {activeMetric === "revenue" && (
+            <span className="text-lg font-bold text-slate-800 dark:text-white">
+              Rs.
+            </span>
+          )}
+
+          {/* The Value Number */}
+          <span className="text-2xl font-black text-slate-800 dark:text-white">
+            {value}
+          </span>
+
+          {/* Suffixes - Now using Full Words */}
+          {activeMetric === "orders" && (
+            <span className="text-sm font-bold text-slate-500 dark:text-slate-400">
+              Orders
+            </span>
+          )}
+          {activeMetric === "customers" && (
+            <span className="text-sm font-bold text-slate-500 dark:text-slate-400">
+              Customers
+            </span>
+          )}
+          {activeMetric === "products" && (
+            <span className="text-sm font-bold text-slate-500 dark:text-slate-400">
+              Products
+            </span>
+          )}
+        </div>
       </div>
     );
   }
@@ -56,14 +84,18 @@ const MainAnalyticsChart = ({
   endYear,
   availableYears,
 }: Props) => {
-  
   const getMetricLabel = () => {
     switch (activeMetric) {
-      case "revenue": return "Total Revenue";
-      case "orders": return "Total Orders";
-      case "customers": return "New Customers";
-      case "products": return "New Products";
-      default: return "Value";
+      case "revenue":
+        return "Total Revenue";
+      case "orders":
+        return "Total Orders";
+      case "customers":
+        return "New Customers";
+      case "products":
+        return "New Products";
+      default:
+        return "Value";
     }
   };
 
@@ -74,21 +106,24 @@ const MainAnalyticsChart = ({
     { label: "Custom Range", value: "custom" },
   ];
 
-  // 🦴 Premium Skeleton Loader
   if (isLoading) {
     return (
       <div className="w-full h-[450px] bg-white dark:bg-slate-950 rounded-[2.5rem] p-8 border border-gray-100 dark:border-slate-800 shadow-sm flex flex-col">
         <div className="flex justify-between items-center mb-8">
-            <div className="space-y-2">
-                <div className="h-6 w-48 bg-slate-200 dark:bg-slate-800 rounded-full animate-pulse"/>
-                <div className="h-4 w-32 bg-slate-100 dark:bg-slate-800 rounded-full animate-pulse"/>
-            </div>
-            <div className="h-10 w-32 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse"/>
+          <div className="space-y-2">
+            <div className="h-6 w-48 bg-slate-200 dark:bg-slate-800 rounded-full animate-pulse" />
+            <div className="h-4 w-32 bg-slate-100 dark:bg-slate-800 rounded-full animate-pulse" />
+          </div>
+          <div className="h-10 w-32 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />
         </div>
         <div className="flex-1 flex items-end gap-2 px-4 opacity-10">
-             {[...Array(10)].map((_, i) => (
-                 <div key={i} className="w-full bg-slate-400 rounded-t-2xl" style={{ height: `${Math.random() * 80 + 20}%` }} />
-             ))}
+          {[...Array(10)].map((_, i) => (
+            <div
+              key={i}
+              className="w-full bg-slate-400 rounded-t-2xl"
+              style={{ height: `${Math.random() * 80 + 20}%` }}
+            />
+          ))}
         </div>
       </div>
     );
@@ -96,7 +131,6 @@ const MainAnalyticsChart = ({
 
   return (
     <div className="w-full bg-white dark:bg-slate-950 p-6 sm:p-8 rounded-[2.5rem] border border-gray-100 dark:border-slate-800 shadow-xl shadow-slate-200/40 dark:shadow-none relative transition-all duration-300">
-      
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4 z-20 relative">
         <div>
@@ -115,14 +149,19 @@ const MainAnalyticsChart = ({
         </div>
 
         <div className="flex flex-col items-end gap-2">
-          <div className="w-40">
-            <CustomSelect value={range} onChange={setRange} options={rangeOptions} />
-          </div>
+          <CustomSelect
+            value={range}
+            onChange={setRange}
+            options={rangeOptions}
+          />
 
           {range === "custom" && (
             <div className="flex items-center gap-2 animate-in slide-in-from-top-2 duration-300">
               <div className="flex items-center bg-blue-50 dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-blue-100 dark:border-slate-800">
-                <Calendar size={14} className="text-blue-600 dark:text-blue-400 mr-2" />
+                <Calendar
+                  size={14}
+                  className="text-blue-600 dark:text-blue-400 mr-2"
+                />
                 <select
                   value={startYear}
                   onChange={(e) => setStartYear(Number(e.target.value))}
@@ -154,40 +193,48 @@ const MainAnalyticsChart = ({
                 <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
               </linearGradient>
             </defs>
-            
-            <CartesianGrid 
-              strokeDasharray="3 3" 
-              vertical={false} 
-              stroke="#e2e8f0" 
+
+            <CartesianGrid
+              strokeDasharray="3 3"
+              vertical={false}
+              stroke="#e2e8f0"
               className="dark:stroke-slate-800"
             />
-            
+
             <XAxis
               dataKey="name"
               axisLine={false}
               tickLine={false}
               tick={{ fill: "#94a3b8", fontSize: 11, fontWeight: 600 }}
               dy={15}
-              interval={range === "custom" || range === "monthly" ? "preserveStartEnd" : 0}
+              interval={
+                range === "custom" || range === "monthly"
+                  ? "preserveStartEnd"
+                  : 0
+              }
             />
-            
+
             <YAxis
               axisLine={false}
               tickLine={false}
               tick={{ fill: "#94a3b8", fontSize: 11, fontWeight: 600 }}
               dx={-10}
             />
-            
-            <Tooltip 
+
+            <Tooltip
               content={<CustomTooltip activeMetric={activeMetric} />}
-              cursor={{ stroke: '#3b82f6', strokeWidth: 1, strokeDasharray: '4 4' }}
+              cursor={{
+                stroke: "#3b82f6",
+                strokeWidth: 1,
+                strokeDasharray: "4 4",
+              }}
             />
-            
+
             <Area
-              type="monotone" // Smooth curve
+              type="monotone"
               dataKey="value"
               stroke="#3b82f6"
-              strokeWidth={4} // Thicker, premium line
+              strokeWidth={4}
               fillOpacity={1}
               fill="url(#colorMain)"
               animationDuration={1500}
