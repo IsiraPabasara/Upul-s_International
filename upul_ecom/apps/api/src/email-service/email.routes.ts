@@ -7,14 +7,14 @@ import {
   getEmailStatistics,
   cleanupOldEmailLogs,
 } from './email.controller';
-// import isAuthenticated from '../../../../packages/middleware/isAuthenticated';
-// import { isAdmin } from '../../../../packages/middleware/authorizedRoles';
+import isAuthenticated from '../../../../packages/middleware/isAuthenticated';
+import { isAdmin } from '../../../../packages/middleware/authorizedRoles';
 
 
 const router = Router();
 
 // All email admin routes require authentication and admin role
-// router.use(isAuthenticated, isAdmin);
+router.use(isAuthenticated, isAdmin);
 
 // Get email queue statistics
 router.get('/queue/stats', getEmailQueueStatus);

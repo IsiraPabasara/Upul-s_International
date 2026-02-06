@@ -40,7 +40,6 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        suppressHydrationWarning
         className={`
           ${roboto.variable}
           ${poppins.variable}

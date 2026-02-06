@@ -1,6 +1,7 @@
 import Queue from 'bull';
 import nodemailer from 'nodemailer';
 import { PrismaClient } from '@prisma/client';
+import Redis from 'ioredis';
 
 const prisma = new PrismaClient();
 
@@ -16,16 +17,17 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Create email queue with Redis
-const emailQueue = new Queue('email', process.env.REDIS_URL || 'redis://localhost:6379', {
-  settings: {
-    lockDuration: 30000,
-    lockRenewTime: 15000,
-    maxStalledCount: 2,
-    stalledInterval: 5000,
-    retryProcessDelay: 5000,
-    guardInterval: 5000,
-  },
+// Redis client factory for Bull queue (creates new clients for each purpose)
+const createBullRedisClient = () => {
+  return new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+    enableReadyCheck: false,
+    maxRetriesPerRequest: null,
+  });
+};
+
+// Create email queue with Bull-compatible Redis clients
+const emailQueue = new Queue('email', {
+  createClient: createBullRedisClient,
 });
 
 export interface EmailJob {
