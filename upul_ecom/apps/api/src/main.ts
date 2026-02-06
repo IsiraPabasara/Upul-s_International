@@ -45,4 +45,5 @@ const port = process.env.PORT || 4000;
 app.listen(port, () => {
   console.log(`API running on http://localhost:${port}`);
   console.log(`Swagger Docs available at http://localhost:${port}/api-docs`);
+  console.log(`📊 Email Dashboard: http://localhost:${port}/api/admin/email/statistics`);
 });

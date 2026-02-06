@@ -197,3 +197,33 @@ model Order {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 }
+
+enum EmailStatus {
+  processing
+  sent
+  failed
+  permanently_failed
+}
+
+model EmailLog {
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  
+  recipientEmail  String
+  subject         String
+  html            String?   // Store HTML for retry capability
+  emailType       String    // confirmation, processing, shipped, etc.
+  orderNumber     String?
+  
+  status          EmailStatus @default(processing)
+  attemptNumber   Int         @default(0)
+  errorMessage    String?
+  failureReason   String?
+  
+  sentAt          DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  @@index([recipientEmail])
+  @@index([status])
+  @@index([orderNumber])
+}
