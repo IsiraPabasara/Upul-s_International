@@ -29,16 +29,19 @@ const BlazerPage = () => {
           </div>
 
           {/* Content Layer with Home Hero Typography */}
-          <div className="relative z-10 h-full max-w-8xl mx-auto flex flex-col justify-between px-5 pb-10 md:pb-16 pt-20 md:pt-24 lg:pt-32">
+          <div className="relative z-10 h-full max-w-8xl mx-auto flex flex-col justify-between px-5 pb-10 md:pb-16 pt-20 lg:pt-32">
   
           <div className="flex justify-between items-start">
-            <motion.p 
+            <motion.div 
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               className="text-xs sm:text-[0.3rem] md:text-[0.6rem] lg:text-sm xl:text-base font-bold uppercase tracking-[0.2em] border-l-2 border-white pl-4 max-w-[200px] md:max-w-[300px]"
             >
-              Redefining modern silhouette
-            </motion.p>
+              <p className="text-[10px] sm:text-[10px] lg:text-xs font-bold uppercase tracking-[0.3em] text-white/80">
+                  The Gold Standard
+                </p>
+                <p className="text-xs   sm:text-[10px] lg:text-sm mt-1 text-white/60">Tailored to your DNA.</p>
+            </motion.div>
           </div>
 
           <div>
@@ -47,7 +50,7 @@ const BlazerPage = () => {
               initial={{ y: 80, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.8, ease: "easeOut" }}
-              className="text-[14vw] sm:text-[clamp(4rem,8vw,9rem)] md:text-[clamp(3.5rem,8vw,6rem)] lg:text-[clamp(6rem,9vw,10rem)] xl:text-[clamp(6rem,9vw,11rem)] leading-[0.75] font-cormorant font-black tracking-tighter uppercase"
+              className="text-[14vw] sm:mt-7 lg:mt-0  sm:text-[clamp(3.5rem,4vw,6rem)] lg:text-[clamp(6rem,9vw,10rem)] xl:text-[clamp(6rem,9vw,11rem)] leading-[0.75] font-cormorant font-black tracking-tighter uppercase"
             >
               Bespoke <br />
               <span className="italic font-light">Blazers</span>
@@ -282,14 +285,14 @@ const BlazerPage = () => {
             </section>
 
       {/* --- CALL TO ACTION --- */}
-      <section className="py-32 bg-black text-center px-5">
+      <section className="py-32 bg-[#666b49] text-center px-5">
         <motion.div 
           initial={{ opacity: 0 }} 
           whileInView={{ opacity: 1 }}
           className="max-w-2xl mx-auto"
         >
           <h2 className="text-5xl md:text-7xl font-cormorant text-white mb-8">Elevate Your Presence.</h2>
-          <p className="text-gray-400 mb-12 text-sm md:text-base font-light tracking-wide uppercase">
+          <p className="text-gray-300 mb-12 text-sm md:text-base font-light tracking-wide uppercase">
             Visit our Flagship Store for a <br /> personalized fitting session.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
