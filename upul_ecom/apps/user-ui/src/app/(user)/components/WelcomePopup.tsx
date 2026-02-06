@@ -4,16 +4,15 @@ import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 
 interface WelcomePopupProps {
-  imageSrc: string;
   resetDuration?: number; // in milliseconds, default 15 min
   showDelay?: number; // in milliseconds, default 10 seconds
 }
 
 export default function WelcomePopup({ 
-  imageSrc, 
   resetDuration = 15 * 60 * 1000, // 15 minutes default
   showDelay = 5 * 1000 // 10 seconds default
 }: WelcomePopupProps) {
+  const imageSrc = 'https://ik.imagekit.io/aqi4rj9dnl/popup2.png';
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -21,8 +20,10 @@ export default function WelcomePopup({
     const lastShownTime = localStorage.getItem('welcomePopupTime');
     const now = Date.now();
     
-    const shouldShow = !lastShownTime || (now - parseInt(lastShownTime) >= resetDuration);
-    
+    const parsedTime = parseInt(lastShownTime || '0'); // Default to 0
+
+    const shouldShow = !lastShownTime || (!isNaN(parsedTime) && now - parsedTime >= resetDuration);
+
     if (shouldShow) {
       // Show popup after delay
       const timer = setTimeout(() => {
@@ -32,6 +33,8 @@ export default function WelcomePopup({
       
       return () => clearTimeout(timer);
     }
+
+    return undefined;
   }, [resetDuration, showDelay]);
 
   const handleClose = () => {

@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import prisma from "../../../../packages/libs/prisma"; // Adjust path if needed
 import { v4 as uuidv4 } from 'uuid'; 
-import { sendOrderConfirmation, sendShopNewOrderNotification } from "../email-service/email.service";
+import { sendOrderCancelled, sendOrderConfirmation, sendShopNewOrderNotification } from "../email-service/email.service";
 
 // Helper: Generate a short, readable 6-digit ID (e.g., "829304")
 const generateOrderNumber = () => {
@@ -234,5 +234,101 @@ export const getOrderById = async (req: any, res: Response, next: NextFunction) 
     return res.json(order);
   } catch (error) {
     return next(error);
+  }
+};
+
+
+// --- 7. CANCEL ORDER (Shared Logic for Stock Restoration) ---
+const cancelOrderLogic = async (orderId: string, tx: any) => {
+  // 1. Fetch current order to get items
+  const currentOrder = await tx.order.findUnique({ where: { id: orderId } });
+  
+  if (!currentOrder) throw new Error("Order not found");
+  if (currentOrder.status !== "PENDING") {
+    throw new Error("Order cannot be cancelled. It has already been confirmed or processed.");
+  }
+
+  // 2. Update Status to CANCELLED
+  const updatedOrder = await tx.order.update({
+    where: { id: orderId },
+    data: { status: "CANCELLED" },
+  });
+
+  // 3. RESTORE STOCK
+  const items = currentOrder.items as any[];
+
+  for (const item of items) {
+    if (item.size) {
+      // Handle Variants
+      const product = await tx.product.findUnique({
+        where: { id: item.productId },
+      });
+
+      if (product) {
+        const newVariants = (product.variants as any[]).map((v: any) => {
+          if (v.size === item.size) {
+            return { ...v, stock: v.stock + item.quantity };
+          }
+          return v;
+        });
+
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { variants: newVariants },
+        });
+      }
+    } else {
+      // Handle Standard Stock
+      await tx.product.update({
+        where: { id: item.productId },
+        data: { stock: { increment: item.quantity } },
+      });
+    }
+  }
+
+  return updatedOrder;
+};
+
+// --- API: Cancel for Logged In User ---
+export const cancelUserOrder = async (req: any, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+
+    const order = await prisma.order.findUnique({ where: { id } });
+    if (!order) return res.status(404).json({ message: "Order not found" });
+    if (order.userId !== userId) return res.status(403).json({ message: "Unauthorized" });
+
+    const result = await prisma.$transaction(async (tx) => {
+       return await cancelOrderLogic(id, tx);
+    });
+
+    // Send Email asynchronously
+    sendOrderCancelled(result).catch(console.error);
+
+    return res.json({ success: true, message: "Order cancelled successfully", order: result });
+  } catch (error: any) {
+    return res.status(400).json({ message: error.message });
+  }
+};
+
+// --- API: Cancel for Guest (via Token) ---
+export const cancelGuestOrder = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { token } = req.params;
+
+    const order = await prisma.order.findUnique({ where: { guestToken: token } });
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    const result = await prisma.$transaction(async (tx) => {
+      return await cancelOrderLogic(order.id, tx);
+    });
+
+    // Send Email asynchronously
+    sendOrderCancelled(result).catch(console.error);
+
+    return res.json({ success: true, message: "Order cancelled successfully", order: result });
+  } catch (error: any) {
+    return res.status(400).json({ message: error.message });
   }
 };

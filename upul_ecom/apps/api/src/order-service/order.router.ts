@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createOrder, getGuestOrder, getOrderById, getUserOrders } from './order.controller';
+import { cancelGuestOrder, cancelUserOrder, createOrder, getGuestOrder, getOrderById, getUserOrders } from './order.controller';
 import isAuthenticated from '../../../../packages/middleware/isAuthenticated';
 import { isAdmin } from '../../../../packages/middleware/authorizedRoles';
 import { getAllOrders, getOrderDetails, updateOrderStatus } from './admin.order.controller';
@@ -10,6 +10,7 @@ const router = Router();
 // The controller handles the security/user logic internally
 router.post('/', createOrder);
 router.get('/track/:token', getGuestOrder);
+router.patch('/track/:token/cancel', cancelGuestOrder);
 
 // Admin routes - must come BEFORE isAuthenticated middleware application
 router.get('/admin', isAuthenticated, isAdmin, getAllOrders);
@@ -17,5 +18,6 @@ router.get('/admin/:orderId', isAuthenticated, isAdmin, getOrderDetails);
 router.patch('/admin/:orderId/status', isAuthenticated, isAdmin, updateOrderStatus);
 router.get('/my-orders', isAuthenticated, getUserOrders);
 router.get('/my-orders/:id', isAuthenticated, getOrderById);
+router.patch('/my-orders/:id/cancel', isAuthenticated, cancelUserOrder);
 
 export default router;

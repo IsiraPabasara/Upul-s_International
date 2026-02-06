@@ -9,6 +9,7 @@ import colorRoutes from '../color-service/color.routes';
 import cartRouter from '../cart-service/cart.routes';
 import wishlistRouter from '../wishlist-service/wishlist.router';
 import orderRouter from '../order-service/order.router';
+import analyticsRoutes from "../analytics/analytics.routes";
 import emailRoutes from '../email-service/email.routes';
 
 const router: Router = express.Router();
@@ -23,6 +24,9 @@ router.use('/colors', colorRoutes);
 router.use('/cart', cartRouter);
 router.use('/wishlist', wishlistRouter);
 router.use('/orders', orderRouter);
+router.use("/analytics", analyticsRoutes);
 router.use('/admin/email', emailRoutes);
+
+
 
 export default router;

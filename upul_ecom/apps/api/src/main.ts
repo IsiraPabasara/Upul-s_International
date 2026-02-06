@@ -12,6 +12,7 @@ import './email-service/email-queue'; // Initialize email queue
 const swaggerDocument = require("./swagger-output.json");
 
 const app = express();
+// app.set("trust proxy", 1);
 
 app.use(cors({ origin: true, credentials: true }));
 app.use(helmet());

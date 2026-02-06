@@ -11,6 +11,9 @@
     },
     {
       "path": "./apps/user-ui/tsconfig.json"
+    },
+    {
+      "path": "./apps/admin-ui"
     }
   ]
 }

@@ -9,7 +9,6 @@ FROM docker.io/node:lts-alpine
 ENV HOST=0.0.0.0
 ENV PORT=3000
 
-
 WORKDIR /app
 
 COPY dist .
@@ -17,10 +16,14 @@ COPY dist .
 # You can remove this install step if you build with `--bundle` option.
 # The bundled output will include external dependencies.
 
-RUN npm -f install
+RUN npm ci --omit=dev
 
 # Generate Prisma Client
 RUN npm exec prisma@6.19 -- generate --schema=./prisma/schema.prisma
+
+# Clean up npm cache and temporary files
+RUN npm cache clean --force && \
+    rm -rf /tmp/* /var/cache/apk/*
 
 CMD [ "node", "main.js" ]
 
