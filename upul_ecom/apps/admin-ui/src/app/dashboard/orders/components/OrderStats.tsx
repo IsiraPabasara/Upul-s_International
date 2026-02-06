@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Phone, CheckCircle2, PackageOpen, Truck, AlertCircle, CheckCircle } from "lucide-react";
+import { Phone, CheckCircle2, PackageOpen, Truck, AlertCircle, PackageCheck, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface StatsProps {
@@ -64,6 +64,19 @@ export default function OrderStats({ orders, currentFilter, onFilterChange }: St
         iconBg: "bg-purple-100 dark:bg-purple-900/40",
         glow: "bg-purple-400",
       },
+      // 👇 NEW CARD: DELIVERED
+      {
+        id: "DELIVERED",
+        label: "Delivered",
+        statuses: ["DELIVERED"],
+        icon: PackageCheck,
+        description: "Successfully Completed",
+        activeBg: "bg-teal-50 dark:bg-teal-900/20",
+        activeBorder: "border-teal-200 dark:border-teal-800",
+        activeText: "text-teal-700 dark:text-teal-400",
+        iconBg: "bg-teal-100 dark:bg-teal-900/40",
+        glow: "bg-teal-400",
+      },
       {
         id: "ISSUES",
         label: "Issues",
@@ -80,12 +93,14 @@ export default function OrderStats({ orders, currentFilter, onFilterChange }: St
   }, []);
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-6 mb-8">
+    // 📏 RESPONSIVE GRID UPDATED FOR 6 CARDS
+    // Mobile: 2 cols
+    // Tablet/Laptop: 3 cols (2 rows of 3)
+    // Ultrawide: 6 cols (1 row)
+    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4 mb-8">
       {statsConfig.map((card) => {
         const isActive = currentFilter === card.id;
         const Icon = card.icon;
-        
-        // Simple Count Calculation
         const currentCount = safeOrders.filter(o => card.statuses.includes(o.status)).length;
 
         return (
@@ -93,50 +108,47 @@ export default function OrderStats({ orders, currentFilter, onFilterChange }: St
             key={card.id}
             onClick={() => onFilterChange(isActive ? "ALL" : card.id)}
             className={cn(
-              "relative overflow-hidden p-4 sm:p-5 rounded-[2rem] border cursor-pointer transition-all duration-300 group select-none",
+              "relative overflow-hidden p-4 sm:p-5 rounded-[2rem] border cursor-pointer transition-all duration-300 group select-none flex flex-col justify-between h-full min-h-[140px]",
               isActive
                 ? `${card.activeBg} ${card.activeBorder} shadow-md scale-[1.02]`
                 : "bg-white border-gray-100 hover:border-blue-100 dark:bg-slate-900 dark:border-slate-800 dark:hover:border-slate-700 hover:shadow-lg hover:-translate-y-1"
             )}
           >
-            {/* Glow */}
+            {/* Glow Effect */}
             <div className={cn(
                "absolute -top-10 -right-10 w-32 h-32 rounded-full blur-3xl opacity-0 group-hover:opacity-10 transition-opacity pointer-events-none",
                card.glow
             )} />
 
-            <div className="relative z-10 flex flex-col h-full justify-between">
-              
-              {/* Header: Icon & Active Check */}
-              <div className="flex justify-between items-start mb-4">
-                <div className={cn(
-                  "p-2 sm:p-2.5 rounded-2xl transition-colors",
-                  isActive 
-                    ? `${card.iconBg} ${card.activeText}` 
-                    : "bg-gray-50 text-slate-500 group-hover:bg-white group-hover:shadow-sm dark:bg-slate-800 dark:text-slate-400 dark:group-hover:bg-slate-700"
-                )}>
-                  <Icon className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2.5} />
-                </div>
-                
-                {isActive && (
-                   <div className={cn("flex items-center gap-1 text-[10px] font-extrabold px-2 py-1 rounded-full", card.iconBg, card.activeText)}>
-                     <CheckCircle size={10} /> Active
-                   </div>
-                )}
+            {/* Header */}
+            <div className="flex justify-between items-start mb-2">
+              <div className={cn(
+                "p-2 sm:p-2.5 rounded-2xl transition-colors",
+                isActive 
+                  ? `${card.iconBg} ${card.activeText}` 
+                  : "bg-gray-50 text-slate-500 group-hover:bg-white group-hover:shadow-sm dark:bg-slate-800 dark:text-slate-400 dark:group-hover:bg-slate-700"
+              )}>
+                <Icon className="w-5 h-5" strokeWidth={2.5} />
               </div>
               
-              {/* Main Content */}
-              <div>
-                <h4 className={cn("text-2xl sm:text-3xl font-extrabold transition-colors", isActive ? "text-slate-800 dark:text-white" : "text-slate-700 dark:text-slate-200")}>
-                  {currentCount}
-                </h4>
-                <p className={cn("text-xs font-bold mt-1 uppercase tracking-wide truncate", isActive ? card.activeText : "text-slate-500 dark:text-slate-500")}>
-                  {card.label}
-                </p>
-                <p className="text-[10px] text-slate-400 mt-1 font-medium truncate opacity-80">
-                  {card.description}
-                </p>
-              </div>
+              {isActive && (
+                 <div className={cn("flex items-center gap-1 text-[10px] font-extrabold px-2 py-1 rounded-full", card.iconBg, card.activeText)}>
+                   <CheckCircle size={10} />
+                 </div>
+              )}
+            </div>
+            
+            {/* Content */}
+            <div>
+              <h4 className={cn("text-2xl sm:text-3xl font-extrabold transition-colors", isActive ? "text-slate-800 dark:text-white" : "text-slate-700 dark:text-slate-200")}>
+                {currentCount}
+              </h4>
+              <p className={cn("text-xs font-bold mt-1 uppercase tracking-wide truncate", isActive ? card.activeText : "text-slate-500 dark:text-slate-500")}>
+                {card.label}
+              </p>
+              <p className="text-[10px] text-slate-400 mt-0.5 font-medium truncate opacity-80">
+                {card.description}
+              </p>
             </div>
           </div>
         );
