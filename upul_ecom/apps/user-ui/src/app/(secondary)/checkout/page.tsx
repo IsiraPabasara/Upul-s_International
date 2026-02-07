@@ -7,7 +7,7 @@ import * as z from 'zod';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { Loader2, ArrowLeft, AlertCircle, ShoppingCart } from 'lucide-react';
+import { Loader2, ArrowLeft, AlertCircle, ShoppingCart, Home } from 'lucide-react';
 
 import { useCart } from '@/app/hooks/useCart';
 import useUser from '@/app/hooks/useUser';
@@ -44,7 +44,10 @@ export default function CheckoutPage() {
   const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentSelected, setPaymentSelected] = useState(false);
+  
+  // Error States
   const [paymentError, setPaymentError] = useState(false);
+  const [addressError, setAddressError] = useState(false);
 
   const SHIPPING_COST = 450;
 
@@ -75,9 +78,17 @@ export default function CheckoutPage() {
   }, [items, router, isProcessing, pathname]);
 
   const onPlaceOrder = async (data: CheckoutFormValues) => {
+    // 1. Payment Validation
     if (!paymentSelected) {
       setPaymentError(true);
-      toast.error("Please select a payment method to continue");
+      toast.error("Please select a payment method");
+      return;
+    }
+
+    // 2. Address Validation for Logged in Users
+    if (user && !isAddingNewAddress && !selectedAddressId) {
+      setAddressError(true);
+      toast.error("Please select a shipping address");
       return;
     }
     
@@ -91,15 +102,11 @@ export default function CheckoutPage() {
             await queryClient.invalidateQueries({ queryKey: ['user'] });
             setSelectedAddressId(res.data.addresses[res.data.addresses.length - 1].id);
             setIsAddingNewAddress(false);
+            setAddressError(false); // Clear error after adding
             reset();
             setIsProcessing(false);
             return;
           }
-        }
-        if (!selectedAddressId) {
-          toast.error("Please select an address");
-          setIsProcessing(false);
-          return;
         }
         orderPayload = { type: 'USER', userId: user.id, addressId: selectedAddressId, items, email: user.email, paymentMethod: 'COD', shippingFee: SHIPPING_COST };
       } else {
@@ -112,11 +119,18 @@ export default function CheckoutPage() {
     } finally { setIsProcessing(false); }
   };
 
-  // Shared button component to avoid logic duplication
   const PlaceOrderButton = ({ className }: { className?: string }) => (
     <button
       disabled={isProcessing}
-      onClick={(e) => user && !isAddingNewAddress ? onPlaceOrder({} as CheckoutFormValues) : handleSubmit(onPlaceOrder)(e)}
+      onClick={(e) => {
+        // If user is logged in and NOT adding a new address, trigger custom validation
+        if (user && !isAddingNewAddress) {
+            onPlaceOrder({} as CheckoutFormValues);
+        } else {
+            // Otherwise trigger Zod form validation
+            handleSubmit(onPlaceOrder)(e);
+        }
+      }}
       className={`w-full bg-black text-white py-4 md:py-5 rounded-md text-xs md:text-sm font-bold uppercase tracking-[0.2em] hover:bg-gray-800 transition-all disabled:opacity-50 active:scale-[0.98] ${className}`}
     >
       {isProcessing ? <Loader2 className="animate-spin mx-auto" /> : "Place Order"}
@@ -126,10 +140,10 @@ export default function CheckoutPage() {
   if (isUserLoading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen font-sans text-gray-700 bg-white">
+    <div className="flex flex-col lg:flex-row min-h-screen font-sans text-gray-700 bg-white overflow-x-hidden">
       
       {/* MOBILE SUMMARY HEADER */}
-      <div className="lg:hidden bg-[#FAFAFA] p-4 border-b border-gray-200 flex justify-between items-center">
+      <div className="lg:hidden sticky top-0 z-20 bg-[#FAFAFA] p-4 border-b border-gray-200 flex justify-between items-center shadow-sm">
         <div className="flex items-center gap-2 text-black font-bold">
           <ShoppingCart size={18} />
           <span>Order summary</span>
@@ -137,36 +151,11 @@ export default function CheckoutPage() {
         <span className="text-black font-black">LKR {grandTotal.toLocaleString()}</span>
       </div>
 
-      {/* LEFT COLUMN: User Info & Desktop Button */}
+      {/* LEFT COLUMN */}
       <div className="w-full lg:w-[58%] px-4 md:px-12 lg:px-24 py-8 lg:py-16">
         <div className="max-w-xl mx-auto lg:ml-auto lg:mr-0">
           <Link href="/" className="text-2xl md:text-3xl font-black tracking-tighter text-black uppercase block mb-6 md:mb-10">
-            <div className="flex flex-col leading-none">
-                <div className="inline-flex items-end justify-center lg:justify-start">
-                  {/* Bigger & wider U */}
-                  <span className="text-4xl md:text-5xl font-serif font-bold text-[#1a1a3a] tracking-tight leading-none mr-0.5">
-                    U
-                  </span>
-
-                  {/* Lines + PUL'S */}
-                  <div className="flex flex-col ml-1 mb-1 md:mb-2">
-                    {/* Decorative lines */}
-                    <div className="mb-0.5">
-                      <div className="h-[2px] w-8 bg-black mb-1"></div>
-                      <div className="h-[2px] w-5 bg-black"></div>
-                    </div>
-
-                    {/* PUL'S aligned with U bottom */}
-                    <span className="text-red-600 text-sm font-serif font-bold tracking-tighter leading-none">
-                      PUL&apos;S
-                    </span>
-                  </div>
-                </div>
-
-                <span className="text-[7px] md:text-[8px] tracking-[0.3em] ml-3 lg:ml-0 font-bold text-[#1a1a3a] border-t border-gray-200 pt-0.5 md:pt-1 uppercase text-center lg:text-left">
-                  International
-                </span>
-              </div>
+            <h1 className="text-3xl font-black tracking-tighter uppercase">Checkout<span className="text-blue-600">.</span></h1>
           </Link>
 
           <Link href="/shop" className="flex items-center gap-2 text-xs md:text-sm text-gray-500 hover:text-black mb-6 md:mb-8 transition-colors uppercase tracking-widest font-bold">
@@ -182,8 +171,13 @@ export default function CheckoutPage() {
                 {user.addresses?.map((addr: any) => (
                   <div 
                     key={addr.id} 
-                    onClick={() => setSelectedAddressId(addr.id)}
-                    className={`p-4 border-2 rounded-lg cursor-pointer transition-all flex items-center gap-4 ${selectedAddressId === addr.id ? 'border-black bg-gray-50' : 'border-gray-100 hover:border-gray-300'}`}
+                    onClick={() => {
+                        setSelectedAddressId(addr.id);
+                        setAddressError(false); // Clear error on selection
+                    }}
+                    className={`p-4 border-2 rounded-lg cursor-pointer transition-all flex items-center gap-4 
+                        ${selectedAddressId === addr.id ? 'border-black bg-gray-50' : 
+                          addressError ? 'border-red-300 bg-red-50' : 'border-gray-100 hover:border-gray-300'}`}
                   >
                     <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${selectedAddressId === addr.id ? 'border-black' : 'border-gray-300'}`}>
                       {selectedAddressId === addr.id && <div className="w-2 h-2 bg-black rounded-full" />}
@@ -194,7 +188,14 @@ export default function CheckoutPage() {
                     </div>
                   </div>
                 ))}
-                <button onClick={() => setIsAddingNewAddress(true)} className="text-xs md:text-sm font-bold text-black underline flex items-center gap-1 mt-4 uppercase tracking-tighter">
+
+                {addressError && (
+                  <p className="text-red-500 text-[10px] font-bold mt-2 flex items-center gap-1 uppercase tracking-tighter">
+                    <AlertCircle size={12} /> Please select an address to continue
+                  </p>
+                )}
+
+                <button onClick={() => { setIsAddingNewAddress(true); setAddressError(false); }} className="text-xs md:text-sm font-bold text-black underline flex items-center gap-1 mt-4 uppercase tracking-tighter">
                   + Use a different address
                 </button>
               </div>
@@ -257,17 +258,15 @@ export default function CheckoutPage() {
             )}
           </section>
 
-          {/* Desktop Only Button */}
           <PlaceOrderButton className="hidden lg:block" />
         </div>
       </div>
 
-      {/* RIGHT COLUMN: Order Summary & Mobile Button */}
-      <div className="w-full lg:w-[42%] bg-[#FAFAFA] border-t lg:border-t-0 lg:border-l border-gray-200 px-4 md:px-12 lg:px-16 py-8 lg:py-16">
+      {/* RIGHT COLUMN: Order Summary */}
+      <div className="w-full lg:w-[42%] bg-[#FAFAFA] border-t lg:border-t-0 lg:border-l border-gray-200 px-4 md:px-12 lg:px-16 py-8 lg:py-16 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto">
         <div className="max-w-md mx-auto lg:mx-0">
           
-          {/* Scrollable Container with item-padding fix */}
-          <div className="space-y-6 mb-8 md:mb-10 max-h-[420px] overflow-y-auto pr-2 py-2">
+          <div className="space-y-6 mb-8 md:mb-10">
             {items.map((item) => (
               <div key={item.sku} className="flex gap-4 items-center">
                 <div className="relative p-1 shrink-0">
@@ -302,13 +301,6 @@ export default function CheckoutPage() {
               <span className="font-bold text-black tracking-tighter">LKR {subtotal.toLocaleString()}</span>
             </div>
             
-            {totalDiscount > 0 && (
-              <div className="flex justify-between text-xs md:text-sm text-green-600 font-bold uppercase tracking-tighter">
-                <span>Total Savings</span>
-                <span>- LKR {totalDiscount.toLocaleString()}</span>
-              </div>
-            )}
-
             <div className="flex justify-between text-xs md:text-sm">
               <span className="text-gray-500">Shipping</span>
               <span className="text-black font-bold tracking-tighter">LKR {SHIPPING_COST.toLocaleString()}</span>
@@ -325,7 +317,6 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          {/* Mobile Only Button */}
           <PlaceOrderButton className="lg:hidden mt-7" />
         </div>
       </div>

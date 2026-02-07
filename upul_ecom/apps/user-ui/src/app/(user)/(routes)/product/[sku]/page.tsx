@@ -445,42 +445,41 @@ export default function ProductPage() {
           {/* Actions */}
           <div className="flex flex-col gap-4 pt-4">
             
-            {/* Quantity Row */}
-            <div className="flex items-center gap-4">
-                <span className="text-sm font-bold uppercase tracking-wide text-gray-900">Quantity</span>
-                <div className={`flex items-center border border-gray-200 rounded-lg w-fit ${(remainingStock === 0 && (!hasVariants || selectedSize)) ? 'opacity-50 pointer-events-none' : ''}`}>
-                    <button onClick={handleDecreaseQty} disabled={quantity <= 1} className="p-3 hover:bg-gray-50 disabled:opacity-30">
+            {/* Row 1: Quantity + Add to Cart */}
+            <div className="flex items-center gap-3 h-14">
+                {/* Quantity Selector */}
+                <div className={`flex items-center border border-gray-200 rounded-lg h-full ${(remainingStock === 0 && (!hasVariants || selectedSize)) ? 'opacity-50 pointer-events-none' : ''}`}>
+                    <button onClick={handleDecreaseQty} disabled={quantity <= 1} className="p-4 hover:bg-gray-50 disabled:opacity-30 h-full flex items-center">
                         <Minus size={16} />
                     </button>
-                    <span className="w-8 text-center font-medium text-sm">{quantity}</span>
-                    <button onClick={handleIncreaseQty} disabled={quantity >= remainingStock} className="p-3 hover:bg-gray-50 disabled:opacity-30">
+                    <span className="w-8 text-center font-bold text-sm">{quantity}</span>
+                    <button onClick={handleIncreaseQty} disabled={quantity >= remainingStock} className="p-4 hover:bg-gray-50 disabled:opacity-30 h-full flex items-center">
                         <Plus size={16} />
                     </button>
                 </div>
-            </div>
 
-            {/* Buttons Row */}
-            <div className="flex gap-3 h-14 mt-2">
+                {/* Add to Cart Button */}
                 <button 
                     onClick={handleAddToCart}
                     disabled={!canAddToCart || isBuyingNow}
-                    className="flex-1 border-2 border-black text-black bg-white rounded-lg font-bold uppercase tracking-widest text-xs md:text-sm flex items-center justify-center gap-2 hover:bg-gray-50 disabled:border-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-all"
+                    className="flex-1 h-full border-2 border-black text-black bg-white rounded-lg font-bold uppercase tracking-widest text-xs md:text-sm flex items-center justify-center gap-2 hover:bg-gray-50 disabled:border-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-all"
                 >
                     <ShoppingBag size={18} /> Add to Cart
                 </button>
-
-                <button 
-                    onClick={handleBuyNow}
-                    disabled={!canAddToCart || isBuyingNow}
-                    className="flex-1 bg-black text-white rounded-lg font-bold uppercase tracking-widest text-xs md:text-sm flex items-center justify-center gap-2 hover:bg-gray-900 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all shadow-xl shadow-gray-200"
-                >
-                    {isBuyingNow ? (
-                        <><Loader2 size={18} className="animate-spin" /> Processing...</>
-                    ) : (
-                        <><Zap size={18} fill="currentColor" /> Buy Now</>
-                    )}
-                </button>
             </div>
+
+            {/* Row 2: Full Width Buy Now */}
+            <button 
+                onClick={handleBuyNow}
+                disabled={!canAddToCart || isBuyingNow}
+                className="w-full h-16 bg-black text-white rounded-lg font-bold uppercase tracking-widest text-xs md:text-sm flex items-center justify-center gap-2 hover:bg-gray-900 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all shadow-xl shadow-gray-200"
+            >
+                {isBuyingNow ? (
+                    <><Loader2 size={18} className="animate-spin" /> Processing...</>
+                ) : (
+                    <><Zap size={18} fill="currentColor" /> Buy Now</>
+                )}
+            </button>
           </div>
 
           {/* Details Accordion */}
