@@ -39,18 +39,6 @@ const CategoryItem = ({ category, currentSlug }: { category: any; currentSlug: s
 
   const [isOpen, setIsOpen] = useState(isActive || hasActiveChild);
   const hasChildren = category.children && category.children.length > 0;
-  useEffect(() => {
-    // Only apply to mobile (since desktop sidebar isn't an overlay)
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen]);
 
   useEffect(() => {
     if (isActive || hasActiveChild) {
@@ -118,6 +106,7 @@ export default function FilterSidebar({ isOpen = false, onClose }: FilterSidebar
   const currentCategory = searchParams.get('category');
   const currentBrand = searchParams.get('brand');
   const currentAvailability = searchParams.get('availability');
+  const isNewArrival = searchParams.get('isNewArrival') === 'true';
 
   const [minPrice, setMinPrice] = useState(Number(searchParams.get('minPrice')) || MIN_LIMIT);
   const [maxPrice, setMaxPrice] = useState(Number(searchParams.get('maxPrice')) || MAX_LIMIT);
@@ -175,13 +164,23 @@ export default function FilterSidebar({ isOpen = false, onClose }: FilterSidebar
     if (val >= minPrice) setMaxPrice(val);
   };
 
-  // Availability Toggle Handler
   const toggleAvailability = (value: string) => {
     const params = new URLSearchParams(searchParams.toString());
     if (currentAvailability === value) {
       params.delete('availability');
     } else {
       params.set('availability', value);
+    }
+    router.push(`/shop?${params.toString()}`);
+  };
+
+  const toggleNewArrival = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (isNewArrival) {
+      params.delete('isNewArrival');
+    } else {
+      params.set('isNewArrival', 'true');
+      params.delete('category'); 
     }
     router.push(`/shop?${params.toString()}`);
   };
@@ -198,29 +197,42 @@ export default function FilterSidebar({ isOpen = false, onClose }: FilterSidebar
         </button>
       </div>
 
+      {/* 1. Collection Section */}
       <div className='font-outfit'>
-        <h3 className="text-xs font-extrabold uppercase tracking-widest text-gray-900 mb-4">Categories</h3>
+        <h3 className="text-xs font-extrabold uppercase tracking-widest text-gray-900 mb-4">Collection</h3>
         <div className="space-y-1">
           <div
             onClick={() => router.push('/shop')}
             className={`pl-3 border-l ml-1 py-1 cursor-pointer text-sm hover:text-black transition-all ${
-              !currentCategory ? 'font-bold border-black text-black' : 'border-transparent text-gray-400'
+              !currentCategory && !isNewArrival ? 'font-bold border-black text-black' : 'border-transparent text-gray-400'
             }`}
           >
             All Products
           </div>
-          {categoryTree.map((cat: any) => (
-            <CategoryItem key={cat.id} category={cat} currentSlug={currentCategory} />
-          ))}
+          <div
+            onClick={toggleNewArrival}
+            className={`pl-3 border-l ml-1 py-1 cursor-pointer text-sm hover:text-black transition-all ${
+              isNewArrival ? 'font-bold border-black text-black' : 'border-transparent text-gray-400'
+            }`}
+          >
+            New Arrivals
+          </div>
         </div>
       </div>
 
-      
+      {/* 2. Separate Categories Section */}
+      <div className='font-outfit'>
+        <h3 className="text-xs font-extrabold uppercase tracking-widest text-gray-900 mb-4">Categories</h3>
+        <div className="space-y-1">
+           {categoryTree.map((cat: any) => (
+              <CategoryItem key={cat.id} category={cat} currentSlug={currentCategory} />
+            ))}
+        </div>
+      </div>
 
       {/* PRICE RANGE SLIDER + INPUTS */}
       <div>
         <h3 className="text-xs font-extrabold uppercase tracking-widest text-gray-900 mb-8 font-outfit">Price Range</h3>
-        
         <div className="px-2">
           <div className="relative h-1 w-full bg-gray-100 rounded-full mb-8">
             <div 
@@ -310,7 +322,6 @@ export default function FilterSidebar({ isOpen = false, onClose }: FilterSidebar
         </div>
       </div>
 
-      {/* AVAILABILITY SECTION */}
       <div>
         <h3 className="text-xs font-extrabold uppercase tracking-widest text-gray-900 mb-4 font-outfit">Availability</h3>
         <div className="space-y-2 text-gray-500 md:pb-10">
@@ -340,7 +351,6 @@ export default function FilterSidebar({ isOpen = false, onClose }: FilterSidebar
       </div>
 
       <style jsx global>{`
-        /* Remove arrows from number inputs */
         input::-webkit-outer-spin-button,
         input::-webkit-inner-spin-button {
           -webkit-appearance: none;
@@ -349,7 +359,6 @@ export default function FilterSidebar({ isOpen = false, onClose }: FilterSidebar
         input[type=number] {
           -moz-appearance: textfield;
         }
-
         .slider-thumb::-webkit-slider-thumb {
           appearance: none;
           pointer-events: auto;
