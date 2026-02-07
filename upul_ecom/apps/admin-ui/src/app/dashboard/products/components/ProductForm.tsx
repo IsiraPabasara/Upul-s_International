@@ -3,24 +3,33 @@
 import { useState, useEffect } from "react";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
 import ParentSelector from "./../category/components/ParentSelector";
+// 👇 IMPORT THE REFINED BRAND SELECTOR
 import BrandSelector from "./../brand/components/BrandSelector";
 import ImageUploader from "./../../products/imagekit/components/ImageUploader";
 import StockManager from "./../stockmanager/components/StockManager";
 import ColorSelector from "./../colorselector/ColorSelector";
 import { uploadImageToKit } from "./../imagekit/utils/uploadService";
-import { Loader2, Eye, EyeOff } from "lucide-react";
+import {
+  Loader2,
+  Eye,
+  EyeOff,
+  Tag,
+  Image as ImageIcon,
+  Box,
+  Layers,
+  DollarSign,
+  X,
+} from "lucide-react";
 
-// --- TYPES ---
+// ... [TYPES and INITIAL_DATA remain exactly the same] ...
 interface ProductImage {
   fileId: string;
   url: string;
 }
-
 interface Variant {
   size: string;
   stock: number;
 }
-
 export interface ProductFormValues {
   name: string;
   sku?: string;
@@ -29,7 +38,6 @@ export interface ProductFormValues {
   stock: number;
   brand: string;
   categoryId: string;
-  category?: { name: string; id: string };
   sizeType: string;
   variants: Variant[];
   colors: string[];
@@ -41,7 +49,7 @@ export interface ProductFormValues {
 }
 
 interface Props {
-  initialData?: ProductFormValues; // If passed, we are in EDIT mode
+  initialData?: ProductFormValues;
   onSubmit: (data: ProductFormValues) => Promise<void>;
   isLoading: boolean;
 }
@@ -60,7 +68,7 @@ const INITIAL_DATA: ProductFormValues = {
   isNewArrival: true,
   discountType: "NONE",
   discountValue: 0,
-  visible: false,
+  visible: true,
 };
 
 export default function ProductForm({
@@ -73,7 +81,6 @@ export default function ProductForm({
   const [selectedRawFiles, setSelectedRawFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [hasVariants, setHasVariants] = useState(false);
-
   const MAX_IMAGES = 5;
 
   const {
@@ -88,33 +95,31 @@ export default function ProductForm({
     defaultValues: INITIAL_DATA,
   });
 
-  // --- HYDRATION (Load Data) ---
-  useEffect(() => {
-    if (initialData) {
-      reset(initialData);
-      // 2. Handle the "Has Variants" toggle
-      if (initialData.variants && initialData.variants.length > 0) {
-        setHasVariants(true);
-      }
-
-      // 3. Ensure visible field is set properly
-      if (initialData.visible !== undefined) {
-        setValue("visible", initialData.visible);
-      }
-
-      // 4. Debugging: Check if data is actually here
-      console.log("Loaded Data:", initialData);
-    }
-  }, [initialData, reset]);
-
   // Watchers
+  const watchedName = watch("name");
   const watchedColors = watch("colors");
   const watchedPrice = watch("price");
   const watchedDiscountType = watch("discountType");
   const watchedDiscountValue = watch("discountValue");
   const currentImages = watch("images") || [];
 
-  // Logic: Discount Preview
+  // 🧠 LOGIC: NAME PREVIEW (Single Color)
+  const primaryColor = watchedColors?.[0] || "";
+  const namePreview =
+    primaryColor &&
+    !watchedName?.toLowerCase().includes(primaryColor.toLowerCase())
+      ? `${watchedName} ${primaryColor}`
+      : watchedName;
+
+  useEffect(() => {
+    if (initialData) {
+      reset(initialData);
+      if (initialData.variants?.length > 0) setHasVariants(true);
+      if (initialData.visible !== undefined)
+        setValue("visible", initialData.visible);
+    }
+  }, [initialData, reset, setValue]);
+
   const getDiscountedPrice = () => {
     const price = Number(watchedPrice) || 0;
     const val = Number(watchedDiscountValue) || 0;
@@ -124,21 +129,19 @@ export default function ProductForm({
     return price;
   };
 
-  // Logic: Form Submit
   const onFormSubmit: SubmitHandler<ProductFormValues> = async (data) => {
+    // ... [Validation Logic Remains Same] ...
     if (!data.categoryId) {
       alert("Please select a category");
       return;
     }
-
     const totalImages = currentImages.length + selectedRawFiles.length;
     if (totalImages > MAX_IMAGES) {
-      alert(`You can only have a maximum of ${MAX_IMAGES} images.`);
+      alert(`Max ${MAX_IMAGES} images allowed.`);
       return;
     }
-
     if (hasVariants && data.variants.length === 0) {
-      alert("Please add at least one size variant.");
+      alert("Add size variants.");
       return;
     }
     if (!hasVariants && Number(data.stock) < 0) {
@@ -149,7 +152,7 @@ export default function ProductForm({
     try {
       setIsUploading(true);
 
-      // 1. Upload NEW images
+      // 1. Upload Images
       let newUploadedImages: ProductImage[] = [];
       if (selectedRawFiles.length > 0) {
         const uploadPromises = selectedRawFiles.map((file) =>
@@ -157,13 +160,21 @@ export default function ProductForm({
         );
         newUploadedImages = await Promise.all(uploadPromises);
       }
-
-      // 2. Combine OLD images + NEW images
       const finalImages = [...currentImages, ...newUploadedImages];
 
-      // 3. Prepare Payload
+      // 2. Prepare Payload
       const cleanData = { ...data };
       cleanData.images = finalImages;
+
+      // 🧠 LOGIC: Append Color to Name
+      if (cleanData.colors?.length > 0) {
+        const colorToAppend = cleanData.colors[0];
+        if (
+          !cleanData.name.toLowerCase().includes(colorToAppend.toLowerCase())
+        ) {
+          cleanData.name = `${cleanData.name} ${colorToAppend}`.trim();
+        }
+      }
 
       if (hasVariants) {
         cleanData.stock = cleanData.variants.reduce(
@@ -175,8 +186,6 @@ export default function ProductForm({
         cleanData.sizeType = "One Size";
         cleanData.stock = Number(data.stock) || 0;
       }
-
-      console.log("Submitting Payload:", cleanData);
 
       await onSubmit(cleanData);
     } catch (error) {
@@ -196,376 +205,461 @@ export default function ProductForm({
   return (
     <form
       onSubmit={handleSubmit(onFormSubmit)}
-      className="bg-white p-6 rounded-xl shadow-sm space-y-8"
+      className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-20"
     >
-      {/* 1. BASIC DETAILS */}
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-gray-700 border-b pb-2">
-          Basic Details
-        </h2>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="label">Product Name</label>
-            <input
-              type="text"
-              className="input-field"
-              {...register("name", { required: true })}
-            />
-          </div>
-          <div>
-            <label className="label">SKU</label>
-            <input
-              type="text"
-              {...register("sku")}
-              className={`input-field ${isEditMode ? "bg-gray-100 text-gray-500" : ""}`}
-              readOnly={isEditMode}
-              placeholder={isEditMode ? "" : "Auto-generated"}
-              disabled={!isEditMode}
-            />
-          </div>
-        </div>
+      {/* LEFT COLUMN */}
+      <div className="lg:col-span-2 space-y-6">
+        {/* --- 1. GENERAL INFORMATION (Refined UI) --- */}
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+            <Tag size={20} className="text-blue-600" /> General Information
+          </h2>
 
-        <div className="pt-2">
-          <Controller
-            name="colors"
-            control={control}
-            render={({ field }) => (
-              <ColorSelector
-                key={`color-${resetKey}`}
-                selectedColor={field.value?.[0] || ""}
-                onChange={(colorName) =>
-                  field.onChange(colorName ? [colorName] : [])
-                }
+          <div className="space-y-6">
+            {/* Name Input */}
+            <div>
+              <label className="label">Product Name</label>
+              <input
+                type="text"
+                className="input-field"
+                placeholder="e.g. Cotton Night Dress"
+                {...register("name", { required: true })}
               />
+              {/* Dynamic Name Preview */}
+              {primaryColor && watchedName && (
+                <div className="mt-2 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 rounded-lg flex items-center gap-2 animate-in fade-in">
+                  <span className="bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded uppercase tracking-wider">
+                    Auto-Preview
+                  </span>
+                  <span>
+                    Final Name: <strong>{namePreview}</strong>
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="label">Description</label>
+              <textarea
+                {...register("description")}
+                rows={4}
+                className="input-field resize-none leading-relaxed min-h-[120px]"
+                placeholder="Write a compelling description for your product..."
+              />
+            </div>
+
+            {/* SKU & Brand Grid - Perfectly Aligned */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+              
+              {/* SKU - System Generated (Always Locked) */}
+              <div className="w-full">
+                <label className="label flex justify-between items-center">
+                  SKU
+                  <span className="text-[10px] uppercase font-bold text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-full">
+                    Auto-Generated
+                  </span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    {...register("sku")}
+                    disabled={true} // 🔒 FORCE DISABLED ALWAYS
+                    className="input-field h-[46px] bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-500 cursor-not-allowed italic border-dashed"
+                    placeholder="System will generate this..."
+                  />
+                  {/* Lock Icon Overlay */}
+                  <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-gray-400">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <rect
+                        x="3"
+                        y="11"
+                        width="18"
+                        height="11"
+                        rx="2"
+                        ry="2"
+                      ></rect>
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              {/* Brand Selector Column */}
+              <div className="w-full">
+                <label className="label">Brand</label>
+                <Controller
+                  name="brand"
+                  control={control}
+                  render={({ field }) => (
+                    <BrandSelector
+                      selectedBrand={field.value}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* --- 2. COLORS & SIZE --- */}
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <Layers size={20} className="text-purple-600" /> Color & Size
+            </h2>
+            {/* Toggle Logic */}
+            <label className="flex items-center gap-2 cursor-pointer bg-gray-50 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-gray-100 dark:border-slate-700 transition hover:bg-gray-100 dark:hover:bg-slate-700">
+              <input
+                type="checkbox"
+                checked={hasVariants}
+                onChange={(e) => setHasVariants(e.target.checked)}
+                className="w-4 h-4 accent-purple-600 rounded cursor-pointer"
+              />
+              <span className="text-sm font-medium text-gray-700 dark:text-slate-300 select-none">
+                Has Sizes?
+              </span>
+            </label>
+          </div>
+
+          <div className="space-y-6">
+            {/* Single Color Logic */}
+            <div className="p-5 bg-gray-50 dark:bg-slate-800/50 rounded-2xl border border-gray-100 dark:border-slate-800">
+              <label className="label mb-3 block">
+                Primary Color <span className="text-red-500">*</span>
+              </label>
+              <Controller
+                name="colors"
+                control={control}
+                render={({ field }) => (
+                  <ColorSelector
+                    key={`color-${resetKey}`}
+                    selectedColor={field.value?.[0] || ""}
+                    onChange={(colorName) =>
+                      // Enforce Single Color Array
+                      field.onChange(colorName ? [colorName] : [])
+                    }
+                  />
+                )}
+              />
+            </div>
+
+            <hr className="border-gray-100 dark:border-slate-800" />
+
+            {/* Stock Logic */}
+            {hasVariants ? (
+              <StockManager
+                key={`stock-${resetKey}`}
+                initialVariants={initialData?.variants}
+                initialSizeType={initialData?.sizeType}
+                onUpdate={(data) => {
+                  setValue("sizeType", data.sizeType);
+                  setValue("variants", data.variants);
+                }}
+              />
+            ) : (
+              <div>
+                <label className="label">Stock Quantity</label>
+                <input
+                  type="number"
+                  className="input-field w-40 font-mono text-lg"
+                  {...register("stock", {
+                    required: !hasVariants,
+                    min: 0,
+                    valueAsNumber: true,
+                  })}
+                />
+              </div>
             )}
-          />
+          </div>
         </div>
 
-        <div>
-          <label className="label">Description</label>
-          <textarea
-            {...register("description")}
-            rows={3}
-            className="input-field"
-          />
+        {/* --- 3. PRICING --- */}
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+            <DollarSign size={20} className="text-emerald-600" /> Pricing
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="label">Base Price (LKR)</label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">
+                  Rs.
+                </span>
+                <input
+                  type="number"
+                  {...register("price", { required: true })}
+                  className="input-field pl-12 font-bold text-lg text-gray-900 dark:text-white"
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+
+            <div className="bg-emerald-50 dark:bg-emerald-900/10 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
+              <div className="flex gap-3 mb-3">
+                <div className="w-1/2">
+                  <label className="label text-emerald-800 dark:text-emerald-400 text-xs uppercase tracking-wide">
+                    Discount
+                  </label>
+                  <select
+                    {...register("discountType")}
+                    className="input-field text-sm py-2"
+                  >
+                    <option value="NONE">None</option>
+                    <option value="PERCENTAGE">% Off</option>
+                    <option value="FIXED">Fixed Amount</option>
+                  </select>
+                </div>
+                {watchedDiscountType !== "NONE" && (
+                  <div className="w-1/2">
+                    <label className="label text-emerald-800 dark:text-emerald-400 text-xs uppercase tracking-wide">
+                      Value
+                    </label>
+                    <input
+                      type="number"
+                      {...register("discountValue")}
+                      className="input-field text-sm py-2"
+                      placeholder={
+                        watchedDiscountType === "PERCENTAGE" ? "10" : "500"
+                      }
+                    />
+                  </div>
+                )}
+              </div>
+
+              {watchedDiscountType !== "NONE" && (
+                <div className="flex justify-between items-center pt-3 border-t border-emerald-200 dark:border-emerald-800/50">
+                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                    Customer Price:
+                  </span>
+                  <span className="text-lg font-bold text-emerald-700 dark:text-emerald-300">
+                    Rs. {getDiscountedPrice().toLocaleString()}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
+      </div>
 
-        {/* MEDIA SECTION */}
-        {/* MEDIA SECTION */}
-        <div className="space-y-4">
-          <div className="flex justify-between items-center border-b pb-2">
-             <h2 className="text-xl font-semibold text-gray-700">Media</h2>
-             <span className={`text-xs font-medium ${currentImages.length + selectedRawFiles.length >= MAX_IMAGES ? 'text-red-500' : 'text-gray-400'}`}>
-               {currentImages.length + selectedRawFiles.length} / {MAX_IMAGES} images
-             </span>
+      {/* RIGHT COLUMN */}
+      <div className="space-y-6">
+        {/* --- 4. IMAGES --- */}
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <ImageIcon size={20} className="text-orange-500" /> Media
+            </h2>
+            <span
+              className={`text-xs font-bold px-2 py-1 rounded-md ${currentImages.length + selectedRawFiles.length >= MAX_IMAGES ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-slate-400"}`}
+            >
+              {currentImages.length + selectedRawFiles.length}/{MAX_IMAGES}
+            </span>
           </div>
 
-          {/* 1. PREVIEW GRID (Combined Old + New) */}
-          <div className="grid grid-cols-5 gap-4 mb-4">
-             
-             {/* A. EXISTING IMAGES (From DB) */}
-             {currentImages.map((img, idx) => (
-                <div key={`old-${idx}`} className="relative group border rounded-lg overflow-hidden aspect-square bg-gray-50 h-10">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img.url} alt="product" className="object-cover w-full h-full" />
-                  <button
-                    type="button"
-                    onClick={() => removeExistingImage(idx)}
-                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-sm"
-                  >
-                    ✕
-                  </button>
-                  <span className="absolute bottom-0 left-0 bg-black/50 text-white text-[10px] px-1 w-full text-center">Saved</span>
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            {currentImages.map((img, idx) => (
+              <div
+                key={`old-${idx}`}
+                className="relative aspect-square rounded-xl overflow-hidden border border-gray-200 dark:border-slate-700 group"
+              >
+                <img
+                  src={img.url}
+                  alt=""
+                  className="w-full h-full object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeExistingImage(idx)}
+                  className="absolute top-1 right-1 bg-white text-red-500 rounded-full p-1 shadow-sm opacity-0 group-hover:opacity-100 transition hover:bg-red-50"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+            {selectedRawFiles.map((file, idx) => (
+              <div
+                key={`new-${idx}`}
+                className="relative aspect-square rounded-xl overflow-hidden border-2 border-blue-100 dark:border-blue-900 group"
+              >
+                <img
+                  src={URL.createObjectURL(file)}
+                  alt=""
+                  className="w-full h-full object-cover opacity-90"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updated = [...selectedRawFiles];
+                    updated.splice(idx, 1);
+                    setSelectedRawFiles(updated);
+                  }}
+                  className="absolute top-1 right-1 bg-white text-red-500 rounded-full p-1 shadow-sm opacity-0 group-hover:opacity-100 transition hover:bg-red-50"
+                >
+                  <X size={12} />
+                </button>
+                <div className="absolute bottom-0 w-full bg-blue-500 text-white text-[9px] font-bold text-center py-0.5">
+                  NEW
                 </div>
-             ))}
-
-             {/* B. NEW IMAGES (Staged for Upload) */}
-             {selectedRawFiles.map((file, idx) => (
-                <div key={`new-${idx}`} className="relative group border-2 border-dashed border-blue-200 rounded-lg overflow-hidden aspect-square bg-blue-50">
-                  {/* Create a temporary URL for preview */}
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={URL.createObjectURL(file)} alt="preview" className="object-cover w-full h-full opacity-90" />
-                  <button
-                    type="button"
-                    onClick={() => {
-                       // Remove from NEW array
-                       const updated = [...selectedRawFiles];
-                       updated.splice(idx, 1);
-                       setSelectedRawFiles(updated);
-                    }}
-                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-sm"
-                  >
-                    ✕
-                  </button>
-                  <span className="absolute bottom-0 left-0 bg-blue-600 text-white text-[10px] px-1 w-full text-center">New</span>
-                </div>
-             ))}
+              </div>
+            ))}
           </div>
 
-          {/* 2. UPLOADER (Conditionally Hidden) */}
           {currentImages.length + selectedRawFiles.length < MAX_IMAGES ? (
-             <ImageUploader 
-               key={`uploader-${resetKey}`} // 👈 FORCE RESET after every drop
-               onFilesSelected={(incomingFiles) => {
-                  // A. Calculate strictly how many slots are left
-                  const currentTotal = currentImages.length + selectedRawFiles.length;
-                  const slotsLeft = MAX_IMAGES - currentTotal;
-                  
-                  if (slotsLeft <= 0) {
-                     alert("Maximum image limit reached!");
-                     setResetKey(prev => prev + 1); // Reset uploader to clear selection
-                     return;
-                  }
-
-                  // B. Slice the incoming files if they exceed slots
-                  let filesToAdd = incomingFiles;
-                  if (incomingFiles.length > slotsLeft) {
-                     alert(`Limit reached! Only adding the first ${slotsLeft} images.`);
-                     filesToAdd = incomingFiles.slice(0, slotsLeft);
-                  }
-
-                  // C. Append to our Master List
-                  setSelectedRawFiles(prev => [...prev, ...filesToAdd]);
-                  
-                  // D. Reset the Uploader Component (so it's ready for next batch)
-                  setResetKey(prev => prev + 1);
-               }} 
-             />
+            <ImageUploader
+              key={`uploader-${resetKey}`}
+              onFilesSelected={(incomingFiles) => {
+                const currentTotal =
+                  currentImages.length + selectedRawFiles.length;
+                const slotsLeft = MAX_IMAGES - currentTotal;
+                if (slotsLeft <= 0) return alert("Limit reached");
+                setSelectedRawFiles((prev) => [
+                  ...prev,
+                  ...incomingFiles.slice(0, slotsLeft),
+                ]);
+                setResetKey((p) => p + 1);
+              }}
+            />
           ) : (
-            <div className="p-4 bg-gray-100 rounded-lg text-center text-xs text-gray-500 border border-dashed border-gray-300">
-               Maximum of {MAX_IMAGES} images reached. Remove some to add more.
+            <div className="text-center p-3 bg-gray-50 dark:bg-slate-800 rounded-xl text-xs text-gray-500">
+              Max images reached.
             </div>
           )}
         </div>
-      </div>
-      {/* 2. MARKETING & PRICING */}
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-gray-700 border-b pb-2">
-          Marketing & Pricing
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <div>
-              <label className="label">Original Price (LKR)</label>
-              <input
-                type="number"
-                {...register("price", { required: true })}
-                className="input-field font-bold text-lg"
-              />
-            </div>
+
+        {/* --- 5. CATEGORY --- */}
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <Box size={20} className="text-pink-500" /> Category
+          </h2>
+          <div className="bg-gray-50 dark:bg-slate-800 p-3 rounded-xl border border-gray-100 dark:border-slate-700">
             <Controller
-              name="brand"
+              name="categoryId"
               control={control}
               render={({ field }) => (
-                <BrandSelector
-                  key={`brand-${resetKey}`}
-                  selectedBrand={field.value}
-                  onChange={field.onChange}
+                <ParentSelector
+                  key={`cat-${resetKey}`}
+                  refreshTrigger={0}
+                  initialCategoryId={initialData?.categoryId}
+                  onSelectionChange={(id) => field.onChange(id || "")}
                 />
               )}
             />
           </div>
+        </div>
 
-          <div className="bg-orange-50 p-4 rounded-lg border border-orange-100 space-y-4">
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                {...register("isNewArrival")}
-                className="w-5 h-5 accent-black"
-              />
-              <label className="font-medium text-gray-700">
-                Mark as New Arrival
-              </label>
-            </div>
-            <hr className="border-orange-200" />
-            <div>
-              <label className="label text-orange-800">Discount Offer</label>
-              <div className="flex gap-2">
-                <select
-                  {...register("discountType")}
-                  className="p-2 border rounded bg-white w-1/2 text-sm"
-                >
-                  <option value="NONE">No Offer</option>
-                  <option value="PERCENTAGE">Percentage (%)</option>
-                  <option value="FIXED">Fixed Amount (LKR)</option>
-                </select>
-                {watchedDiscountType !== "NONE" && (
-                  <input
-                    type="number"
-                    {...register("discountValue")}
-                    placeholder="Value"
-                    className="p-2 border rounded w-1/2 text-sm"
-                  />
-                )}
+        {/* --- 6. ACTIONS --- */}
+        <div className="sticky top-6 space-y-4">
+          {isEditMode && (
+            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800">
+              <label className="label mb-2">Visibility</label>
+              <div className="flex bg-gray-100 dark:bg-slate-800 p-1 rounded-xl">
+                <Controller
+                  name="visible"
+                  control={control}
+                  defaultValue={initialData?.visible ?? true}
+                  render={({ field }) => (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => field.onChange(true)}
+                        className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${field.value ? "bg-white dark:bg-slate-700 text-green-600 shadow-sm" : "text-gray-500 dark:text-slate-400 hover:text-gray-900"}`}
+                      >
+                        <div className="flex items-center justify-center gap-1.5">
+                          <Eye size={14} /> Live
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => field.onChange(false)}
+                        className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${!field.value ? "bg-white dark:bg-slate-700 text-amber-600 shadow-sm" : "text-gray-500 dark:text-slate-400 hover:text-gray-900"}`}
+                      >
+                        <div className="flex items-center justify-center gap-1.5">
+                          <EyeOff size={14} /> Draft
+                        </div>
+                      </button>
+                    </>
+                  )}
+                />
               </div>
             </div>
-            {watchedDiscountType !== "NONE" && Number(watchedPrice) > 0 && (
-              <div className="bg-white p-2 rounded border border-orange-200 text-sm text-center">
-                <span className="text-gray-400 line-through mr-2">
-                  Rs. {watchedPrice}
-                </span>
-                <span className="font-bold text-green-600">
-                  Now Rs. {getDiscountedPrice().toFixed(2)}
-                </span>
-              </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={isLoading || isUploading}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-bold text-sm transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 flex justify-center items-center gap-2"
+          >
+            {(isUploading || isLoading) && (
+              <Loader2 className="animate-spin" size={18} />
             )}
-          </div>
+            {isUploading
+              ? "Uploading..."
+              : isLoading
+                ? "Saving Product..."
+                : isEditMode
+                  ? "Update Product"
+                  : "Publish Product"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => reset()}
+            className="w-full bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-gray-500 dark:text-slate-400 py-3 rounded-xl font-semibold text-sm hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+          >
+            Discard Changes
+          </button>
         </div>
       </div>
 
-      {/* 3. CATEGORIZATION */}
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-gray-700 border-b pb-2">
-          Categorization
-        </h2>
-        <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-          <Controller
-            name="categoryId"
-            control={control}
-            render={({ field }) => (
-              <ParentSelector
-                key={`cat-${resetKey}`}
-                refreshTrigger={0}
-                // 👇 PASS THE INITIAL ID HERE
-                initialCategoryId={initialData?.categoryId}
-                onSelectionChange={(id) => field.onChange(id || "")}
-              />
-            )}
-          />
-        </div>
-      </div>
-      {/* 4. INVENTORY */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between border-b pb-2">
-          <h2 className="text-xl font-semibold text-gray-700">Inventory</h2>
-          <div className="flex items-center gap-2 bg-gray-100 px-3 py-1 rounded-full">
-            <input
-              type="checkbox"
-              checked={hasVariants}
-              onChange={(e) => setHasVariants(e.target.checked)}
-              className="w-4 h-4 accent-black cursor-pointer"
-            />
-            <label className="text-sm font-medium cursor-pointer">
-              Has Variations?
-            </label>
-          </div>
-        </div>
-
-        {hasVariants ? (
-          <StockManager
-            key={`stock-${resetKey}`}
-            initialVariants={initialData?.variants}
-            initialSizeType={initialData?.sizeType}
-            onUpdate={(data) => {
-              setValue("sizeType", data.sizeType);
-              setValue("variants", data.variants);
-            }}
-          />
-        ) : (
-          <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
-            <label className="label">Total Stock Quantity</label>
-            <input
-              type="number"
-              className="input-field text-lg font-medium w-full md:w-1/3"
-              {...register("stock", {
-                required: !hasVariants,
-                min: 0,
-                valueAsNumber: true,
-              })}
-            />
-          </div>
-        )}
-      </div>
-
-      {isEditMode && (
-        <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 space-y-4">
-          <h3 className="font-semibold text-gray-800 flex items-center gap-2">
-            Store Visibility
-          </h3>
-          <p className="text-sm text-gray-500">
-            Control if this product is hidden from customers.
-          </p>
-
-          <Controller
-            name="visible"
-            control={control}
-            // 👇 CRITICAL: Default to true if undefined
-            defaultValue={initialData?.visible ?? true}
-            render={({ field }) => (
-              <div className="flex items-center gap-4">
-                {/* Option 1: Visible */}
-                <label
-                  className={`flex items-center gap-2 cursor-pointer p-2 rounded border transition ${field.value === true ? "bg-green-50 border-green-200 ring-1 ring-green-500" : "bg-white border-gray-200"}`}
-                >
-                  <input
-                    type="radio"
-                    // 👇 We manually handle the change to ensure BOOLEAN
-                    onChange={() => field.onChange(true)}
-                    checked={field.value === true}
-                    className="w-4 h-4 accent-green-600"
-                  />
-                  <span className="flex items-center gap-1 text-green-700 font-medium">
-                    <Eye size={16} /> Visible
-                  </span>
-                </label>
-
-                {/* Option 2: Hidden */}
-                <label
-                  className={`flex items-center gap-2 cursor-pointer p-2 rounded border transition ${field.value === false ? "bg-gray-100 border-gray-300 ring-1 ring-gray-400" : "bg-white border-gray-200"}`}
-                >
-                  <input
-                    type="radio"
-                    // 👇 We manually handle the change to ensure BOOLEAN
-                    onChange={() => field.onChange(false)}
-                    checked={field.value === false}
-                    className="w-4 h-4 accent-gray-500"
-                  />
-                  <span className="flex items-center gap-1 text-gray-600 font-medium">
-                    <EyeOff size={16} /> Hidden (Draft)
-                  </span>
-                </label>
-              </div>
-            )}
-          />
-        </div>
-      )}
-
-      {/* SUBMIT */}
-      <div className="pt-4">
-        <button
-          type="submit"
-          disabled={isLoading || isUploading}
-          className="w-full bg-black text-white py-4 rounded-lg text-lg font-semibold hover:bg-gray-800 transition disabled:opacity-50 flex justify-center items-center gap-2"
-        >
-          {(isUploading || isLoading) && <Loader2 className="animate-spin" />}
-          {isUploading
-            ? "Uploading Images..."
-            : isLoading
-              ? "Saving..."
-              : isEditMode
-                ? "Update Product"
-                : "Publish Product"}
-        </button>
-      </div>
-      <style jsx>{`
+      {/* Global Form Styles */}
+      <style jsx global>{`
         .label {
           display: block;
-          margin-bottom: 0.5rem;
-          font-size: 0.875rem;
-          font-weight: 500;
+          font-size: 0.85rem;
+          font-weight: 600;
           color: #374151;
+          margin-bottom: 0.5rem;
         }
+        .dark .label {
+          color: #94a3b8;
+        }
+
         .input-field {
           width: 100%;
-          padding: 0.75rem;
-          border: 1px solid #d1d5db;
-          border-radius: 0.5rem;
-          outline: none;
-          transition: border-color 0.2s;
+          padding: 0.75rem 1rem;
+          background-color: #f8f9fa;
+          border: 1px solid #e5e7eb;
+          border-radius: 0.75rem;
+          color: #1f2937;
+          font-size: 0.95rem;
+          transition: all 0.2s ease;
+        }
+        .dark .input-field {
+          background-color: #1e293b;
+          border-color: #334155;
+          color: #f8fafc;
         }
         .input-field:focus {
-          border-color: #2563eb;
-          box-shadow: 0 0 0 2px #bfdbfe;
+          background-color: #ffffff;
+          border-color: #3b82f6;
+          box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+          outline: none;
+        }
+        .dark .input-field:focus {
+          background-color: #0f172a;
+          border-color: #60a5fa;
+          box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.15);
         }
       `}</style>
     </form>
