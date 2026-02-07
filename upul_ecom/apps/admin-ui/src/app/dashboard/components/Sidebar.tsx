@@ -6,13 +6,15 @@ import { useState, useEffect } from "react";
 import { useTheme } from "@/app/context/ThemeContext";
 import { 
   LayoutDashboard, ShoppingBag, Package, Layers, Ruler, LogOut, 
-  ChevronDown, ChevronRight, PlusCircle, List, Moon, Sun, X 
+  ChevronDown, ChevronRight, PlusCircle, List, Moon, Sun, X, 
+  Mail
 } from "lucide-react";
 
 const mainNavItems = [
   { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
   { label: "Orders", href: "/dashboard/orders", icon: ShoppingBag },
   { label: "Inventory", href: "/dashboard/inventory", icon: Layers },
+  { label: "Email Management", href: "/dashboard/email-management", icon: Mail },
 ];
 
 const productSubItems = [
