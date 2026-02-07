@@ -228,26 +228,50 @@ export default function CartSlider() {
           </div>
 
           {items.length > 0 && (
-            <div className="border-t p-6 bg-gray-50 space-y-4">
-              {totalSavings > 0 && (
-                <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-100 rounded-lg text-green-700">
-                  <Tag size={16} />
-                  <span className="text-sm font-semibold">Saved LKR {totalSavings.toLocaleString()}!</span>
-                </div>
-              )}
-              <div className="flex justify-between items-center text-lg font-bold">
-                <span>Subtotal</span>
-                <span>LKR {subtotal.toLocaleString()}</span>
-              </div>
-              <button
-                onClick={handleCheckoutClick}
-                disabled={isVerifying}
-                className="w-full bg-black text-white py-4 rounded-lg font-bold hover:bg-zinc-800 flex items-center justify-center transition-colors disabled:opacity-70"
-              >
-                {isVerifying ? <><Loader2 className="animate-spin mr-2" size={18} /> VERIFYING...</> : 'CHECKOUT'}
-              </button>
-            </div>
-          )}
+  <div className="border-t p-6 bg-gray-50/80 space-y-4">
+    <div className="space-y-2">
+      {/* Subtotal Line */}
+      <div className="flex justify-between items-center text-sm text-gray-600">
+        <span>Subtotal</span>
+        <span>LKR {(subtotal + totalSavings).toLocaleString()}</span>
+      </div>
+
+      {/* Savings Line - "The Sub-line" */}
+      {totalSavings > 0 && (
+        <div className="flex justify-between items-center text-sm font-medium text-green-600">
+          <div className="flex items-center gap-1.5">
+            <Tag size={14} />
+            <span>Discounts</span>
+          </div>
+          <span>- LKR {totalSavings.toLocaleString()}</span>
+        </div>
+      )}
+
+      {/* Divider */}
+      <div className="pt-2 border-t border-gray-200">
+        <div className="flex justify-between items-center">
+          <span className="text-lg font-bold">Total</span>
+          <span className="text-xl font-bold text-black">
+            LKR {subtotal.toLocaleString()}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    {/* Checkout Button */}
+    <button
+      onClick={handleCheckoutClick}
+      disabled={isVerifying}
+      className="w-full bg-black text-white py-4 rounded-lg font-bold hover:bg-zinc-800 flex items-center justify-center transition-all active:scale-[0.98] disabled:opacity-70"
+    >
+      {isVerifying ? (
+        <><Loader2 className="animate-spin mr-2" size={18} /> VERIFYING...</>
+      ) : (
+        'CHECKOUT'
+      )}
+    </button>
+  </div>
+)}
         </div>
       </aside>
     </div>

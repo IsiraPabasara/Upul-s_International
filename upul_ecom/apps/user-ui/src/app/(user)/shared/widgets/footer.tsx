@@ -82,7 +82,6 @@ export default function Footer() {
             <h4 className="text-xs font-bold uppercase tracking-[0.2em] mb-6 border-b border-gray-100 pb-2">Customer Care</h4>
             <ul className="flex flex-col gap-3 text-[13px] font-medium uppercase tracking-tight text-gray-600">
               <li><Link href="/about-us" className="hover:text-red-600 transition-colors">About Us</Link></li>
-              <li><Link href="/contact-us" className="hover:text-red-600 transition-colors">Contact Us</Link></li>
               <li><Link href="/shipping-returns" className="hover:text-red-600 transition-colors">Shipping & Returns</Link></li>
               <li><Link href="/terms-conditions" className="hover:text-red-600 transition-colors">Terms & Conditions</Link></li>
               <li><Link href="/privacy-policy" className="hover:text-red-600 transition-colors">Privacy Policy</Link></li>

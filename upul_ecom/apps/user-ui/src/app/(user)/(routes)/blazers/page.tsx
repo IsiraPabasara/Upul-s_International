@@ -62,7 +62,7 @@ const BlazerPage = () => {
                 Est. 1940 — Ratnapura / Bandarawela
               </span>
               
-              <Link href="/shop" className="group flex items-center gap-2 text-xs md:text-[0.7rem] lg:text-sm xl:text-base font-bold uppercase tracking-widest mt-4 md:mt-0">
+              <Link href="https://wa.me/94768187582" className="group flex items-center gap-2 text-xs md:text-[0.7rem] lg:text-sm xl:text-base font-bold uppercase tracking-widest mt-4 md:mt-0">
                 Book Now
                 <ArrowUpRight className="group-hover:-translate-y-1 group-hover:translate-x-1 transition-transform" />
               </Link>
@@ -92,35 +92,56 @@ const BlazerPage = () => {
         `}</style>
       </section>
 
+
       {/* --- BRAND PHILOSOPHY --- */}
-      <section className="py-24 px-5">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-16 items-center">
-          <div className="w-full md:w-1/2">
-            <h2 className="text-4xl md:text-6xl font-cormorant text-black leading-tight mb-8">
-              A Legacy of <br /> Precision.
-            </h2>
-            <div className="space-y-6 text-gray-600 leading-relaxed text-sm md:text-base">
-              <p>
-                At Upul's International, a blazer is not just an outer layer—it is an architectural 
-                feat. Drawing from decades of tailoring expertise, we combine structured elegance with effortless comfort.
-              </p>
-              <p>
-                Our fabrics are sourced from the world’s finest mills, ensuring that every stitch reflects our commitment to professional excellence and premium quality.
-              </p>
-            </div>
-          </div>
-          <div className="w-full md:w-1/2 aspect-[4/5] relative bg-gray-100">
-            <img 
-              src="https://ik.imagekit.io/aqi4rj9dnl/upul-1.0"
-              className="w-full h-full object-cover shadow-2xl"
-              alt="Fine Fabric"
-            />
-            <div className="absolute bottom-0 left-0 md:-bottom-6 md:-left-6 bg-black text-white p-6 md:p-8">
-              <p className="font-cormorant italic text-lg md:text-xl">"Tailoring is the language of confidence."</p>
-            </div>
-          </div>
+<section className="py-16 md:py-24 px-6 md:px-5 bg-white">
+  <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-12 md:gap-16 items-center">
+    
+    {/* Image Container - Moves to Top on Mobile */}
+    <div className="w-full md:w-1/2 order-2 md:order-2">
+      <div className="relative">
+        <div className="aspect-[4/5] w-full overflow-hidden">
+          <img 
+            src="https://ik.imagekit.io/aqi4rj9dnl/upul-1.0"
+            className="w-full h-full object-cover shadow-xl"
+            alt="Fine Fabric and Tailoring"
+          />
         </div>
-      </section>
+        
+        {/* Quote Box - Refined for Mobile positioning */}
+        <div className="absolute -bottom-9 left-4 right-4 md:right-auto md:left-[-1.5rem] md:bottom-[-1.5rem] bg-[#1d1d1d] text-white p-6 md:p-8 shadow-2xl">
+          <p className="font-cormorant italic text-lg md:text-xl leading-tight">
+            "Tailoring is the language of confidence."
+          </p>
+        </div>
+      </div>
+    </div>
+
+    {/* Text Content */}
+    <div className="w-full md:w-1/2 order-1 md:order-1 mt-12 md:mt-0">
+      <h2 className="text-4xl md:text-6xl font-cormorant text-black leading-[1.1] mb-6 tracking-tight">
+        A Legacy of <br className="hidden md:block" /> Precision.
+      </h2>
+      
+      <div className="space-y-5 text-gray-600 leading-relaxed text-base md:text-lg font-light">
+        <p>
+          At Upul's International, a blazer is not just an outer layer—it is an 
+          <span className="text-black font-medium"> architectural feat</span>. 
+          Drawing from decades of tailoring expertise, we combine structured elegance 
+          with effortless comfort.
+        </p>
+        <p>
+          Our fabrics are sourced from the world’s finest mills, ensuring that every 
+          stitch reflects our commitment to professional excellence and premium quality.
+        </p>
+      </div>
+      
+      {/* Optional: Add a subtle CTA or Divider for mobile polish */}
+      <div className="mt-8 w-12 h-[1px] bg-black md:hidden"></div>
+    </div>
+
+  </div>
+</section>
 
       
 
