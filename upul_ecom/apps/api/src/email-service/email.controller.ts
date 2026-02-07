@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { getEmailQueueStats, getFailedEmails, retryFailedEmail } from './email-queue';
+import { getEmailQueueStats, retryFailedEmail } from './email-queue'; // removed getFailedEmails import as we query prisma directly now for flexibility
 
 const prisma = new PrismaClient();
 
@@ -21,22 +21,51 @@ export const getEmailQueueStatus = async (req: Request, res: Response) => {
   }
 };
 
-// Get failed emails
-export const getFailedEmailsList = async (req: Request, res: Response) => {
+// ⚡ UPDATED: Get Email Logs with Search & Filtering
+export const getEmailLogs = async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
+    const status = (req.query.status as string) || 'all';
+    const search = (req.query.search as string) || '';
+
     const skip = (page - 1) * limit;
 
-    const [failedEmails, total] = await Promise.all([
-      getFailedEmails(skip, limit),
-      prisma.emailLog.count({ where: { status: 'permanently_failed' } }),
+    // Build the dynamic filter
+    const where: any = {};
+
+    // 1. Status Filter
+    if (status === 'failed') {
+      where.status = { in: ['failed', 'permanently_failed'] };
+    } else if (status === 'sent') {
+      where.status = 'sent';
+    } 
+    // if status is 'all', we don't apply a status filter
+
+    // 2. Search Filter (Recipient, Subject, Order #)
+    if (search) {
+      where.OR = [
+        { recipientEmail: { contains: search, mode: 'insensitive' } },
+        { subject: { contains: search, mode: 'insensitive' } },
+        { orderNumber: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    // Run count and query in parallel
+    const [emails, total] = await Promise.all([
+      prisma.emailLog.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' }, // Newest first
+      }),
+      prisma.emailLog.count({ where }),
     ]);
 
     return res.json({
       success: true,
       data: {
-        emails: failedEmails,
+        emails,
         pagination: {
           page,
           limit,
@@ -46,10 +75,10 @@ export const getFailedEmailsList = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching failed emails:', error);
+    console.error('Error fetching email logs:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to fetch failed emails',
+      error: 'Failed to fetch email logs',
     });
   }
 };
@@ -117,21 +146,23 @@ export const retryFailedEmailManually = async (req: Request, res: Response) => {
 // Get email statistics
 export const getEmailStatistics = async (req: Request, res: Response) => {
   try {
+    const now = new Date();
+    const startOfDay = new Date(now.setHours(0, 0, 0, 0));
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
     const [totalSent, totalFailed, today, thisMonth, byType] = await Promise.all([
       prisma.emailLog.count({ where: { status: 'sent' } }),
-      prisma.emailLog.count({ where: { status: 'permanently_failed' } }),
+      prisma.emailLog.count({ where: { status: { in: ['failed', 'permanently_failed'] } } }), // Include both fail types
       prisma.emailLog.count({
         where: {
-          createdAt: {
-            gte: new Date(new Date().setHours(0, 0, 0, 0)),
-          },
+          status: 'sent',
+          createdAt: { gte: startOfDay },
         },
       }),
       prisma.emailLog.count({
         where: {
-          createdAt: {
-            gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-          },
+          status: 'sent',
+          createdAt: { gte: startOfMonth },
         },
       }),
       prisma.emailLog.groupBy({
@@ -161,10 +192,12 @@ export const getEmailStatistics = async (req: Request, res: Response) => {
   }
 };
 
-// Cleanup old email logs (optional - for maintenance)
+// Cleanup old email logs
 export const cleanupOldEmailLogs = async (req: Request, res: Response) => {
   try {
+    // Default to 30 days if not specified
     const daysToKeep = parseInt(req.query.days as string) || 30;
+    
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
 
