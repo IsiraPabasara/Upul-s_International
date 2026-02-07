@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
 import ParentSelector from "./../category/components/ParentSelector";
-// 👇 IMPORT THE REFINED BRAND SELECTOR
 import BrandSelector from "./../brand/components/BrandSelector";
 import ImageUploader from "./../../products/imagekit/components/ImageUploader";
 import StockManager from "./../stockmanager/components/StockManager";
@@ -11,17 +10,17 @@ import ColorSelector from "./../colorselector/ColorSelector";
 import { uploadImageToKit } from "./../imagekit/utils/uploadService";
 import {
   Loader2,
-  Eye,
-  EyeOff,
   Tag,
   Image as ImageIcon,
   Box,
   Layers,
   DollarSign,
   X,
+  Minus,
+  Plus,
 } from "lucide-react";
 
-// ... [TYPES and INITIAL_DATA remain exactly the same] ...
+// --- Types ---
 interface ProductImage {
   fileId: string;
   url: string;
@@ -30,6 +29,7 @@ interface Variant {
   size: string;
   stock: number;
 }
+
 export interface ProductFormValues {
   name: string;
   sku?: string;
@@ -100,10 +100,9 @@ export default function ProductForm({
   const watchedColors = watch("colors");
   const watchedPrice = watch("price");
   const watchedDiscountType = watch("discountType");
-  const watchedDiscountValue = watch("discountValue");
   const currentImages = watch("images") || [];
 
-  // 🧠 LOGIC: NAME PREVIEW (Single Color)
+  // Logic: Auto-Preview Name
   const primaryColor = watchedColors?.[0] || "";
   const namePreview =
     primaryColor &&
@@ -111,26 +110,24 @@ export default function ProductForm({
       ? `${watchedName} ${primaryColor}`
       : watchedName;
 
-  useEffect(() => {
-    if (initialData) {
-      reset(initialData);
-      if (initialData.variants?.length > 0) setHasVariants(true);
-      if (initialData.visible !== undefined)
-        setValue("visible", initialData.visible);
-    }
-  }, [initialData, reset, setValue]);
-
+  // Logic: Discount Calc
   const getDiscountedPrice = () => {
     const price = Number(watchedPrice) || 0;
-    const val = Number(watchedDiscountValue) || 0;
+    const val = Number(watch("discountValue")) || 0;
     if (watchedDiscountType === "PERCENTAGE")
       return price - price * (val / 100);
     if (watchedDiscountType === "FIXED") return price - val;
     return price;
   };
 
+  useEffect(() => {
+    if (initialData) {
+      reset(initialData);
+      if (initialData.variants?.length > 0) setHasVariants(true);
+    }
+  }, [initialData, reset]);
+
   const onFormSubmit: SubmitHandler<ProductFormValues> = async (data) => {
-    // ... [Validation Logic Remains Same] ...
     if (!data.categoryId) {
       alert("Please select a category");
       return;
@@ -152,7 +149,7 @@ export default function ProductForm({
     try {
       setIsUploading(true);
 
-      // 1. Upload Images
+      // Upload Logic
       let newUploadedImages: ProductImage[] = [];
       if (selectedRawFiles.length > 0) {
         const uploadPromises = selectedRawFiles.map((file) =>
@@ -161,12 +158,9 @@ export default function ProductForm({
         newUploadedImages = await Promise.all(uploadPromises);
       }
       const finalImages = [...currentImages, ...newUploadedImages];
+      const cleanData = { ...data, images: finalImages };
 
-      // 2. Prepare Payload
-      const cleanData = { ...data };
-      cleanData.images = finalImages;
-
-      // 🧠 LOGIC: Append Color to Name
+      // Name Append Logic
       if (cleanData.colors?.length > 0) {
         const colorToAppend = cleanData.colors[0];
         if (
@@ -176,6 +170,7 @@ export default function ProductForm({
         }
       }
 
+      // Stock Logic
       if (hasVariants) {
         cleanData.stock = cleanData.variants.reduce(
           (acc, curr) => acc + Number(curr.stock),
@@ -203,447 +198,601 @@ export default function ProductForm({
   };
 
   return (
-    <form
-      onSubmit={handleSubmit(onFormSubmit)}
-      className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-20"
-    >
-      {/* LEFT COLUMN */}
-      <div className="lg:col-span-2 space-y-6">
-        {/* --- 1. GENERAL INFORMATION (Refined UI) --- */}
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-            <Tag size={20} className="text-blue-600" /> General Information
-          </h2>
-
-          <div className="space-y-6">
-            {/* Name Input */}
-            <div>
-              <label className="label">Product Name</label>
-              <input
-                type="text"
-                className="input-field"
-                placeholder="e.g. Cotton Night Dress"
-                {...register("name", { required: true })}
-              />
-              {/* Dynamic Name Preview */}
-              {primaryColor && watchedName && (
-                <div className="mt-2 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 rounded-lg flex items-center gap-2 animate-in fade-in">
-                  <span className="bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded uppercase tracking-wider">
-                    Auto-Preview
-                  </span>
-                  <span>
-                    Final Name: <strong>{namePreview}</strong>
-                  </span>
-                </div>
-              )}
+    <form onSubmit={handleSubmit(onFormSubmit)} className="pb-20">
+      {/* --- MASTER LAYOUT (60% Left / 40% Right) --- */}
+      <div className="grid grid-cols-1 xl:grid-cols-5 gap-8 items-start">
+        {/* === LEFT COLUMN: FORMS (Col Span 3) === */}
+        <div className="xl:col-span-3 space-y-8">
+          {/* 1. GENERAL INFORMATION */}
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800">
+            <div className="flex items-center gap-3 mb-8 pb-4 border-b border-gray-100 dark:border-slate-800">
+              <div className="p-2.5 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-blue-600 dark:text-blue-400">
+                <Tag size={20} strokeWidth={2.5} />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">
+                  General Information
+                </h2>
+                <p className="text-xs text-gray-500 dark:text-slate-400 font-medium mt-0.5">
+                  Basic identification details.
+                </p>
+              </div>
             </div>
 
-            {/* Description */}
-            <div>
-              <label className="label">Description</label>
-              <textarea
-                {...register("description")}
-                rows={4}
-                className="input-field resize-none leading-relaxed min-h-[120px]"
-                placeholder="Write a compelling description for your product..."
-              />
-            </div>
+            <div className="space-y-6">
+              <div>
+                <label className="label mb-2 ml-1">Product Name</label>
+                <input
+                  type="text"
+                  className="input-field h-[48px] font-medium"
+                  placeholder="e.g. Cotton Night Dress"
+                  {...register("name", { required: true })}
+                />
+                {/* Preview Badge */}
+                {primaryColor && watchedName && (
+                  <div className="mt-3 text-xs font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 px-4 py-3 rounded-xl border border-blue-100 dark:border-blue-800/30 flex items-center gap-3 animate-in fade-in slide-in-from-top-1">
+                    <span className="bg-blue-600 text-white text-[10px] px-2 py-0.5 rounded shadow-sm font-bold tracking-wide uppercase">
+                      Preview
+                    </span>
+                    <span className="truncate opacity-90">
+                      Will save as: <strong>{namePreview}</strong>
+                    </span>
+                  </div>
+                )}
+              </div>
 
-            {/* SKU & Brand Grid - Perfectly Aligned */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-              
-              {/* SKU - System Generated (Always Locked) */}
-              <div className="w-full">
-                <label className="label flex justify-between items-center">
-                  SKU
-                  <span className="text-[10px] uppercase font-bold text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-full">
-                    Auto-Generated
-                  </span>
-                </label>
-                <div className="relative">
+              <div>
+                <label className="label mb-2 ml-1">Description</label>
+                <textarea
+                  {...register("description")}
+                  rows={4}
+                  className="input-field resize-none leading-relaxed py-3 min-h-[120px]"
+                  placeholder="Product description..."
+                />
+              </div>
+
+              {/* SKU & Brand Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                <div className="w-full">
+                  <div className="flex justify-between items-center mb-2 ml-1 h-5">
+                    <label className="label mb-0">SKU</label>
+                    <span className="text-[10px] font-bold tracking-wider uppercase text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 select-none">
+                      Auto-Generated
+                    </span>
+                  </div>
                   <input
                     type="text"
                     {...register("sku")}
-                    disabled={true} // 🔒 FORCE DISABLED ALWAYS
-                    className="input-field h-[46px] bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-500 cursor-not-allowed italic border-dashed"
-                    placeholder="System will generate this..."
+                    disabled={true}
+                    className="input-field h-[46px] bg-slate-50 dark:bg-slate-800/40 text-slate-500 cursor-not-allowed border-dashed"
+                    placeholder="Generated after save..."
                   />
-                  {/* Lock Icon Overlay */}
-                  <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-gray-400">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <rect
-                        x="3"
-                        y="11"
-                        width="18"
-                        height="11"
-                        rx="2"
-                        ry="2"
-                      ></rect>
-                      <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                    </svg>
+                </div>
+                <div className="w-full">
+                  <div className="flex justify-between items-center mb-2 ml-1 h-5">
+                    <label className="label mb-0">Brand</label>
                   </div>
+                  <Controller
+                    name="brand"
+                    control={control}
+                    render={({ field }) => (
+                      <BrandSelector
+                        selectedBrand={field.value}
+                        onChange={field.onChange}
+                      />
+                    )}
+                  />
                 </div>
               </div>
-              {/* Brand Selector Column */}
-              <div className="w-full">
-                <label className="label">Brand</label>
+            </div>
+          </div>
+
+          {/* 2. COLOR & SIZE (Fixed Stock) */}
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800">
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-slate-800">
+              <div className="p-2.5 bg-purple-50 dark:bg-purple-900/20 rounded-xl text-purple-600 dark:text-purple-400">
+                <Layers size={20} strokeWidth={2.5} />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">
+                  Variants
+                </h2>
+                <p className="text-xs text-gray-500 dark:text-slate-400 font-medium mt-0.5">
+                  Manage colors and sizes.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-8">
+              <div>
+                <label className="label mb-3 ml-1">
+                  Primary Color <span className="text-red-500">*</span>
+                </label>
                 <Controller
-                  name="brand"
+                  name="colors"
                   control={control}
                   render={({ field }) => (
-                    <BrandSelector
-                      selectedBrand={field.value}
-                      onChange={field.onChange}
+                    <ColorSelector
+                      key={`color-${resetKey}`}
+                      selectedColor={field.value?.[0] || ""}
+                      onChange={(colorName) =>
+                        field.onChange(colorName ? [colorName] : [])
+                      }
                     />
                   )}
                 />
+              </div>
+              <div className="border-t border-gray-100 dark:border-slate-800" />
+
+              {/* Toggle */}
+              <div className="flex items-center justify-between p-5 bg-gray-50 dark:bg-slate-800/40 rounded-2xl border border-gray-100 dark:border-slate-700">
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-bold text-gray-900 dark:text-white">
+                    Multiple Sizes ?
+                  </span>
+                  <span className="text-xs text-gray-500 dark:text-slate-400">
+                    Enable for S, M, L variants.
+                  </span>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={hasVariants}
+                    onChange={(e) => setHasVariants(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-12 h-7 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-purple-600 shadow-inner"></div>
+                </label>
+              </div>
+
+              {/* Stock Input */}
+              <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                {hasVariants ? (
+                  <StockManager
+                    key={`stock-${resetKey}`}
+                    initialVariants={initialData?.variants}
+                    initialSizeType={initialData?.sizeType}
+                    onUpdate={(data) => {
+                      setValue("sizeType", data.sizeType);
+                      setValue("variants", data.variants);
+                    }}
+                  />
+                ) : (
+                  /* Fixed Single Stock Control */
+                  <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-6">
+                    <div className="flex flex-col gap-1 w-full sm:w-auto">
+                      <label className="label mb-0 text-gray-900 dark:text-white">
+                        Available Quantity
+                      </label>
+                      <div
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold border w-fit ${(watch("stock") || 0) > 0 ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-red-50 text-red-700 border-red-100"}`}
+                      >
+                        {(watch("stock") || 0) > 0
+                          ? "In Stock"
+                          : "Out of Stock"}
+                      </div>
+                    </div>
+                    <div className="flex items-center bg-gray-50 dark:bg-slate-800 rounded-xl p-1 border border-gray-200 dark:border-slate-700">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setValue(
+                            "stock",
+                            Math.max(0, (Number(watch("stock")) || 0) - 1),
+                          )
+                        }
+                        className="w-10 h-10 flex items-center justify-center bg-white dark:bg-slate-700 text-gray-500 hover:text-red-500 rounded-lg shadow-sm"
+                      >
+                        <Minus size={16} />
+                      </button>
+                      <input
+                        type="number"
+                        min="0"
+                        onKeyDown={(e) =>
+                          (e.key === "-" || e.key === "e") && e.preventDefault()
+                        }
+                        className="w-20 h-10 text-center bg-transparent border-none text-lg font-bold text-gray-900 dark:text-white focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        placeholder="0"
+                        {...register("stock", {
+                          required: !hasVariants,
+                          min: 0,
+                          valueAsNumber: true,
+                        })}
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setValue("stock", (Number(watch("stock")) || 0) + 1)
+                        }
+                        className="w-10 h-10 flex items-center justify-center bg-white dark:bg-slate-700 text-gray-500 hover:text-emerald-600 rounded-lg shadow-sm"
+                      >
+                        <Plus size={16} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* --- 3. PRICING (Spacious & Fixed Layout) --- */}
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800">
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-8">
+              <div className="p-3 bg-emerald-100 dark:bg-emerald-900/20 rounded-2xl text-emerald-600 dark:text-emerald-400">
+                <DollarSign size={24} strokeWidth={2.5} />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                  Pricing
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">
+                  Set price and discount rules.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-8">
+              {/* ROW 1: Base Selling Price (Full Width) */}
+              <div>
+                <label className="label mb-2 ml-1 text-gray-600 dark:text-slate-300">
+                  Base Selling Price
+                </label>
+                <div className="relative group transition-all transform focus-within:scale-[1.01]">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xl pointer-events-none group-focus-within:text-emerald-600 transition-colors">
+                    Rs.
+                  </div>
+                  <input
+                    type="number"
+                    min="0"
+                    onKeyDown={(e) =>
+                      (e.key === "-" || e.key === "e") && e.preventDefault()
+                    }
+                    {...register("price", { required: true })}
+                    className="w-full h-16 pl-14 pr-4 bg-gray-50 dark:bg-slate-800 border-2 border-transparent focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 rounded-2xl text-2xl font-bold text-gray-900 dark:text-white outline-none transition-all placeholder:text-gray-300 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-sm"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+
+              {/* ROW 2: Discount Controls (Spacious Grid) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                {/* Discount Type (Takes 2/3 space) */}
+                <div className="sm:col-span-2">
+                  <label className="label mb-2 ml-1">Discount Type</label>
+                  <div className="relative">
+                    <select
+                      {...register("discountType")}
+                      className="w-full h-[64px] px-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-sm font-semibold text-gray-700 dark:text-gray-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none cursor-pointer appearance-none shadow-sm transition-all"
+                    >
+                      <option value="NONE">No Discount</option>
+                      <option value="PERCENTAGE">Percentage %</option>
+                      <option value="FIXED">Fixed Amount</option>
+                    </select>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M19 9l-7 7-7-7"
+                        ></path>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Value Input (Takes 1/3 space) */}
+                <div
+                  className={`sm:col-span-1 transition-all duration-300 ${watchedDiscountType === "NONE" ? "opacity-40 pointer-events-none grayscale blur-[1px]" : "opacity-100"}`}
+                >
+                  <label className="label mb-2 ml-1">Value</label>
+                  <div className="relative group">
+                    {/* Symbol Left (For Fixed) */}
+                    {watchedDiscountType === "FIXED" && (
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm pointer-events-none transition-colors group-focus-within:text-emerald-600">
+                        Rs.
+                      </div>
+                    )}
+
+                    <input
+                      type="number"
+                      min="0"
+                      onKeyDown={(e) =>
+                        (e.key === "-" || e.key === "e") && e.preventDefault()
+                      }
+                      {...register("discountValue")}
+                      disabled={watchedDiscountType === "NONE"}
+                      className={`w-full h-[64px] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-lg font-bold text-gray-900 dark:text-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-sm
+                                        ${watchedDiscountType === "FIXED" ? "pl-12 pr-4" : "pl-4 pr-10"}
+                                    `}
+                      placeholder="0"
+                    />
+
+                    {/* Symbol Right (For Percentage) */}
+                    {watchedDiscountType === "PERCENTAGE" && (
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xs pointer-events-none transition-colors group-focus-within:text-emerald-600">
+                        %
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* ROW 3: Breakdown Summary (Full Width) */}
+              <div className="bg-gradient-to-r from-gray-50 to-white dark:from-slate-800 dark:to-slate-900 p-6 rounded-2xl border border-gray-100 dark:border-slate-700 flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
+                {/* Decorative background glow */}
+                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/2"></div>
+
+                {/* Left: Details */}
+                <div className="flex items-center gap-8 text-sm">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                      Original
+                    </span>
+                    <span className="font-mono text-gray-600 dark:text-slate-300 font-medium">
+                      Rs. {Number(watchedPrice || 0).toLocaleString()}
+                    </span>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="h-8 w-px bg-gray-200 dark:bg-slate-700"></div>
+
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                      Discount
+                    </span>
+                    <span className="font-mono text-red-500 font-medium">
+                      - Rs.{" "}
+                      {(
+                        Number(watchedPrice || 0) - getDiscountedPrice()
+                      ).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Right: Final Price */}
+                <div className="flex items-center gap-4 bg-white dark:bg-slate-800 px-5 py-3 rounded-xl border border-gray-100 dark:border-slate-700 shadow-sm relative z-10">
+                  <div className="flex flex-col items-end">
+                    <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                      Customer Price
+                    </span>
+                    <span className="text-2xl font-black text-gray-900 dark:text-white tracking-tight leading-none mt-0.5">
+                      Rs. {getDiscountedPrice().toLocaleString()}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* --- 2. COLORS & SIZE --- */}
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <Layers size={20} className="text-purple-600" /> Color & Size
-            </h2>
-            {/* Toggle Logic */}
-            <label className="flex items-center gap-2 cursor-pointer bg-gray-50 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-gray-100 dark:border-slate-700 transition hover:bg-gray-100 dark:hover:bg-slate-700">
-              <input
-                type="checkbox"
-                checked={hasVariants}
-                onChange={(e) => setHasVariants(e.target.checked)}
-                className="w-4 h-4 accent-purple-600 rounded cursor-pointer"
-              />
-              <span className="text-sm font-medium text-gray-700 dark:text-slate-300 select-none">
-                Has Sizes?
+        {/* === RIGHT COLUMN: VISUALS (Col Span 2) === */}
+        {/* === RIGHT COLUMN: VISUALS (Col Span 2) === */}
+        <div className="xl:col-span-2 space-y-8 sticky top-6">
+          {/* 4. MEDIA GALLERY */}
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <ImageIcon size={20} className="text-orange-500" />
+                Product Media
+              </h2>
+              <span
+                className={`text-xs font-bold px-2.5 py-1 rounded-lg border ${
+                  currentImages.length + selectedRawFiles.length >= MAX_IMAGES
+                    ? "bg-red-50 text-red-600 border-red-100 dark:bg-red-900/20 dark:border-red-800"
+                    : "bg-gray-100 text-gray-500 border-transparent dark:bg-slate-800 dark:text-slate-400"
+                }`}
+              >
+                {currentImages.length + selectedRawFiles.length} / {MAX_IMAGES}
               </span>
-            </label>
-          </div>
-
-          <div className="space-y-6">
-            {/* Single Color Logic */}
-            <div className="p-5 bg-gray-50 dark:bg-slate-800/50 rounded-2xl border border-gray-100 dark:border-slate-800">
-              <label className="label mb-3 block">
-                Primary Color <span className="text-red-500">*</span>
-              </label>
-              <Controller
-                name="colors"
-                control={control}
-                render={({ field }) => (
-                  <ColorSelector
-                    key={`color-${resetKey}`}
-                    selectedColor={field.value?.[0] || ""}
-                    onChange={(colorName) =>
-                      // Enforce Single Color Array
-                      field.onChange(colorName ? [colorName] : [])
-                    }
-                  />
-                )}
-              />
             </div>
 
-            <hr className="border-gray-100 dark:border-slate-800" />
+            {/* A. Cover Image (First Image) */}
+            <div className="mb-4">
+              {currentImages.length + selectedRawFiles.length > 0 ? (
+                <div className="relative aspect-[4/5] w-full rounded-2xl overflow-hidden border border-gray-200 dark:border-slate-700 shadow-sm bg-gray-50 dark:bg-slate-800 group">
+                  {/* Image: object-contain to stop cropping */}
+                  <img
+                    src={
+                      currentImages[0]?.url ||
+                      URL.createObjectURL(selectedRawFiles[0])
+                    }
+                    alt="Cover"
+                    className="w-full h-full object-contain"
+                  />
+                  {/* Remove Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (currentImages.length > 0) removeExistingImage(0);
+                      else {
+                        const updated = [...selectedRawFiles];
+                        updated.splice(0, 1);
+                        setSelectedRawFiles(updated);
+                      }
+                    }}
+                    className="absolute top-3 right-3 p-2 bg-white/90 text-red-500 hover:bg-red-500 hover:text-white rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-all duration-200 transform scale-90 group-hover:scale-100 backdrop-blur-sm z-20"
+                    title="Remove Cover"
+                  >
+                    <X size={18} />
+                  </button>
+                  {/* Badge */}
+                  <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-md text-white px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider shadow-sm z-10">
+                    Cover Image
+                  </div>
+                </div>
+              ) : (
+                <div className="aspect-[4/5] w-full rounded-2xl bg-gray-50 dark:bg-slate-800/50 border-2 border-dashed border-gray-200 dark:border-slate-700 flex flex-col items-center justify-center gap-3 text-gray-400">
+                  <div className="p-4 bg-white dark:bg-slate-800 rounded-full shadow-sm">
+                    <ImageIcon
+                      size={32}
+                      strokeWidth={1.5}
+                      className="opacity-50"
+                    />
+                  </div>
+                  <span className="text-xs font-medium uppercase tracking-wide">
+                    No cover image
+                  </span>
+                </div>
+              )}
+            </div>
 
-            {/* Stock Logic */}
-            {hasVariants ? (
-              <StockManager
-                key={`stock-${resetKey}`}
-                initialVariants={initialData?.variants}
-                initialSizeType={initialData?.sizeType}
-                onUpdate={(data) => {
-                  setValue("sizeType", data.sizeType);
-                  setValue("variants", data.variants);
+            {/* B. Thumbnails Grid (Skipping First) */}
+            <div className="grid grid-cols-4 gap-3 mb-4">
+              {[...currentImages, ...selectedRawFiles].map((fileOrUrl, idx) => {
+                if (idx === 0) return null; // Skip Cover
+                const src =
+                  fileOrUrl instanceof File
+                    ? URL.createObjectURL(fileOrUrl)
+                    : (fileOrUrl as ProductImage).url;
+                return (
+                  <div
+                    key={idx}
+                    className="relative aspect-square rounded-xl overflow-hidden border border-gray-200 dark:border-slate-700 cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all bg-gray-50 dark:bg-slate-800 group"
+                  >
+                    <img
+                      src={src}
+                      className="w-full h-full object-contain"
+                      alt=""
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (idx < currentImages.length)
+                          removeExistingImage(idx);
+                        else {
+                          const newIdx = idx - currentImages.length;
+                          const upd = [...selectedRawFiles];
+                          upd.splice(newIdx, 1);
+                          setSelectedRawFiles(upd);
+                        }
+                      }}
+                      className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity text-white"
+                    >
+                      <div className="bg-white text-red-500 p-1.5 rounded-full shadow-sm">
+                        <X size={14} />
+                      </div>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* C. Uploader (NOW CONDITIONALLY RENDERED) */}
+            {currentImages.length + selectedRawFiles.length < MAX_IMAGES ? (
+              <ImageUploader
+                onFilesSelected={(incoming) => {
+                  const left =
+                    MAX_IMAGES -
+                    (currentImages.length + selectedRawFiles.length);
+                  if (left <= 0) return;
+                  setSelectedRawFiles((p) => [
+                    ...p,
+                    ...incoming.slice(0, left),
+                  ]);
                 }}
               />
             ) : (
+              /* Limit Reached State */
+              <div className="p-4 bg-gray-50 dark:bg-slate-800 rounded-2xl border border-dashed border-gray-200 dark:border-slate-700 text-center">
+                <p className="text-xs font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wide">
+                  Maximum limit reached
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* 5. ORGANIZATION */}
+          {/* 5. ORGANIZATION */}
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 bg-pink-50 dark:bg-pink-900/20 rounded-2xl text-pink-500">
+                <Box size={24} strokeWidth={2.5} />
+              </div>
               <div>
-                <label className="label">Stock Quantity</label>
-                <input
-                  type="number"
-                  className="input-field w-40 font-mono text-lg"
-                  {...register("stock", {
-                    required: !hasVariants,
-                    min: 0,
-                    valueAsNumber: true,
-                  })}
-                />
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* --- 3. PRICING --- */}
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-            <DollarSign size={20} className="text-emerald-600" /> Pricing
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="label">Base Price (LKR)</label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">
-                  Rs.
-                </span>
-                <input
-                  type="number"
-                  {...register("price", { required: true })}
-                  className="input-field pl-12 font-bold text-lg text-gray-900 dark:text-white"
-                  placeholder="0.00"
-                />
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                  Organization
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">
+                  Categorize your product.
+                </p>
               </div>
             </div>
 
-            <div className="bg-emerald-50 dark:bg-emerald-900/10 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
-              <div className="flex gap-3 mb-3">
-                <div className="w-1/2">
-                  <label className="label text-emerald-800 dark:text-emerald-400 text-xs uppercase tracking-wide">
-                    Discount
-                  </label>
-                  <select
-                    {...register("discountType")}
-                    className="input-field text-sm py-2"
-                  >
-                    <option value="NONE">None</option>
-                    <option value="PERCENTAGE">% Off</option>
-                    <option value="FIXED">Fixed Amount</option>
-                  </select>
-                </div>
-                {watchedDiscountType !== "NONE" && (
-                  <div className="w-1/2">
-                    <label className="label text-emerald-800 dark:text-emerald-400 text-xs uppercase tracking-wide">
-                      Value
-                    </label>
-                    <input
-                      type="number"
-                      {...register("discountValue")}
-                      className="input-field text-sm py-2"
-                      placeholder={
-                        watchedDiscountType === "PERCENTAGE" ? "10" : "500"
-                      }
-                    />
-                  </div>
+            <div className="p-6 bg-gray-50 dark:bg-slate-800/50 rounded-2xl border border-gray-100 dark:border-slate-700/50">
+              <Controller
+                name="categoryId"
+                control={control}
+                render={({ field }) => (
+                  <ParentSelector
+                    refreshTrigger={0}
+                    initialCategoryId={initialData?.categoryId}
+                    onSelectionChange={(id) => field.onChange(id || "")}
+                  />
                 )}
-              </div>
-
-              {watchedDiscountType !== "NONE" && (
-                <div className="flex justify-between items-center pt-3 border-t border-emerald-200 dark:border-emerald-800/50">
-                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                    Customer Price:
-                  </span>
-                  <span className="text-lg font-bold text-emerald-700 dark:text-emerald-300">
-                    Rs. {getDiscountedPrice().toLocaleString()}
-                  </span>
-                </div>
-              )}
+              />
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* RIGHT COLUMN */}
-      <div className="space-y-6">
-        {/* --- 4. IMAGES --- */}
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <ImageIcon size={20} className="text-orange-500" /> Media
-            </h2>
-            <span
-              className={`text-xs font-bold px-2 py-1 rounded-md ${currentImages.length + selectedRawFiles.length >= MAX_IMAGES ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-slate-400"}`}
+          {/* ACTIONS */}
+          <div className="space-y-3 pt-4">
+            <button
+              type="submit"
+              disabled={isLoading || isUploading}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-bold text-sm transition-all shadow-lg shadow-blue-500/20 flex justify-center items-center gap-2 active:scale-[0.98]"
             >
-              {currentImages.length + selectedRawFiles.length}/{MAX_IMAGES}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            {currentImages.map((img, idx) => (
-              <div
-                key={`old-${idx}`}
-                className="relative aspect-square rounded-xl overflow-hidden border border-gray-200 dark:border-slate-700 group"
-              >
-                <img
-                  src={img.url}
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
-                <button
-                  type="button"
-                  onClick={() => removeExistingImage(idx)}
-                  className="absolute top-1 right-1 bg-white text-red-500 rounded-full p-1 shadow-sm opacity-0 group-hover:opacity-100 transition hover:bg-red-50"
-                >
-                  <X size={12} />
-                </button>
-              </div>
-            ))}
-            {selectedRawFiles.map((file, idx) => (
-              <div
-                key={`new-${idx}`}
-                className="relative aspect-square rounded-xl overflow-hidden border-2 border-blue-100 dark:border-blue-900 group"
-              >
-                <img
-                  src={URL.createObjectURL(file)}
-                  alt=""
-                  className="w-full h-full object-cover opacity-90"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    const updated = [...selectedRawFiles];
-                    updated.splice(idx, 1);
-                    setSelectedRawFiles(updated);
-                  }}
-                  className="absolute top-1 right-1 bg-white text-red-500 rounded-full p-1 shadow-sm opacity-0 group-hover:opacity-100 transition hover:bg-red-50"
-                >
-                  <X size={12} />
-                </button>
-                <div className="absolute bottom-0 w-full bg-blue-500 text-white text-[9px] font-bold text-center py-0.5">
-                  NEW
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {currentImages.length + selectedRawFiles.length < MAX_IMAGES ? (
-            <ImageUploader
-              key={`uploader-${resetKey}`}
-              onFilesSelected={(incomingFiles) => {
-                const currentTotal =
-                  currentImages.length + selectedRawFiles.length;
-                const slotsLeft = MAX_IMAGES - currentTotal;
-                if (slotsLeft <= 0) return alert("Limit reached");
-                setSelectedRawFiles((prev) => [
-                  ...prev,
-                  ...incomingFiles.slice(0, slotsLeft),
-                ]);
-                setResetKey((p) => p + 1);
-              }}
-            />
-          ) : (
-            <div className="text-center p-3 bg-gray-50 dark:bg-slate-800 rounded-xl text-xs text-gray-500">
-              Max images reached.
-            </div>
-          )}
-        </div>
-
-        {/* --- 5. CATEGORY --- */}
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <Box size={20} className="text-pink-500" /> Category
-          </h2>
-          <div className="bg-gray-50 dark:bg-slate-800 p-3 rounded-xl border border-gray-100 dark:border-slate-700">
-            <Controller
-              name="categoryId"
-              control={control}
-              render={({ field }) => (
-                <ParentSelector
-                  key={`cat-${resetKey}`}
-                  refreshTrigger={0}
-                  initialCategoryId={initialData?.categoryId}
-                  onSelectionChange={(id) => field.onChange(id || "")}
-                />
+              {(isUploading || isLoading) && (
+                <Loader2 className="animate-spin" size={18} />
               )}
-            />
+              {isUploading
+                ? "Uploading..."
+                : isLoading
+                  ? "Saving..."
+                  : isEditMode
+                    ? "Update Product"
+                    : "Publish Product"}
+            </button>
+            <button
+              type="button"
+              onClick={() => reset()}
+              className="w-full bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-gray-500 dark:text-slate-400 py-3 rounded-xl font-semibold text-sm hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+            >
+              Discard Changes
+            </button>
           </div>
-        </div>
-
-        {/* --- 6. ACTIONS --- */}
-        <div className="sticky top-6 space-y-4">
-          {isEditMode && (
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800">
-              <label className="label mb-2">Visibility</label>
-              <div className="flex bg-gray-100 dark:bg-slate-800 p-1 rounded-xl">
-                <Controller
-                  name="visible"
-                  control={control}
-                  defaultValue={initialData?.visible ?? true}
-                  render={({ field }) => (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => field.onChange(true)}
-                        className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${field.value ? "bg-white dark:bg-slate-700 text-green-600 shadow-sm" : "text-gray-500 dark:text-slate-400 hover:text-gray-900"}`}
-                      >
-                        <div className="flex items-center justify-center gap-1.5">
-                          <Eye size={14} /> Live
-                        </div>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => field.onChange(false)}
-                        className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${!field.value ? "bg-white dark:bg-slate-700 text-amber-600 shadow-sm" : "text-gray-500 dark:text-slate-400 hover:text-gray-900"}`}
-                      >
-                        <div className="flex items-center justify-center gap-1.5">
-                          <EyeOff size={14} /> Draft
-                        </div>
-                      </button>
-                    </>
-                  )}
-                />
-              </div>
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={isLoading || isUploading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-bold text-sm transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 flex justify-center items-center gap-2"
-          >
-            {(isUploading || isLoading) && (
-              <Loader2 className="animate-spin" size={18} />
-            )}
-            {isUploading
-              ? "Uploading..."
-              : isLoading
-                ? "Saving Product..."
-                : isEditMode
-                  ? "Update Product"
-                  : "Publish Product"}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => reset()}
-            className="w-full bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-gray-500 dark:text-slate-400 py-3 rounded-xl font-semibold text-sm hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
-          >
-            Discard Changes
-          </button>
         </div>
       </div>
 
-      {/* Global Form Styles */}
+      {/* Global CSS for removing spinners */}
       <style jsx global>{`
         .label {
           display: block;
-          font-size: 0.85rem;
-          font-weight: 600;
-          color: #374151;
+          font-size: 0.8rem;
+          font-weight: 700;
+          color: #4b5563;
           margin-bottom: 0.5rem;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
         }
         .dark .label {
           color: #94a3b8;
         }
-
         .input-field {
           width: 100%;
           padding: 0.75rem 1rem;
-          background-color: #f8f9fa;
+          background-color: #f9fafb;
           border: 1px solid #e5e7eb;
           border-radius: 0.75rem;
-          color: #1f2937;
+          color: #111827;
           font-size: 0.95rem;
-          transition: all 0.2s ease;
+          transition: all 0.2s;
         }
         .dark .input-field {
           background-color: #1e293b;
@@ -651,15 +800,13 @@ export default function ProductForm({
           color: #f8fafc;
         }
         .input-field:focus {
-          background-color: #ffffff;
+          background-color: #fff;
           border-color: #3b82f6;
           box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
           outline: none;
         }
         .dark .input-field:focus {
           background-color: #0f172a;
-          border-color: #60a5fa;
-          box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.15);
         }
       `}</style>
     </form>
