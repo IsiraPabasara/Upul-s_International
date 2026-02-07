@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import {
   getEmailQueueStatus,
-  getFailedEmailsList,
+  getEmailLogs, 
   getOrderEmailHistory,
   retryFailedEmailManually,
   getEmailStatistics,
@@ -9,7 +9,6 @@ import {
 } from './email.controller';
 import isAuthenticated from '../../../../packages/middleware/isAuthenticated';
 import { isAdmin } from '../../../../packages/middleware/authorizedRoles';
-
 
 const router = Router();
 
@@ -19,8 +18,8 @@ router.use(isAuthenticated, isAdmin);
 // Get email queue statistics
 router.get('/queue/stats', getEmailQueueStatus);
 
-// Get failed emails list
-router.get('/failed', getFailedEmailsList);
+// ⚡ UPDATED: Get email logs (Supports filters: status, search, page)
+router.get('/logs', getEmailLogs);
 
 // Get email statistics
 router.get('/statistics', getEmailStatistics);
@@ -31,7 +30,7 @@ router.get('/order/:orderNumber', getOrderEmailHistory);
 // Retry a failed email
 router.post('/retry/:emailLogId', retryFailedEmailManually);
 
-// Cleanup old email logs (optional)
+// Cleanup old email logs
 router.delete('/cleanup', cleanupOldEmailLogs);
 
 export default router;
