@@ -16,8 +16,8 @@ type FormData = {
 const ForgotPassword = () => {
     const [step, setStep] = useState<"email" | "otp" | "reset">("email");
     const [serverError, setServerError] = useState<string | null>(null);
-    const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [otp, setOtp] = useState(["", "", "", ""]);
+    const [focusedIndex, setFocusedIndex] = useState<number | null>(null); // Track focus
     const [userEmail, setUserEmail] = useState<string | null>(null);
     const [canResend, setCanResend] = useState(true);
     const [timer, setTimer] = useState(60);
@@ -95,7 +95,7 @@ const ForgotPassword = () => {
     };
 
     return (
-        <div className='w-full min-h-[70vh]  bg-white flex flex-col items-center justify-center font-sans py-20'>
+        <div className='w-full min-h-[70vh] bg-white flex flex-col items-center justify-center font-sans py-20'>
             <div className='w-full max-w-[450px] px-8'>
 
                 {step === "email" && (
@@ -128,9 +128,20 @@ const ForgotPassword = () => {
                         </div>
                         <div className='flex justify-center gap-4 mb-10'>
                             {otp.map((digit, index) => (
-                                <input key={index} type='text' ref={(el) => { if (el) inputRefs.current[index] = el; }}
-                                    maxLength={1} value={digit}
-                                    className='w-14 h-14 text-center border-2 border-black outline-none text-lg font-bold focus:bg-black focus:text-white transition-all'
+                                <input 
+                                    key={index} 
+                                    type='text' 
+                                    ref={(el) => { if (el) inputRefs.current[index] = el; }}
+                                    maxLength={1} 
+                                    value={digit}
+                                    onFocus={() => setFocusedIndex(index)}
+                                    onBlur={() => setFocusedIndex(null)}
+                                    className={`w-14 h-14 text-center border outline-none text-lg font-bold transition-all duration-200 
+                                        ${focusedIndex === index 
+                                            ? 'border-black border-2 scale-105 shadow-sm' 
+                                            : 'border-black/20 text-black/60'
+                                        } 
+                                        ${digit && focusedIndex !== index ? 'border-black/40' : ''}`}
                                     onChange={(e) => handleOtpChange(index, e.target.value)}
                                     onKeyDown={(e) => handleOtpKeyDown(index, e)}
                                 />

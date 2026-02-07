@@ -24,6 +24,7 @@ const Signup = () => {
     const [canResend, setCanResend] = useState(true);
     const [timer, setTimer] = useState(60);
     const [otp, setOtp] = useState(["", "", "", ""]);
+    const [focusedIndex, setFocusedIndex] = useState<number | null>(null); // NEW: Track active box
     const [userData, setUserData] = useState<FormData | null>(null);
     
     const router = useRouter();
@@ -101,7 +102,7 @@ const Signup = () => {
     };
 
     return (
-        <div className='w-full min-h-[70vh] mt-[0px] bg-white flex flex-col items-center justify-center font-sans py-20'>
+        <div className='w-full min-h-[70vh] bg-white flex flex-col items-center justify-center font-sans py-20'>
             <div className='w-full max-w-[450px] px-8'>
                 
                 <div className="mb-14 text-center">
@@ -193,8 +194,15 @@ const Signup = () => {
                                     type='text'
                                     ref={(el) => { if (el) inputRefs.current[index] = el; }}
                                     maxLength={1}
-                                    className='w-14 h-14 text-center border-2 border-black outline-none text-lg font-bold focus:bg-black focus:text-white transition-all'
                                     value={digit}
+                                    onFocus={() => setFocusedIndex(index)}
+                                    onBlur={() => setFocusedIndex(null)}
+                                    className={`w-14 h-14 text-center border outline-none text-lg font-bold transition-all duration-200 
+                                        ${focusedIndex === index 
+                                            ? 'border-black border-2 scale-105 shadow-sm' 
+                                            : 'border-black/20 text-black/60'
+                                        } 
+                                        ${digit && focusedIndex !== index ? 'border-black/40' : ''}`}
                                     onChange={(e) => handleOtpChange(index, e.target.value)}
                                     onKeyDown={(e) => handleOtpKeyDown(index, e)}
                                 />
@@ -222,7 +230,7 @@ const Signup = () => {
                             )}
                         </div>
                         
-                        <button onClick={() => setShowOtp(false)} className='mt-8 text-[11px] text-black font-bold uppercase tracking-widest hover:text-black/50 transition-colors'>
+                        <button onClick={() => setShowOtp(false)} className='mt-8 text-[11px] text-black font-bold uppercase tracking-widest hover:text-black/50 transition-colors underline underline-offset-4 decoration-black'>
                             ← Back to Signup
                         </button>
                     </div>
