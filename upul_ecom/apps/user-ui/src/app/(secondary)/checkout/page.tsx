@@ -320,6 +320,14 @@ export default function CheckoutPage() {
           <PlaceOrderButton className="lg:hidden mt-7" />
         </div>
       </div>
+
+      <style jsx>{`
+        @media (max-width: 768px) {
+          input {
+            font-size: 16px !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
