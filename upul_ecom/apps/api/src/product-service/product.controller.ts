@@ -198,30 +198,94 @@ export const getProductBySku = async (
 };
 
 // 2. UPDATE By SKU
+// export const updateProductBySku = async (req: Request, res: Response, next: NextFunction) => {
+//   try {
+//     const { sku } = req.params;
+//     const { 
+//       name, description, price, stock, categoryId, 
+//       images, variants, discountType, discountValue, brand, sizeType, visible
+//     } = req.body;
+
+//     // 1. Map Variants safely
+//     const formattedVariants = Array.isArray(variants)
+//       ? variants.map((v: any) => ({ size: v.size, stock: Number(v.stock) }))
+//       : [];
+
+//     // 2. 👇 CALCULATE STOCK LOGIC (Create vs Update must match)
+//     let finalStock = 0;
+    
+//     if (formattedVariants.length > 0) {
+//        // Option A: Sum of Variants
+//        finalStock = formattedVariants.reduce((sum: number, v: any) => sum + v.stock, 0);
+//     } else {
+//        // Option B: Manual Stock Input
+//        finalStock = Number(stock || 0);
+//     }
+
+//     const updatedProduct = await prisma.product.update({
+//       where: { sku },
+//       data: {
+//         name,
+//         description,
+//         price: Number(price),
+//         brand,
+//         sizeType,
+        
+//         // Stock & Availability
+//         stock: finalStock,
+//         availability: finalStock > 0, 
+        
+//         // Visibility
+//         visible: visible, 
+
+//         category: categoryId ? { connect: { id: categoryId } } : undefined,
+        
+//         // IMPORTANT: We overwrite these arrays
+//         images: images, 
+//         variants: formattedVariants, 
+
+//         discountType: discountType || "NONE",
+//         discountValue: Number(discountValue || 0),
+//       },
+//     });
+
+//     return res.json({ success: true, product: updatedProduct });
+//   } catch (error) {
+//     if ((error as any).code === 'P2002') {
+//        return res.status(400).json({ error: "Duplicate value found." });
+//     }
+//     return next(error);
+//   }
+// };
+
 export const updateProductBySku = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { sku } = req.params;
     const { 
       name, description, price, stock, categoryId, 
-      images, variants, discountType, discountValue, brand, sizeType, visible
+      images, variants, discountType, discountValue, brand, sizeType, visible, colors, isNewArrival
     } = req.body;
 
-    // 1. Map Variants safely
+    // 1. Ensure product exists
+    const existingProduct = await prisma.product.findUnique({ where: { sku } });
+    if (!existingProduct) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    // 2. Format Variants safely
     const formattedVariants = Array.isArray(variants)
       ? variants.map((v: any) => ({ size: v.size, stock: Number(v.stock) }))
       : [];
 
-    // 2. 👇 CALCULATE STOCK LOGIC (Create vs Update must match)
+    // 3. Calculate Stock
     let finalStock = 0;
-    
     if (formattedVariants.length > 0) {
-       // Option A: Sum of Variants
-       finalStock = formattedVariants.reduce((sum: number, v: any) => sum + v.stock, 0);
+      finalStock = formattedVariants.reduce((sum: number, v: any) => sum + v.stock, 0);
     } else {
-       // Option B: Manual Stock Input
-       finalStock = Number(stock || 0);
+      finalStock = Number(stock || 0);
     }
 
+    // 4. Update
     const updatedProduct = await prisma.product.update({
       where: { sku },
       data: {
@@ -230,18 +294,17 @@ export const updateProductBySku = async (req: Request, res: Response, next: Next
         price: Number(price),
         brand,
         sizeType,
-        
-        // Stock & Availability
         stock: finalStock,
         availability: finalStock > 0, 
+        visible: visible !== undefined ? visible : existingProduct.visible,
+        isNewArrival: isNewArrival !== undefined ? isNewArrival : existingProduct.isNewArrival,
         
-        // Visibility
-        visible: visible, 
-
-        category: categoryId ? { connect: { id: categoryId } } : undefined,
+        // Use direct ID assignment if your schema allows it (usually categoryId: categoryId)
+        // or keep connect but ensure categoryId exists
+        categoryId: categoryId || existingProduct.categoryId,
         
-        // IMPORTANT: We overwrite these arrays
-        images: images, 
+        images: images || existingProduct.images, 
+        colors: colors || existingProduct.colors,
         variants: formattedVariants, 
 
         discountType: discountType || "NONE",
@@ -251,6 +314,7 @@ export const updateProductBySku = async (req: Request, res: Response, next: Next
 
     return res.json({ success: true, product: updatedProduct });
   } catch (error) {
+    console.error("Update Error:", error);
     if ((error as any).code === 'P2002') {
        return res.status(400).json({ error: "Duplicate value found." });
     }

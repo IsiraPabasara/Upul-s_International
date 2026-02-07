@@ -7,6 +7,8 @@ import BrandMarquee from './shared/widgets/brandsMarquee';
 import Hero from './shared/widgets/banner';
 import NewArrivalPreview from './shared/widgets/NewArrivalPreview';
 import MenCategoryPreview from './shared/widgets/MenCategoryPreview';
+import WomenCategoryPreview from './shared/widgets/WomenCatPreview';
+
 
 
 
@@ -227,8 +229,11 @@ export default function HomePage() {
         <BrandMarquee/>
       </div>
       <FeaturedCategories />
-      <div className='mb-20'>
+      <div className='mb-10 pb-3'>
         <MenCategoryPreview />
+      </div>
+      <div className='mb-20'>
+        <WomenCategoryPreview />
       </div>
       <Lookbook />
       
