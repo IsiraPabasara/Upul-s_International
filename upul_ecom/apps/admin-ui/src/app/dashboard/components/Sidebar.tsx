@@ -18,8 +18,8 @@ const mainNavItems = [
 ];
 
 const productSubItems = [
-  { label: "Product List", href: "/dashboard/productlist", icon: List },
   { label: "Add Product", href: "/dashboard/products/add", icon: PlusCircle },
+  { label: "Product List", href: "/dashboard/productlist", icon: List },
   { label: "Categories", href: "/dashboard/products/category", icon: Layers },
   { label: "Size Standards", href: "/dashboard/products/sizetypes", icon: Ruler },
 ];
