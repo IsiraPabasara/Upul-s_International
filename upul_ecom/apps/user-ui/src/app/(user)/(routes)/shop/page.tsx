@@ -29,11 +29,28 @@ const GridIcon = ({ columns, active }: { columns: number, active: boolean }) => 
   </div>
 );
 
-const Breadcrumbs = ({ category, search }: { category?: string | null; search?: string | null }) => (
+const Breadcrumbs = ({ 
+  category, 
+  search, 
+  isNewArrival 
+}: { 
+  category?: string | null; 
+  search?: string | null; 
+  isNewArrival: boolean 
+}) => (
   <nav className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-gray-400 mb-4 md:mb-4 font-outfit mt-5 md:mt-1">
     <a href="/" className="hover:text-black transition-colors">Home</a>
     <span>/</span>
-    <a href="/shop" className={`${!category && !search ? 'text-black font-bold' : 'hover:text-black'}`}>Shop</a>
+    <a href="/shop" className={`${!category && !search && !isNewArrival ? 'text-black font-bold' : 'hover:text-black'}`}>Shop</a>
+    
+    {/* Breadcrumb for New Arrivals */}
+    {isNewArrival && (
+      <>
+        <span>/</span>
+        <span className="text-black font-bold">New Arrivals</span>
+      </>
+    )}
+    
     {category && (
       <>
         <span>/</span>
@@ -53,6 +70,9 @@ export default function ShopPage() {
   const searchParams = useSearchParams();
   const searchTerm = searchParams.get('search');
   const categorySlug = searchParams.get('category');
+  
+  // ✅ Check for isNewArrival parameter
+  const isNewArrival = searchParams.get('isNewArrival') === 'true';
 
   // State
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
@@ -61,7 +81,6 @@ export default function ShopPage() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Use 'instant' for an immediate jump to the top
     window.scrollTo({
       top: 0,
       left: 0,
@@ -69,12 +88,10 @@ export default function ShopPage() {
     });
   }, [])
 
-  // ✅ Hydration Fix: Set mounted to true after initial render
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // ✅ Scroll Lock: Prevents background scrolling when mobile filter is open
   useEffect(() => {
     if (isMobileFiltersOpen) {
       document.body.style.overflow = 'hidden';
@@ -84,12 +101,10 @@ export default function ShopPage() {
     return () => { document.body.style.overflow = 'unset'; };
   }, [isMobileFiltersOpen]);
 
-  // ✅ Dynamic Limit: Safe calculation that matches Server vs Client
   const dynamicLimit = useMemo(() => {
-    if (!mounted) return 12; // Default for Server Side Rendering
+    if (!mounted) return 12; 
     
     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-      // Mobile: 8 items for 1 column, 12 for 2 columns
       return mobileGrid === 1 ? 8 : 12;
     }
     if (desktopGrid === 3) return 12;
@@ -101,12 +116,10 @@ export default function ShopPage() {
     setIsMobileFiltersOpen(false);
   }, []);
 
-  // ✅ Query Logic: Enabled only after mounting to prevent hydration mismatch
   const { data, isLoading } = useQuery<ShopResponse>({
     queryKey: ['shop-products', searchParams.toString(), dynamicLimit],
     queryFn: async () => {
       const params = new URLSearchParams(searchParams.toString());
-      // Ensure page parameter is set (default to 1 if not present)
       if (!params.has('page')) {
         params.set('page', '1');
       }
@@ -123,7 +136,7 @@ export default function ShopPage() {
   const pagination = data?.pagination || { total: 0, page: 1, limit: dynamicLimit, totalPages: 1 };
 
   const getGridClasses = () => {
-    if (!mounted) return "grid-cols-2 lg:grid-cols-4"; // Static fallback for SSR
+    if (!mounted) return "grid-cols-2 lg:grid-cols-4"; 
     
     const mobileClass = mobileGrid === 1 ? "grid-cols-1" : "grid-cols-2";
     let desktopClass = "lg:grid-cols-3 xl:grid-cols-4";
@@ -135,7 +148,7 @@ export default function ShopPage() {
   return (
     <div className="min-h-screen bg-white mb-10">
       <div className="mx-auto px-5 mt-12 md:mt-2 md:pt-5 font-outfit max-w-8xl">
-        <Breadcrumbs category={categorySlug} search={searchTerm} />
+        <Breadcrumbs category={categorySlug} search={searchTerm} isNewArrival={isNewArrival} />
 
         <div className="flex flex-col md:flex-row gap-10">
           <FilterSidebar isOpen={isMobileFiltersOpen} onClose={closeMobileFilters} />
@@ -145,7 +158,14 @@ export default function ShopPage() {
             <div className="flex items-end justify-between mb-8 pb-4 border-b border-gray-100">
               <div className="flex flex-col gap-1">
                  <h1 className="text-xl md:text-2xl font-bold uppercase tracking-tight text-gray-900">
-                    {searchTerm ? `Search: "${searchTerm}"` : categorySlug ? categorySlug.replace(/-/g, ' ') : 'All Collection'}
+                    {/* ✅ Conditional Title Logic */}
+                    {searchTerm 
+                      ? `Search: "${searchTerm}"` 
+                      : isNewArrival 
+                        ? 'New Arrivals' 
+                        : categorySlug 
+                          ? categorySlug.replace(/-/g, ' ') 
+                          : 'All Collection'}
                  </h1>
                  {!isLoading && mounted && (
                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
@@ -154,7 +174,6 @@ export default function ShopPage() {
                  )}
               </div>
               
-              {/* Desktop View Controls */}
               <div className="hidden md:flex items-center gap-6">
                 <div className="flex items-center gap-2 border-r border-gray-200 pr-6">
                     <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mr-2">View</span>

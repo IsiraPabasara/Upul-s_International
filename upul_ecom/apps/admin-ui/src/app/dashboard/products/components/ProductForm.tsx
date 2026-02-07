@@ -18,6 +18,8 @@ import {
   X,
   Minus,
   Plus,
+  Eye,
+  Zap,
 } from "lucide-react";
 
 // --- Types ---
@@ -199,9 +201,8 @@ export default function ProductForm({
 
   return (
     <form onSubmit={handleSubmit(onFormSubmit)} className="pb-20">
-      {/* --- MASTER LAYOUT (60% Left / 40% Right) --- */}
       <div className="grid grid-cols-1 xl:grid-cols-5 gap-8 items-start">
-        {/* === LEFT COLUMN: FORMS (Col Span 3) === */}
+        {/* === LEFT COLUMN === */}
         <div className="xl:col-span-3 space-y-8">
           {/* 1. GENERAL INFORMATION */}
           <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800">
@@ -228,7 +229,6 @@ export default function ProductForm({
                   placeholder="e.g. Cotton Night Dress"
                   {...register("name", { required: true })}
                 />
-                {/* Preview Badge */}
                 {primaryColor && watchedName && (
                   <div className="mt-3 text-xs font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 px-4 py-3 rounded-xl border border-blue-100 dark:border-blue-800/30 flex items-center gap-3 animate-in fade-in slide-in-from-top-1">
                     <span className="bg-blue-600 text-white text-[10px] px-2 py-0.5 rounded shadow-sm font-bold tracking-wide uppercase">
@@ -251,7 +251,6 @@ export default function ProductForm({
                 />
               </div>
 
-              {/* SKU & Brand Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
                 <div className="w-full">
                   <div className="flex justify-between items-center mb-2 ml-1 h-5">
@@ -287,7 +286,7 @@ export default function ProductForm({
             </div>
           </div>
 
-          {/* 2. COLOR & SIZE (Fixed Stock) */}
+          {/* 2. VARIANTS */}
           <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800">
             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-slate-800">
               <div className="p-2.5 bg-purple-50 dark:bg-purple-900/20 rounded-xl text-purple-600 dark:text-purple-400">
@@ -324,7 +323,6 @@ export default function ProductForm({
               </div>
               <div className="border-t border-gray-100 dark:border-slate-800" />
 
-              {/* Toggle */}
               <div className="flex items-center justify-between p-5 bg-gray-50 dark:bg-slate-800/40 rounded-2xl border border-gray-100 dark:border-slate-700">
                 <div className="flex flex-col gap-1">
                   <span className="text-sm font-bold text-gray-900 dark:text-white">
@@ -345,7 +343,6 @@ export default function ProductForm({
                 </label>
               </div>
 
-              {/* Stock Input */}
               <div className="animate-in fade-in slide-in-from-top-2 duration-300">
                 {hasVariants ? (
                   <StockManager
@@ -358,7 +355,6 @@ export default function ProductForm({
                     }}
                   />
                 ) : (
-                  /* Fixed Single Stock Control */
                   <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-6">
                     <div className="flex flex-col gap-1 w-full sm:w-auto">
                       <label className="label mb-0 text-gray-900 dark:text-white">
@@ -415,9 +411,8 @@ export default function ProductForm({
             </div>
           </div>
 
-          {/* --- 3. PRICING (Spacious & Fixed Layout) --- */}
+          {/* 3. PRICING */}
           <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800">
-            {/* Header */}
             <div className="flex items-center gap-3 mb-8">
               <div className="p-3 bg-emerald-100 dark:bg-emerald-900/20 rounded-2xl text-emerald-600 dark:text-emerald-400">
                 <DollarSign size={24} strokeWidth={2.5} />
@@ -433,7 +428,6 @@ export default function ProductForm({
             </div>
 
             <div className="flex flex-col gap-8">
-              {/* ROW 1: Base Selling Price (Full Width) */}
               <div>
                 <label className="label mb-2 ml-1 text-gray-600 dark:text-slate-300">
                   Base Selling Price
@@ -455,9 +449,7 @@ export default function ProductForm({
                 </div>
               </div>
 
-              {/* ROW 2: Discount Controls (Spacious Grid) */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                {/* Discount Type (Takes 2/3 space) */}
                 <div className="sm:col-span-2">
                   <label className="label mb-2 ml-1">Discount Type</label>
                   <div className="relative">
@@ -487,19 +479,16 @@ export default function ProductForm({
                   </div>
                 </div>
 
-                {/* Value Input (Takes 1/3 space) */}
                 <div
                   className={`sm:col-span-1 transition-all duration-300 ${watchedDiscountType === "NONE" ? "opacity-40 pointer-events-none grayscale blur-[1px]" : "opacity-100"}`}
                 >
                   <label className="label mb-2 ml-1">Value</label>
                   <div className="relative group">
-                    {/* Symbol Left (For Fixed) */}
                     {watchedDiscountType === "FIXED" && (
                       <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm pointer-events-none transition-colors group-focus-within:text-emerald-600">
                         Rs.
                       </div>
                     )}
-
                     <input
                       type="number"
                       min="0"
@@ -513,8 +502,6 @@ export default function ProductForm({
                                     `}
                       placeholder="0"
                     />
-
-                    {/* Symbol Right (For Percentage) */}
                     {watchedDiscountType === "PERCENTAGE" && (
                       <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xs pointer-events-none transition-colors group-focus-within:text-emerald-600">
                         %
@@ -524,12 +511,8 @@ export default function ProductForm({
                 </div>
               </div>
 
-              {/* ROW 3: Breakdown Summary (Full Width) */}
               <div className="bg-gradient-to-r from-gray-50 to-white dark:from-slate-800 dark:to-slate-900 p-6 rounded-2xl border border-gray-100 dark:border-slate-700 flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
-                {/* Decorative background glow */}
                 <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/2"></div>
-
-                {/* Left: Details */}
                 <div className="flex items-center gap-8 text-sm">
                   <div className="flex flex-col gap-1">
                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
@@ -539,10 +522,7 @@ export default function ProductForm({
                       Rs. {Number(watchedPrice || 0).toLocaleString()}
                     </span>
                   </div>
-
-                  {/* Divider */}
                   <div className="h-8 w-px bg-gray-200 dark:bg-slate-700"></div>
-
                   <div className="flex flex-col gap-1">
                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                       Discount
@@ -555,8 +535,6 @@ export default function ProductForm({
                     </span>
                   </div>
                 </div>
-
-                {/* Right: Final Price */}
                 <div className="flex items-center gap-4 bg-white dark:bg-slate-800 px-5 py-3 rounded-xl border border-gray-100 dark:border-slate-700 shadow-sm relative z-10">
                   <div className="flex flex-col items-end">
                     <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
@@ -572,12 +550,10 @@ export default function ProductForm({
           </div>
         </div>
 
-        {/* === RIGHT COLUMN: VISUALS (Col Span 2) === */}
-        {/* === RIGHT COLUMN: VISUALS (Col Span 2) === */}
+        {/* === RIGHT COLUMN === */}
         <div className="xl:col-span-2 space-y-8 sticky top-6">
           {/* 4. MEDIA GALLERY */}
           <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800">
-            {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <ImageIcon size={20} className="text-orange-500" />
@@ -594,11 +570,9 @@ export default function ProductForm({
               </span>
             </div>
 
-            {/* A. Cover Image (First Image) */}
             <div className="mb-4">
               {currentImages.length + selectedRawFiles.length > 0 ? (
                 <div className="relative aspect-[4/5] w-full rounded-2xl overflow-hidden border border-gray-200 dark:border-slate-700 shadow-sm bg-gray-50 dark:bg-slate-800 group">
-                  {/* Image: object-contain to stop cropping */}
                   <img
                     src={
                       currentImages[0]?.url ||
@@ -607,7 +581,6 @@ export default function ProductForm({
                     alt="Cover"
                     className="w-full h-full object-contain"
                   />
-                  {/* Remove Button */}
                   <button
                     type="button"
                     onClick={() => {
@@ -623,7 +596,6 @@ export default function ProductForm({
                   >
                     <X size={18} />
                   </button>
-                  {/* Badge */}
                   <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-md text-white px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider shadow-sm z-10">
                     Cover Image
                   </div>
@@ -644,10 +616,9 @@ export default function ProductForm({
               )}
             </div>
 
-            {/* B. Thumbnails Grid (Skipping First) */}
             <div className="grid grid-cols-4 gap-3 mb-4">
               {[...currentImages, ...selectedRawFiles].map((fileOrUrl, idx) => {
-                if (idx === 0) return null; // Skip Cover
+                if (idx === 0) return null;
                 const src =
                   fileOrUrl instanceof File
                     ? URL.createObjectURL(fileOrUrl)
@@ -685,7 +656,6 @@ export default function ProductForm({
               })}
             </div>
 
-            {/* C. Uploader (NOW CONDITIONALLY RENDERED) */}
             {currentImages.length + selectedRawFiles.length < MAX_IMAGES ? (
               <ImageUploader
                 onFilesSelected={(incoming) => {
@@ -700,7 +670,6 @@ export default function ProductForm({
                 }}
               />
             ) : (
-              /* Limit Reached State */
               <div className="p-4 bg-gray-50 dark:bg-slate-800 rounded-2xl border border-dashed border-gray-200 dark:border-slate-700 text-center">
                 <p className="text-xs font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wide">
                   Maximum limit reached
@@ -709,35 +678,95 @@ export default function ProductForm({
             )}
           </div>
 
-          {/* 5. ORGANIZATION */}
-          {/* 5. ORGANIZATION */}
-          <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800">
+          {/* 5. ORGANIZATION & STATUS */}
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800">
             <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-pink-50 dark:bg-pink-900/20 rounded-2xl text-pink-500">
-                <Box size={24} strokeWidth={2.5} />
+              <div className="p-2.5 bg-pink-50 dark:bg-pink-900/20 rounded-xl text-pink-500">
+                <Box size={20} strokeWidth={2.5} />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">
                   Organization
                 </h2>
-                <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">
-                  Categorize your product.
+                <p className="text-xs text-gray-500 dark:text-slate-400 font-medium mt-0.5">
+                  Category and status settings.
                 </p>
               </div>
             </div>
 
-            <div className="p-6 bg-gray-50 dark:bg-slate-800/50 rounded-2xl border border-gray-100 dark:border-slate-700/50">
-              <Controller
-                name="categoryId"
-                control={control}
-                render={({ field }) => (
-                  <ParentSelector
-                    refreshTrigger={0}
-                    initialCategoryId={initialData?.categoryId}
-                    onSelectionChange={(id) => field.onChange(id || "")}
+            <div className="space-y-4">
+              <div className="p-4 bg-gray-50 dark:bg-slate-800/40 rounded-2xl border border-gray-100 dark:border-slate-700/50">
+                <Controller
+                  name="categoryId"
+                  control={control}
+                  render={({ field }) => (
+                    <ParentSelector
+                      refreshTrigger={0}
+                      initialCategoryId={initialData?.categoryId}
+                      onSelectionChange={(id) => field.onChange(id || "")}
+                    />
+                  )}
+                />
+              </div>
+
+              {/* Status Toggles */}
+              <div className="grid grid-cols-1 gap-3">
+                {/* Visibility Toggle */}
+                <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-blue-600">
+                      <Eye size={16} />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold text-gray-900 dark:text-white">Visible</span>
+                      <span className="text-[10px] text-gray-500 font-medium">Public on store</span>
+                    </div>
+                  </div>
+                  <Controller
+                    name="visible"
+                    control={control}
+                    render={({ field }) => (
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="sr-only peer"
+                          checked={field.value}
+                          onChange={(e) => field.onChange(e.target.checked)}
+                        />
+                        <div className="w-10 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                      </label>
+                    )}
                   />
-                )}
-              />
+                </div>
+
+                {/* New Arrival Toggle */}
+                <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg text-orange-600">
+                      <Zap size={16} />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold text-gray-900 dark:text-white">New Arrival</span>
+                      <span className="text-[10px] text-gray-500 font-medium">Highlight badge</span>
+                    </div>
+                  </div>
+                  <Controller
+                    name="isNewArrival"
+                    control={control}
+                    render={({ field }) => (
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="sr-only peer"
+                          checked={field.value}
+                          onChange={(e) => field.onChange(e.target.checked)}
+                        />
+                        <div className="w-10 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-orange-500"></div>
+                      </label>
+                    )}
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
@@ -770,7 +799,6 @@ export default function ProductForm({
         </div>
       </div>
 
-      {/* Global CSS for removing spinners */}
       <style jsx global>{`
         .label {
           display: block;
