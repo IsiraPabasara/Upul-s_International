@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import prisma from "../../../../packages/libs/prisma"; // Adjust path if needed
 import { v4 as uuidv4 } from 'uuid'; 
 import { sendOrderCancelled, sendOrderConfirmation, sendShopNewOrderNotification } from "../email-service/email.service";
+import { validateCoupon } from "../coupen-service/coupon.service";
 
 // Helper: Generate a short, readable 6-digit ID (e.g., "829304")
 const generateOrderNumber = () => {
@@ -9,20 +10,19 @@ const generateOrderNumber = () => {
 };
 
 export const createOrder = async (req: Request, res: Response, next: NextFunction) => {
-  const { type, userId, addressId, address, items, email } = req.body;
+  const { type, userId, addressId, address, items, email, couponCode } = req.body;
 
   try {
     // --- 1. PREPARE ORDER DATA ---
     let shippingAddress;
     let customerEmail;
-    let customerId = null;
-    
-    // 👇 FIX: Always generate a token. 
-    // This solves the "Unique Constraint" error because the field will never be null/undefined.
-    const guestToken = uuidv4(); 
+    let customerId: string | null = null;
+
+    // Always generate a token (prevents unique constraint issues)
+    const guestToken = uuidv4();
 
     // SCENARIO A: Logged-in User
-    if (type === 'USER') {
+    if (type === "USER") {
       const user = await prisma.users.findUnique({ where: { id: userId } });
       if (!user) return res.status(404).json({ message: "User not found" });
 
@@ -32,7 +32,7 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
       shippingAddress = selectedAddr;
       customerEmail = user.email;
       customerId = user.id;
-    } 
+    }
     // SCENARIO B: Guest
     else {
       shippingAddress = address;
@@ -44,11 +44,10 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
     // --- 2. TRANSACTION (Atomic Stock Deduction + Creation) ---
     const order = await prisma.$transaction(async (tx) => {
       let calculatedTotal = 0;
-      const finalItems = [];
+      const finalItems: any[] = [];
 
       // A. Loop through items to Validate & Deduct Stock
       for (const item of items) {
-        // Fetch fresh product data
         const product = await tx.product.findUnique({ where: { id: item.productId } });
 
         if (!product) throw new Error(`Product not found: ${item.sku}`);
@@ -59,102 +58,128 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
         let variantIndex = -1;
 
         if (item.size) {
-           // Variant Logic
-           variantIndex = product.variants.findIndex((v: any) => v.size === item.size);
-           if (variantIndex === -1) throw new Error(`Size ${item.size} not found for ${product.name}`);
-           currentStock = product.variants[variantIndex].stock;
+          variantIndex = product.variants.findIndex((v: any) => v.size === item.size);
+          if (variantIndex === -1) throw new Error(`Size ${item.size} not found for ${product.name}`);
+          currentStock = product.variants[variantIndex].stock;
         } else {
-           // Standard Logic
-           currentStock = product.stock;
+          currentStock = product.stock;
         }
 
         if (currentStock < item.quantity) {
-           throw new Error(`Insufficient stock for ${product.name}. Only ${currentStock} left.`);
+          throw new Error(`Insufficient stock for ${product.name}. Only ${currentStock} left.`);
         }
 
         // B. Update Stock in DB
         if (item.size) {
-           const newVariants = [...product.variants];
-           newVariants[variantIndex].stock -= item.quantity;
-           
-           await tx.product.update({
-             where: { id: product.id },
-             data: { variants: newVariants }
-           });
+          const newVariants = [...product.variants];
+          newVariants[variantIndex].stock -= item.quantity;
+
+          await tx.product.update({
+            where: { id: product.id },
+            data: { variants: newVariants },
+          });
         } else {
-           await tx.product.update({
-             where: { id: product.id },
-             data: { stock: { decrement: item.quantity } }
-           });
+          await tx.product.update({
+            where: { id: product.id },
+            data: { stock: { decrement: item.quantity } },
+          });
         }
 
         // C. Calculate Price
         let price = product.price;
-        if (product.discountType === 'PERCENTAGE') {
-          price -= (price * (product.discountValue / 100));
-        } else if (product.discountType === 'FIXED') {
+        if (product.discountType === "PERCENTAGE") {
+          price -= price * (product.discountValue / 100);
+        } else if (product.discountType === "FIXED") {
           price -= product.discountValue;
         }
-        
+
         calculatedTotal += price * item.quantity;
-        
-        // Add to snapshot list
+
         finalItems.push({
           productId: product.id,
           sku: item.sku,
           name: product.name,
-          image: product.images[0]?.url || '',
-          price: price,
+          image: product.images[0]?.url || "",
+          price,
           quantity: item.quantity,
           size: item.size,
-          color: item.color
+          color: item.color,
         });
       }
+
+      // --- ✅ NEW: COUPON LOGIC ---
+      let finalDiscount = 0;
+      let appliedCouponCode: string | null = null;
+
+      if (couponCode) {
+        // Re-validate inside transaction (helps prevent race conditions)
+        const { coupon, discount } = await validateCoupon(
+          couponCode,
+          customerId,
+          calculatedTotal
+        );
+
+        finalDiscount = discount;
+        appliedCouponCode = coupon.code;
+
+        // Atomic usage update to prevent over-usage
+        await tx.coupon.update({
+          where: { id: coupon.id },
+          data: {
+            usedCount: { increment: 1 },
+            usedByUserIds: customerId ? { push: customerId } : undefined,
+          },
+        });
+      }
+
+      const grandTotal = calculatedTotal - finalDiscount;
 
       // D. Create the Order Record
       const newOrder = await tx.order.create({
         data: {
           orderNumber,
-          guestToken, // Always defined now
+          guestToken,
           userId: customerId,
           email: customerEmail,
           shippingAddress,
           items: finalItems,
-          totalAmount: calculatedTotal,
-          status: 'PENDING',
-          paymentMethod: 'COD'
-        }
+
+          // ✅ Updated financials
+          totalAmount: grandTotal,
+          discountAmount: finalDiscount,
+          couponCode: appliedCouponCode,
+
+          status: "PENDING",
+          paymentMethod: "COD",
+        },
       });
 
       // E. Clear User Cart (Only for logged-in users)
       if (customerId) {
         await tx.cart.update({
           where: { userId: customerId },
-          data: { items: [] }
+          data: { items: [] },
         });
       }
 
       return newOrder;
     });
 
-    // Customer Invoice
-    sendOrderConfirmation(order).catch(err => console.error("Invoice Email Failed", err));
-    
-    // Shop Owner Alert
-    sendShopNewOrderNotification(order).catch(err => console.error("Shop Alert Failed", err));
+    // Emails (async)
+    sendOrderConfirmation(order).catch((err) => console.error("Invoice Email Failed", err));
+    sendShopNewOrderNotification(order).catch((err) => console.error("Shop Alert Failed", err));
 
     // --- 3. RESPONSE ---
-    return res.status(200).json({ 
-      success: true, 
-      orderId: order.orderNumber, 
-      guestToken: order.guestToken 
+    return res.status(200).json({
+      success: true,
+      orderId: order.orderNumber,
+      guestToken: order.guestToken,
     });
-
   } catch (error: any) {
     console.error("Order Creation Error:", error);
-    return res.status(400).json({ 
-      success: false, 
-      message: error.message || "Failed to place order" 
+    return res.status(400).json({
+      success: false,
+      message: error.message || "Failed to place order",
     });
   }
 };

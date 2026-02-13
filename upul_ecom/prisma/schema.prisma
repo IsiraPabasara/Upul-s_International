@@ -188,7 +188,10 @@ model Order {
   // Snapshots (Data locked at time of purchase)
   email         String
   shippingAddress Json      
-  items         Json      
+  items         Json
+
+  couponCode     String?
+  discountAmount Float      @default(0)      
   
   totalAmount   Float
   status        OrderStatus @default(PENDING)
@@ -226,4 +229,37 @@ model EmailLog {
   @@index([recipientEmail])
   @@index([status])
   @@index([orderNumber])
+}
+
+enum CouponType {
+  PERCENTAGE
+  FIXED
+}
+
+model Coupon {
+  id             String     @id @default(auto()) @map("_id") @db.ObjectId
+  code           String     @unique
+  type           CouponType
+  value          Float      // e.g., 10 (for 10%) or 500 (for 500 LKR)
+  
+  // Constraints
+  minOrderAmount Float?     @default(0)
+  maxDiscount    Float?     // Cap for percentage discounts (e.g., max 2000 off)
+  expiresAt      DateTime?
+  isActive       Boolean    @default(true)
+  
+  // Usage Limits
+  maxUses        Int?       // Global limit (e.g., first 100 people)
+  usedCount      Int        @default(0)
+  
+  // User Restrictions
+  limitPerUser   Int?       @default(1) // How many times a single user can use it
+  isPublic       Boolean    @default(true) // If false, maybe only specific emails allowed (logic below)
+  
+  // Track who used it to enforce limitPerUser
+  // specificUserIds String[]   // Optional: If you wanted to whitelist specific users
+  usedByUserIds  String[]   // Array of User IDs who have successfully used this coupon
+
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
 }

@@ -19,6 +19,12 @@ interface CartState {
   items: CartItem[];
   isOpen: boolean;
   validationErrors: Record<string, string>;
+
+  couponCode: string | null;
+  discountAmount: number;
+  applyCoupon: (code: string, discount: number) => void;
+  removeCoupon: () => void;
+
   toggleCart: () => void;
   addItem: (item: CartItem, openCart?: boolean) => void;
   removeItem: (sku: string) => void;
@@ -28,9 +34,12 @@ interface CartState {
   setValidationErrors: (errors: Record<string, string>) => void;
   clearValidationErrors: () => void;
   updatePrices: (priceUpdates: Record<string, number>) => void;
+
   // Getters
   getSubtotal: () => number;
   getTotalSavings: () => number;
+
+  getFinalTotal: () => number;
 }
 
 export const useCart = create<CartState>()(
@@ -40,18 +49,32 @@ export const useCart = create<CartState>()(
       isOpen: false,
       validationErrors: {},
 
+      couponCode: null,
+      discountAmount: 0,
+
+      applyCoupon: (code, discount) =>
+        set({ couponCode: code, discountAmount: discount }),
+
+      removeCoupon: () =>
+        set({ couponCode: null, discountAmount: 0 }),
+
       toggleCart: () => set((state) => ({ isOpen: !state.isOpen })),
 
       addItem: (newItem, openCart = true) => {
         set((state) => {
           const existing = state.items.find((i) => i.sku === newItem.sku);
           const nextIsOpen = openCart ? true : state.isOpen;
-          
+
           if (existing) {
             return {
               items: state.items.map((i) =>
-                i.sku === newItem.sku 
-                  ? { ...i, quantity: i.quantity + newItem.quantity, price: newItem.price, originalPrice: newItem.originalPrice } 
+                i.sku === newItem.sku
+                  ? {
+                      ...i,
+                      quantity: i.quantity + newItem.quantity,
+                      price: newItem.price,
+                      originalPrice: newItem.originalPrice,
+                    }
                   : i
               ),
               isOpen: nextIsOpen,
@@ -65,8 +88,8 @@ export const useCart = create<CartState>()(
       updatePrices: (priceUpdates) => {
         set((state) => ({
           items: state.items.map((item) =>
-            priceUpdates[item.sku] !== undefined 
-              ? { ...item, price: priceUpdates[item.sku] } 
+            priceUpdates[item.sku] !== undefined
+              ? { ...item, price: priceUpdates[item.sku] }
               : item
           ),
         }));
@@ -79,18 +102,18 @@ export const useCart = create<CartState>()(
 
       updateQuantity: (sku, qty) => {
         set((state) => ({
-          items: state.items.map((i) => i.sku === sku ? { ...i, quantity: qty } : i),
+          items: state.items.map((i) => (i.sku === sku ? { ...i, quantity: qty } : i)),
         }));
         get().clearValidationErrors();
       },
 
-      clearCart: () => set({ items: [], validationErrors: {} }),
+      clearCart: () =>
+        set({ items: [], validationErrors: {}, couponCode: null, discountAmount: 0 }),
 
       syncWithUser: async () => {
         const localItems = get().items;
         try {
           const res = await axiosInstance.post('/api/cart/merge', { localItems });
-          // The backend now sends back sanitized items including originalPrice
           set({ items: res.data });
           get().clearValidationErrors();
         } catch (error) {
@@ -109,15 +132,24 @@ export const useCart = create<CartState>()(
       getTotalSavings: () => {
         return get().items.reduce((acc, item) => {
           const savingsPerUnit = (item.originalPrice || item.price) - item.price;
-          return acc + (savingsPerUnit * item.quantity);
+          return acc + savingsPerUnit * item.quantity;
         }, 0);
+      },
+
+      getFinalTotal: () => {
+        const subtotal = get().items.reduce((acc, item) => acc + item.price * item.quantity, 0);
+        return Math.max(0, subtotal - get().discountAmount);
       },
     }),
     {
       name: 'eshop-cart-storage',
       storage: createJSONStorage(() => localStorage),
-      // We only persist the items array to keep the storage clean
-      partialize: (state) => ({ items: state.items }),
+
+      partialize: (state) => ({
+        items: state.items,
+        couponCode: state.couponCode,
+        discountAmount: state.discountAmount,
+      }),
     }
   )
 );
