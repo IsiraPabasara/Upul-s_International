@@ -7,7 +7,7 @@ import * as z from 'zod';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { Loader2, ArrowLeft, AlertCircle, ShoppingCart, Home } from 'lucide-react';
+import { Loader2, ArrowLeft, AlertCircle, ShoppingCart } from 'lucide-react';
 
 import { useCart } from '@/app/hooks/useCart';
 import useUser from '@/app/hooks/useUser';
@@ -44,12 +44,9 @@ export default function CheckoutPage() {
   const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentSelected, setPaymentSelected] = useState(false);
-  
-  // Error States
   const [paymentError, setPaymentError] = useState(false);
-  const [addressError, setAddressError] = useState(false);
 
-  const SHIPPING_COST = 450;
+  const SHIPPING_COST = 0;
 
   const subtotal = useMemo(() => {
     if (!items) return 0;
@@ -78,17 +75,9 @@ export default function CheckoutPage() {
   }, [items, router, isProcessing, pathname]);
 
   const onPlaceOrder = async (data: CheckoutFormValues) => {
-    // 1. Payment Validation
     if (!paymentSelected) {
       setPaymentError(true);
-      toast.error("Please select a payment method");
-      return;
-    }
-
-    // 2. Address Validation for Logged in Users
-    if (user && !isAddingNewAddress && !selectedAddressId) {
-      setAddressError(true);
-      toast.error("Please select a shipping address");
+      toast.error("Please select a payment method to continue");
       return;
     }
     
@@ -102,11 +91,15 @@ export default function CheckoutPage() {
             await queryClient.invalidateQueries({ queryKey: ['user'] });
             setSelectedAddressId(res.data.addresses[res.data.addresses.length - 1].id);
             setIsAddingNewAddress(false);
-            setAddressError(false); // Clear error after adding
             reset();
             setIsProcessing(false);
             return;
           }
+        }
+        if (!selectedAddressId) {
+          toast.error("Please select an address");
+          setIsProcessing(false);
+          return;
         }
         orderPayload = { type: 'USER', userId: user.id, addressId: selectedAddressId, items, email: user.email, paymentMethod: 'COD', shippingFee: SHIPPING_COST };
       } else {
@@ -122,15 +115,7 @@ export default function CheckoutPage() {
   const PlaceOrderButton = ({ className }: { className?: string }) => (
     <button
       disabled={isProcessing}
-      onClick={(e) => {
-        // If user is logged in and NOT adding a new address, trigger custom validation
-        if (user && !isAddingNewAddress) {
-            onPlaceOrder({} as CheckoutFormValues);
-        } else {
-            // Otherwise trigger Zod form validation
-            handleSubmit(onPlaceOrder)(e);
-        }
-      }}
+      onClick={(e) => user && !isAddingNewAddress ? onPlaceOrder({} as CheckoutFormValues) : handleSubmit(onPlaceOrder)(e)}
       className={`w-full bg-black text-white py-4 md:py-5 rounded-md text-xs md:text-sm font-bold uppercase tracking-[0.2em] hover:bg-gray-800 transition-all disabled:opacity-50 active:scale-[0.98] ${className}`}
     >
       {isProcessing ? <Loader2 className="animate-spin mx-auto" /> : "Place Order"}
@@ -140,18 +125,18 @@ export default function CheckoutPage() {
   if (isUserLoading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen font-sans text-gray-700 bg-white overflow-x-hidden">
+    <div className="flex flex-col lg:flex-row min-h-screen font-sans text-gray-700 bg-white">
       
       {/* MOBILE SUMMARY HEADER */}
-      <div className="lg:hidden sticky top-0 z-20 bg-[#FAFAFA] p-4 border-b border-gray-200 flex justify-between items-center shadow-sm">
+      <div className="lg:hidden bg-[#FAFAFA] p-4 border-b border-gray-200 flex justify-between items-center sticky top-0 z-20">
         <div className="flex items-center gap-2 text-black font-bold">
           <ShoppingCart size={18} />
-          <span>Order summary</span>
+          <span className="text-sm">Order summary</span>
         </div>
         <span className="text-black font-black">LKR {grandTotal.toLocaleString()}</span>
       </div>
 
-      {/* LEFT COLUMN */}
+      {/* LEFT COLUMN: Main Form Area */}
       <div className="w-full lg:w-[58%] px-4 md:px-12 lg:px-24 py-8 lg:py-16">
         <div className="max-w-xl mx-auto lg:ml-auto lg:mr-0">
           <Link href="/" className="text-2xl md:text-3xl font-black tracking-tighter text-black uppercase block mb-6 md:mb-10">
@@ -162,7 +147,6 @@ export default function CheckoutPage() {
             <ArrowLeft size={16} /> Go back to shop
           </Link>
 
-          {/* Addresses Section */}
           <section className="mb-10 md:mb-12">
             <h2 className="text-lg md:text-xl font-medium text-black mb-4 md:mb-6">Shipping Address</h2>
             
@@ -171,13 +155,8 @@ export default function CheckoutPage() {
                 {user.addresses?.map((addr: any) => (
                   <div 
                     key={addr.id} 
-                    onClick={() => {
-                        setSelectedAddressId(addr.id);
-                        setAddressError(false); // Clear error on selection
-                    }}
-                    className={`p-4 border-2 rounded-lg cursor-pointer transition-all flex items-center gap-4 
-                        ${selectedAddressId === addr.id ? 'border-black bg-gray-50' : 
-                          addressError ? 'border-red-300 bg-red-50' : 'border-gray-100 hover:border-gray-300'}`}
+                    onClick={() => setSelectedAddressId(addr.id)}
+                    className={`p-4 border-2 rounded-lg cursor-pointer transition-all flex items-center gap-4 ${selectedAddressId === addr.id ? 'border-black bg-gray-50' : 'border-gray-100 hover:border-gray-300'}`}
                   >
                     <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${selectedAddressId === addr.id ? 'border-black' : 'border-gray-300'}`}>
                       {selectedAddressId === addr.id && <div className="w-2 h-2 bg-black rounded-full" />}
@@ -188,14 +167,7 @@ export default function CheckoutPage() {
                     </div>
                   </div>
                 ))}
-
-                {addressError && (
-                  <p className="text-red-500 text-[10px] font-bold mt-2 flex items-center gap-1 uppercase tracking-tighter">
-                    <AlertCircle size={12} /> Please select an address to continue
-                  </p>
-                )}
-
-                <button onClick={() => { setIsAddingNewAddress(true); setAddressError(false); }} className="text-xs md:text-sm font-bold text-black underline flex items-center gap-1 mt-4 uppercase tracking-tighter">
+                <button onClick={() => setIsAddingNewAddress(true)} className="text-xs md:text-sm font-bold text-black underline flex items-center gap-1 mt-4 uppercase tracking-tighter">
                   + Use a different address
                 </button>
               </div>
@@ -234,7 +206,6 @@ export default function CheckoutPage() {
             )}
           </section>
 
-          {/* Payment Section */}
           <section className="mb-10 md:mb-12">
             <h2 className="text-lg md:text-xl font-medium text-black mb-2">Payment</h2>
             <p className="text-xs md:text-sm text-gray-500 mb-4 md:mb-6">All transactions are secure and encrypted.</p>
@@ -262,72 +233,73 @@ export default function CheckoutPage() {
         </div>
       </div>
 
-      {/* RIGHT COLUMN: Order Summary */}
-      <div className="w-full lg:w-[42%] bg-[#FAFAFA] border-t lg:border-t-0 lg:border-l border-gray-200 px-4 md:px-12 lg:px-16 py-8 lg:py-16 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto">
-        <div className="max-w-md mx-auto lg:mx-0">
+      {/* RIGHT COLUMN: Sticky Summary Area */}
+      <div className="w-full lg:w-[42%] bg-[#FAFAFA] border-t lg:border-t-0 lg:border-l border-gray-200 px-4 md:px-12 lg:px-12 py-8 lg:py-16">
+        {/* 'lg:sticky' and 'lg:top-16' makes this stay fixed as you scroll the page */}
+        <div className="max-w-sm mx-auto lg:mx-0 lg:sticky lg:top-16">
           
-          <div className="space-y-6 mb-8 md:mb-10">
+          {/* Item List: No scroll/fixed height on mobile, compact on desktop */}
+          <div className="space-y-4 mb-8 md:mb-10 lg:max-h-[50vh] lg:overflow-y-auto lg:pr-4">
             {items.map((item) => (
-              <div key={item.sku} className="flex gap-4 items-center">
+              <div key={item.sku} className="flex gap-4 items-center lg:pt-2">
                 <div className="relative p-1 shrink-0">
-                  <div className="w-16 h-20 md:w-20 md:h-24 bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                  <div className="w-14 h-16 md:w-16 md:h-20 bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
                     <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                   </div>
-                  <span className="absolute -top-1 -right-1 bg-gray-700 text-white text-[10px] md:text-[11px] min-w-[20px] md:min-w-[22px] h-[20px] md:h-[22px] px-1 rounded-full flex items-center justify-center font-bold z-10 shadow-md">
+                  <span className="absolute -top-1 -right-1 bg-gray-700 text-white text-[9px] md:text-[10px] min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center font-bold z-10 shadow-md">
                     {item.quantity}
                   </span>
                 </div>
                 
-                <div className="flex-1 text-xs md:text-sm">
-                  <p className="font-bold text-black line-clamp-2 leading-tight">{item.name}</p>
-                  <div className="text-gray-400 text-[10px] md:text-[11px] uppercase mt-1 tracking-tighter flex flex-wrap gap-2">
+                <div className="flex-1 text-[11px] md:text-xs">
+                  <p className="font-bold text-black line-clamp-2 leading-tight uppercase tracking-tight">{item.name}</p>
+                  <div className="text-gray-400 text-[9px] md:text-[10px] uppercase mt-1 tracking-tighter flex flex-wrap gap-2">
                     {item.size && <span>Size: {item.size}</span>}
                     <span>{item.color}</span>
                   </div>
                 </div>
                 <div className="text-right shrink-0">
-                    <p className="text-xs md:text-sm font-bold text-black">LKR {((Number(item.price) || 0) * (Number(item.quantity) || 0)).toLocaleString()}</p>
+                    <p className="text-[11px] md:text-xs font-bold text-black">LKR {((Number(item.price) || 0) * (Number(item.quantity) || 0)).toLocaleString()}</p>
                     {item.originalPrice && item.originalPrice > item.price && (
-                      <p className="text-[10px] text-gray-400 line-through">LKR {(item.originalPrice * item.quantity).toLocaleString()}</p>
+                      <p className="text-[9px] text-gray-400 line-through">LKR {(item.originalPrice * item.quantity).toLocaleString()}</p>
                     )}
                 </div>
               </div>
             ))}
           </div>
 
-          <div className="space-y-3 md:space-y-4 pt-6 border-t border-gray-200">
-            <div className="flex justify-between text-xs md:text-sm">
+          <div className="space-y-3 pt-6 border-t border-gray-200">
+            <div className="flex justify-between text-[11px] md:text-xs uppercase tracking-wider">
               <span className="text-gray-500">Subtotal</span>
-              <span className="font-bold text-black tracking-tighter">LKR {subtotal.toLocaleString()}</span>
+              <span className="font-bold text-black">LKR {subtotal.toLocaleString()}</span>
             </div>
             
-            <div className="flex justify-between text-xs md:text-sm">
+            {totalDiscount > 0 && (
+              <div className="flex justify-between text-[11px] md:text-xs text-green-600 font-bold uppercase tracking-tighter">
+                <span>Savings</span>
+                <span>- LKR {totalDiscount.toLocaleString()}</span>
+              </div>
+            )}
+
+            <div className="flex justify-between text-[11px] md:text-xs uppercase tracking-wider">
               <span className="text-gray-500">Shipping</span>
-              <span className="text-black font-bold tracking-tighter">LKR {SHIPPING_COST.toLocaleString()}</span>
+              <span className="text-black font-bold">LKR {SHIPPING_COST.toLocaleString()}</span>
             </div>
 
-            <div className="flex justify-between items-center pt-6 border-t border-black mb-10">
-              <span className="text-base md:text-lg font-black uppercase tracking-tighter">Total</span>
-              <div className="text-right flex items-baseline gap-2">
-                <span className="text-[10px] text-gray-400 font-bold">LKR</span>
-                <span className="text-2xl md:text-3xl font-black text-black tracking-tighter">
+            <div className="flex justify-between items-center pt-5 border-t border-black mb-8 lg:mb-0">
+              <span className="text-sm md:text-base font-black uppercase tracking-tighter">Total</span>
+              <div className="text-right flex items-baseline gap-1">
+                <span className="text-[9px] text-gray-400 font-bold">LKR</span>
+                <span className="text-xl md:text-2xl font-black text-black tracking-tighter">
                   {grandTotal.toLocaleString()}
                 </span>
               </div>
             </div>
           </div>
 
-          <PlaceOrderButton className="lg:hidden mt-7" />
+          <PlaceOrderButton className="lg:hidden mt-8" />
         </div>
       </div>
-
-      <style jsx>{`
-        @media (max-width: 768px) {
-          input {
-            font-size: 16px !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }
