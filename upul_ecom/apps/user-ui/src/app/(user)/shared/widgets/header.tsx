@@ -178,7 +178,7 @@ export default function Header() {
               </button>
             </form>
 
-            <div className="flex items-center gap-3 md:gap-5">
+            <div className="flex items-center gap-3 md:gap-4">
               <Link
                 href={isLoggedIn ? "/profile" : "/login"}
                 className="hidden sm:flex items-center gap-1 hover:text-red-600 transition-all text-gray-800"
