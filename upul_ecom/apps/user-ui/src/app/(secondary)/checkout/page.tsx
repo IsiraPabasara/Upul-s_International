@@ -48,7 +48,6 @@ export default function CheckoutPage() {
     removeCoupon,
     clearCart,
     getSubtotal,
-    getFinalTotal,
   } = useCart();
 
   const { user, isLoading: isUserLoading } = useUser({ required: false });
@@ -59,7 +58,6 @@ export default function CheckoutPage() {
   const [paymentSelected, setPaymentSelected] = useState(false);
   const [paymentError, setPaymentError] = useState(false);
 
-  // ✅ NEW: coupon UI state
   const [promoInput, setPromoInput] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponMsg, setCouponMsg] = useState<{ type: '' | 'success' | 'error'; text: string }>({
@@ -190,7 +188,6 @@ export default function CheckoutPage() {
           paymentMethod: 'COD',
           shippingFee: SHIPPING_COST,
 
-          // ✅ CRITICAL: Send couponCode to backend
           couponCode: couponCode,
         };
       } else {
@@ -202,7 +199,6 @@ export default function CheckoutPage() {
           paymentMethod: 'COD',
           shippingFee: SHIPPING_COST,
 
-          // ✅ CRITICAL: Send couponCode to backend
           couponCode: couponCode,
         };
       }
@@ -210,7 +206,6 @@ export default function CheckoutPage() {
       const res = await axiosInstance.post('/api/orders', orderPayload);
 
       if (res.data.success) {
-        // ✅ Clear cart (also clears coupon via your store)
         clearCart();
         router.replace(`/checkout/success?orderNumber=${res.data.orderId}&success=true`);
       }
@@ -475,7 +470,6 @@ export default function CheckoutPage() {
               </div>
             )}
 
-            {/* ✅ NEW: Coupon discount row */}
             {couponCode && discountAmount > 0 && (
               <div className="flex justify-between text-[11px] md:text-xs text-green-700 font-bold uppercase tracking-tighter">
                 <span>Coupon ({couponCode})</span>
