@@ -12,6 +12,7 @@ import orderRouter from '../order-service/order.router';
 import analyticsRoutes from "../analytics/analytics.routes";
 import emailRoutes from '../email-service/email.routes';
 import couponsRoutes from '../coupen-service/coupen.routes';
+import paymentRoutes from '../payhere-service/payhere.routes';
 
 const router: Router = express.Router();
 
@@ -28,6 +29,8 @@ router.use('/orders', orderRouter);
 router.use("/analytics", analyticsRoutes);
 router.use('/admin/email', emailRoutes);
 router.use('/coupons', couponsRoutes);
+router.use('/payment', paymentRoutes);
+
 
 
 
