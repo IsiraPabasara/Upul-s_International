@@ -3,6 +3,7 @@ import prisma from "../../../../packages/libs/prisma"; // Adjust path if needed
 import { v4 as uuidv4 } from 'uuid'; 
 import { sendOrderCancelled, sendOrderConfirmation, sendShopNewOrderNotification } from "../email-service/email.service";
 import { validateCoupon } from "../coupen-service/coupon.service";
+import md5 from 'md5';
 
 // Helper: Generate a short, readable 6-digit ID (e.g., "829304")
 const generateOrderNumber = () => {
@@ -10,7 +11,7 @@ const generateOrderNumber = () => {
 };
 
 export const createOrder = async (req: Request, res: Response, next: NextFunction) => {
-  const { type, userId, addressId, address, items, email, couponCode } = req.body;
+  const { type, userId, addressId, address, items, email, paymentMethod, couponCode } = req.body; // 👈 Added couponCode
 
   try {
     // --- 1. PREPARE ORDER DATA ---
@@ -18,11 +19,10 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
     let customerEmail;
     let customerId: string | null = null;
 
-    // Always generate a token (prevents unique constraint issues)
     const guestToken = uuidv4();
 
     // SCENARIO A: Logged-in User
-    if (type === "USER") {
+    if (type === 'USER') {
       const user = await prisma.users.findUnique({ where: { id: userId } });
       if (!user) return res.status(404).json({ message: "User not found" });
 
@@ -41,7 +41,7 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
 
     const orderNumber = generateOrderNumber();
 
-    // --- 2. TRANSACTION (Atomic Stock Deduction + Creation) ---
+    // --- 2. TRANSACTION (Atomic Stock + Coupon + Order) ---
     const order = await prisma.$transaction(async (tx) => {
       let calculatedTotal = 0;
       const finalItems: any[] = [];
@@ -76,20 +76,20 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
 
           await tx.product.update({
             where: { id: product.id },
-            data: { variants: newVariants },
+            data: { variants: newVariants }
           });
         } else {
           await tx.product.update({
             where: { id: product.id },
-            data: { stock: { decrement: item.quantity } },
+            data: { stock: { decrement: item.quantity } }
           });
         }
 
-        // C. Calculate Price
+        // C. Calculate Item Price
         let price = product.price;
-        if (product.discountType === "PERCENTAGE") {
+        if (product.discountType === 'PERCENTAGE') {
           price -= price * (product.discountValue / 100);
-        } else if (product.discountType === "FIXED") {
+        } else if (product.discountType === 'FIXED') {
           price -= product.discountValue;
         }
 
@@ -99,19 +99,20 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
           productId: product.id,
           sku: item.sku,
           name: product.name,
-          image: product.images[0]?.url || "",
-          price,
+          image: product.images[0]?.url || '',
+          price: price,
           quantity: item.quantity,
           size: item.size,
-          color: item.color,
+          color: item.color
         });
       }
 
+      // --- D. COUPON LOGIC (RESTORED) ---
       let finalDiscount = 0;
       let appliedCouponCode: string | null = null;
 
       if (couponCode) {
-        // Re-validate inside transaction (helps prevent race conditions)
+        // Validate inside transaction to ensure data integrity
         const { coupon, discount } = await validateCoupon(
           couponCode,
           customerId,
@@ -121,7 +122,7 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
         finalDiscount = discount;
         appliedCouponCode = coupon.code;
 
-        // Atomic usage update to prevent over-usage
+        // Increment usage count atomically
         await tx.coupon.update({
           where: { id: coupon.id },
           data: {
@@ -131,9 +132,10 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
         });
       }
 
-      const grandTotal = calculatedTotal - finalDiscount;
+      const grandTotal = Math.max(0, calculatedTotal - finalDiscount); // Ensure non-negative
+      const finalPaymentMethod = paymentMethod === 'PAYHERE' ? 'PAYHERE' : 'COD';
 
-      // D. Create the Order Record
+      // --- E. Create Order ---
       const newOrder = await tx.order.create({
         data: {
           orderNumber,
@@ -142,42 +144,94 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
           email: customerEmail,
           shippingAddress,
           items: finalItems,
+          
+          totalAmount: grandTotal,       // 👈 Uses discounted total
+          discountAmount: finalDiscount, // 👈 Saves discount amount
+          couponCode: appliedCouponCode, // 👈 Saves code used
 
-          totalAmount: grandTotal,
-          discountAmount: finalDiscount,
-          couponCode: appliedCouponCode,
-
-          status: "PENDING",
-          paymentMethod: "COD",
-        },
+          status: 'PENDING',
+          paymentMethod: finalPaymentMethod
+        }
       });
 
-      // E. Clear User Cart (Only for logged-in users)
-      if (customerId) {
+      // F. Clear Cart (Only if COD)
+      if (customerId && finalPaymentMethod === 'COD') {
         await tx.cart.update({
           where: { userId: customerId },
-          data: { items: [] },
+          data: { items: [] }
         });
       }
 
       return newOrder;
     });
 
-    // Emails (async)
-    sendOrderConfirmation(order).catch((err) => console.error("Invoice Email Failed", err));
-    sendShopNewOrderNotification(order).catch((err) => console.error("Shop Alert Failed", err));
+    // --- 3. RESPONSE HANDLER ---
 
-    // --- 3. RESPONSE ---
-    return res.status(200).json({
-      success: true,
-      orderId: order.orderNumber,
-      guestToken: order.guestToken,
-    });
+    // SCENARIO A: COD
+    if (paymentMethod === 'COD' || !paymentMethod) {
+      sendOrderConfirmation(order).catch(console.error);
+      sendShopNewOrderNotification(order).catch(console.error);
+
+      return res.status(200).json({
+        success: true,
+        orderId: order.orderNumber,
+        guestToken: order.guestToken
+      });
+    }
+
+    // SCENARIO B: PayHere
+    if (paymentMethod === 'PAYHERE') {
+        const merchantId = process.env.PAYHERE_MERCHANT_ID;
+        const secret = process.env.PAYHERE_SECRET;
+
+        if (!merchantId || !secret) {
+            return res.status(500).json({ 
+                success: false, 
+                message: "Server Configuration Error: Payment Gateway not setup." 
+            });
+        }
+
+        const currency = 'LKR';
+        const amount = order.totalAmount.toFixed(2); // 👈 This now includes the coupon discount
+        const orderId = order.orderNumber; 
+        const shipping = order.shippingAddress as any; 
+
+        // Generate Hash
+        const hashedSecret = md5(secret).toUpperCase();
+        const hash = md5(merchantId + orderId + amount + currency + hashedSecret).toUpperCase();
+
+        return res.status(200).json({
+            success: true,
+            isPayHere: true,
+            payhereParams: {
+                sandbox: true,
+                merchant_id: merchantId,
+                return_url: `${process.env.FRONTEND_URL}/checkout/success?orderNumber=${orderId}`,
+                cancel_url: `${process.env.FRONTEND_URL}/checkout`,
+                notify_url: `${process.env.API_URL}/api/payment/notify`,
+                order_id: orderId,
+                items: "Order #" + orderId,
+                currency: currency,
+                amount: amount,
+                first_name: shipping?.firstname || "Customer",
+                last_name: shipping?.lastname || "",
+                email: order.email || "no-email@example.com",
+                phone: shipping?.phoneNumber || "0000000000",
+                address: shipping?.addressLine || "No Address",
+                city: shipping?.city || "Colombo",
+                country: "Sri Lanka",
+                hash: hash
+            }
+        });
+    }
+
+    return res.status(400).json({ success: false, message: "Invalid payment method" });
+
   } catch (error: any) {
     console.error("Order Creation Error:", error);
     return res.status(400).json({
       success: false,
-      message: error.message || "Failed to place order",
+      message: error.message || "Failed to place order"
     });
   }
 };
