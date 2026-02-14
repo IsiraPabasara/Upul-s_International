@@ -107,7 +107,6 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
         });
       }
 
-      // --- ✅ NEW: COUPON LOGIC ---
       let finalDiscount = 0;
       let appliedCouponCode: string | null = null;
 
@@ -144,7 +143,6 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
           shippingAddress,
           items: finalItems,
 
-          // ✅ Updated financials
           totalAmount: grandTotal,
           discountAmount: finalDiscount,
           couponCode: appliedCouponCode,
@@ -199,7 +197,6 @@ export const getGuestOrder = async (req: Request, res: Response, next: NextFunct
         return res.status(404).json({ message: "Invalid tracking link" });
     }
 
-    // 🛑 EXPIRATION LOGIC
     // If the order is finished, we block access to protect customer privacy
     if (order.status === 'DELIVERED' || order.status === 'CANCELLED') {
         return res.status(410).json({ 
