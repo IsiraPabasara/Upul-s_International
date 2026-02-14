@@ -167,6 +167,7 @@ enum OrderStatus {
   DELIVERED
   CANCELLED
   RETURNED
+  REFUNDED
 }
 
 model Order {

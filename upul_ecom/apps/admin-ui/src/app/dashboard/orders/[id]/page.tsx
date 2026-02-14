@@ -8,13 +8,13 @@ import Link from "next/link";
 import { 
   Loader2, Phone, MapPin, CheckCircle, Truck, XCircle, ArrowLeft, 
   PackageCheck, CreditCard, Banknote, Copy, Calendar, Check,
-  AlertTriangle 
+  AlertTriangle, RefreshCcw // Added RefreshCcw icon
 } from "lucide-react";
 import toast from "react-hot-toast";
-
 import OrderTimeline from "../components/OrderTimeline"; 
 
-// Internal Copy Button
+// ... (Keep CopyButton and Imports exactly as they are) ...
+
 const CopyButton = ({ text, label, className = "" }: { text: string, label: string, className?: string }) => {
   const [copied, setCopied] = useState(false);
   const handleCopy = (e: React.MouseEvent) => {
@@ -39,9 +39,9 @@ export default function AdminOrderDetails() {
   const { id } = useParams();
   const queryClient = useQueryClient();
   
-  // States
   const [trackingInput, setTrackingInput] = useState("");
   const [isPhoneCopied, setIsPhoneCopied] = useState(false);
+  const [isRefunding, setIsRefunding] = useState(false); // 🆕 New State
 
   const { data: order, isLoading } = useQuery({
     queryKey: ["admin-order", id],
@@ -60,6 +60,27 @@ export default function AdminOrderDetails() {
     onError: (err: any) => toast.error(err.response?.data?.message || "Update failed"),
   });
 
+  // 🆕 REFUND HANDLER
+  const handleRefund = async () => {
+    const confirmed = window.confirm(
+      "⚠️ IMPORTANT:\n\n1. Go to PayHere Dashboard > Transactions.\n2. Refund the money manually.\n\nHave you done this already? This button ONLY updates the database and restores stock."
+    );
+    if (!confirmed) return;
+
+    setIsRefunding(true);
+    try {
+      const res = await axiosInstance.post(`/api/orders/admin/${id}/refund`);
+      if (res.data.success) {
+        toast.success("Order marked as Refunded");
+        queryClient.invalidateQueries({ queryKey: ["admin-order", id] });
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Refund failed");
+    } finally {
+      setIsRefunding(false);
+    }
+  };
+
   const handleUpdateStatus = (newStatus: string) => {
     if (newStatus === "SHIPPED" && !trackingInput && !order.trackingNumber) {
       toast.error("Please enter a Domex tracking number first");
@@ -71,8 +92,8 @@ export default function AdminOrderDetails() {
   if (isLoading) return <div className="h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-950"><Loader2 className="animate-spin text-blue-600 h-10 w-10" /></div>;
   if (!order) return <div className="p-10 text-center">Order not found</div>;
 
-  // Logic: Order is "Terminated" if Cancelled, Returned, or Delivered
-  const isOrderTerminated = ['CANCELLED', 'RETURNED', 'DELIVERED'].includes(order.status);
+  // Logic: Order is "Terminated" if Cancelled, Returned, Delivered OR REFUNDED
+  const isOrderTerminated = ['CANCELLED', 'RETURNED', 'DELIVERED', 'REFUNDED'].includes(order.status);
 
   return (
     <div className="min-h-screen bg-gray-50/50 dark:bg-slate-950 p-4 sm:p-6 lg:p-10 font-sans transition-colors">
@@ -98,7 +119,7 @@ export default function AdminOrderDetails() {
           </div>
           <div className="flex flex-col items-end">
             <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Current Status</span>
-            <span className={`text-sm sm:text-base font-extrabold px-4 py-1.5 rounded-full border ${order.status === 'DELIVERED' ? 'border-green-200 text-green-700 bg-green-50 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800' : order.status === 'CANCELLED' ? 'border-red-200 text-red-700 bg-red-50 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800' : order.status === 'RETURNED' ? 'border-orange-200 text-orange-700 bg-orange-50 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800' : 'border-slate-200 text-slate-700 bg-white dark:bg-slate-900 dark:text-slate-200 dark:border-slate-700'}`}>
+            <span className={`text-sm sm:text-base font-extrabold px-4 py-1.5 rounded-full border ${order.status === 'DELIVERED' ? 'border-green-200 text-green-700 bg-green-50' : order.status === 'REFUNDED' ? 'border-purple-200 text-purple-700 bg-purple-50' : order.status === 'CANCELLED' ? 'border-red-200 text-red-700 bg-red-50' : 'border-slate-200 text-slate-700 bg-white'}`}>
                {order.status}
             </span>
           </div>
@@ -108,7 +129,7 @@ export default function AdminOrderDetails() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
             
-            {/* LEFT COLUMN: Info */}
+            {/* LEFT COLUMN: Info (Kept your existing code) */}
             <div className="lg:col-span-2 space-y-6">
                 
                 {/* Items Card */}
@@ -143,7 +164,7 @@ export default function AdminOrderDetails() {
                     </div>
                 </div>
 
-                {/* Customer Details */}
+                {/* Customer Details (Kept as is) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                    <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] shadow-sm border border-gray-100 dark:border-slate-800">
                        <div className="flex justify-between items-start mb-4">
@@ -163,9 +184,9 @@ export default function AdminOrderDetails() {
                         <div 
                             className={`flex-1 p-5 rounded-2xl flex flex-col justify-center items-center text-center group cursor-pointer transition-all select-none ${isPhoneCopied ? "bg-emerald-50 border border-emerald-100 dark:bg-emerald-900/20" : "bg-yellow-50 border border-yellow-100 hover:bg-yellow-100 dark:bg-yellow-900/10 dark:hover:bg-yellow-900/20"}`}
                              onClick={() => { 
-                                 navigator.clipboard.writeText(order.shippingAddress.phoneNumber); 
-                                 toast.success("Phone number copied!"); 
-                                 setIsPhoneCopied(true); setTimeout(() => setIsPhoneCopied(false), 2000);
+                                  navigator.clipboard.writeText(order.shippingAddress.phoneNumber); 
+                                  toast.success("Phone number copied!"); 
+                                  setIsPhoneCopied(true); setTimeout(() => setIsPhoneCopied(false), 2000);
                              }}
                         >
                              {isPhoneCopied ? (
@@ -185,43 +206,60 @@ export default function AdminOrderDetails() {
             </div>
 
             {/* RIGHT COLUMN: Management */}
-            <div className="space-y-6">
-                {!isOrderTerminated ? (
-                    <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-[2rem] shadow-xl border border-gray-100 dark:border-slate-800 sticky top-6">
-                        <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Manage Status</h2>
-                        <div className="space-y-3">
-                            {order.status === 'PENDING' && <button onClick={() => handleUpdateStatus('CONFIRMED')} disabled={statusMutation.isPending} className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold flex justify-center gap-2">{statusMutation.isPending ? <Loader2 className="animate-spin"/> : <CheckCircle />} Confirm Order</button>}
-                            {order.status === 'CONFIRMED' && <button onClick={() => handleUpdateStatus('PROCESSING')} disabled={statusMutation.isPending} className="w-full py-4 bg-purple-600 text-white rounded-xl font-bold flex justify-center gap-2"><Loader2 /> Start Processing</button>}
-                            {(order.status === 'PROCESSING' || order.status === 'CONFIRMED') && (
-                                <div className="bg-gray-50 dark:bg-slate-800 p-4 rounded-2xl border border-gray-100 dark:border-slate-700">
-                                    <label className="text-xs font-bold text-slate-500 uppercase mb-2 block ml-1">Domex Tracking ID</label>
-                                    <input type="text" placeholder="Enter Tracking Number..." value={trackingInput} onChange={(e) => setTrackingInput(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-900 border border-gray-200 rounded-xl mb-3 text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none" />
-                                    <button onClick={() => handleUpdateStatus('SHIPPED')} disabled={statusMutation.isPending} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold flex justify-center gap-2"><Truck /> Mark as Shipped</button>
-                                </div>
-                            )}
-                            {order.status === 'SHIPPED' && <button onClick={() => handleUpdateStatus('DELIVERED')} disabled={statusMutation.isPending} className="w-full py-4 bg-emerald-600 text-white rounded-xl font-bold flex justify-center gap-2"><PackageCheck /> Mark as Delivered</button>}
-                            <div className="pt-6 mt-6 border-t border-gray-100 dark:border-slate-800 space-y-3">
-                                 {['PENDING', 'CONFIRMED', 'PROCESSING'].includes(order.status) && (
-                                    <button onClick={() => { if(confirm('Cancel Order?')) handleUpdateStatus('CANCELLED'); }} className="w-full py-3 text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-xl border border-transparent flex justify-center gap-2"><XCircle size={16} /> Cancel Order</button>
-                                 )}
-                            </div>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="bg-gray-50 dark:bg-slate-900/50 p-6 rounded-[2rem] border border-gray-200 dark:border-slate-800 text-center sticky top-6">
-                        <AlertTriangle size={32} className="mx-auto text-gray-400 mb-3" />
-                        <h3 className="font-bold text-gray-500">Order Closed</h3>
-                        <p className="text-xs text-gray-400 mt-1">This order is {order.status.toLowerCase()}. Actions are disabled.</p>
+{/* RIGHT COLUMN: Management */}
+<div className="space-y-6">
+    {!isOrderTerminated ? (
+        <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-[2rem] shadow-xl border border-gray-100 dark:border-slate-800 sticky top-6">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Manage Status</h2>
+            <div className="space-y-3">
+                {/* Standard Workflow Buttons (Confirm, Process, Ship, Deliver) */}
+                {order.status === 'PENDING' && <button onClick={() => handleUpdateStatus('CONFIRMED')} disabled={statusMutation.isPending} className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold flex justify-center gap-2">{statusMutation.isPending ? <Loader2 className="animate-spin"/> : <CheckCircle />} Confirm Order</button>}
+                {order.status === 'CONFIRMED' && <button onClick={() => handleUpdateStatus('PROCESSING')} disabled={statusMutation.isPending} className="w-full py-4 bg-purple-600 text-white rounded-xl font-bold flex justify-center gap-2"><Loader2 /> Start Processing</button>}
+                
+                {(order.status === 'PROCESSING' || order.status === 'CONFIRMED') && (
+                    <div className="bg-gray-50 dark:bg-slate-800 p-4 rounded-2xl border border-gray-100 dark:border-slate-700">
+                        <label className="text-xs font-bold text-slate-500 uppercase mb-2 block ml-1">Domex Tracking ID</label>
+                        <input type="text" placeholder="Enter Tracking Number..." value={trackingInput} onChange={(e) => setTrackingInput(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-900 border border-gray-200 rounded-xl mb-3 text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none" />
+                        <button onClick={() => handleUpdateStatus('SHIPPED')} disabled={statusMutation.isPending} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold flex justify-center gap-2"><Truck /> Mark as Shipped</button>
                     </div>
                 )}
-                {order.trackingNumber && (
-                    <div className="bg-emerald-50 dark:bg-emerald-900/10 p-6 rounded-[2rem] border border-emerald-100 dark:border-emerald-900/30 text-center relative group">
-                        <div className="absolute top-4 right-4"><CopyButton text={order.trackingNumber} label="Tracking ID" /></div>
-                        <p className="text-emerald-800 dark:text-emerald-400 text-xs font-bold uppercase mb-2">Tracking Number</p>
-                        <p className="text-2xl font-black text-emerald-900 dark:text-emerald-300 tracking-wider font-mono">{order.trackingNumber}</p>
-                    </div>
-                )}
+                
+                {order.status === 'SHIPPED' && <button onClick={() => handleUpdateStatus('DELIVERED')} disabled={statusMutation.isPending} className="w-full py-4 bg-emerald-600 text-white rounded-xl font-bold flex justify-center gap-2"><PackageCheck /> Mark as Delivered</button>}
+                
+                <div className="pt-6 mt-6 border-t border-gray-100 dark:border-slate-800 space-y-3">
+                        
+                        {/* 🟢 OPTION A: PAYHERE ORDERS (Show Refund ONLY) */}
+                        {order.paymentMethod === 'PAYHERE' ? (
+                        <button 
+                            onClick={handleRefund} 
+                            disabled={isRefunding}
+                            className="w-full py-3 text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-xl border border-transparent flex justify-center gap-2"
+                        >
+                            {isRefunding ? <Loader2 className="animate-spin" size={16}/> : <RefreshCcw size={16} />}
+                            Mark as Refunded
+                        </button>
+                        ) : (
+                        /* 🔵 OPTION B: COD ORDERS (Show Cancel) */
+                        ['PENDING', 'CONFIRMED', 'PROCESSING'].includes(order.status) && (
+                            <button 
+                                onClick={() => { if(confirm('Cancel Order?')) handleUpdateStatus('CANCELLED'); }} 
+                                className="w-full py-3 text-sm font-bold text-gray-500 hover:text-red-600 bg-gray-50 hover:bg-red-50 rounded-xl border border-transparent flex justify-center gap-2"
+                            >
+                                <XCircle size={16} /> Cancel Order
+                            </button>
+                        )
+                        )}
+                </div>
             </div>
+        </div>
+    ) : (
+        <div className="bg-gray-50 dark:bg-slate-900/50 p-6 rounded-[2rem] border border-gray-200 dark:border-slate-800 text-center sticky top-6">
+            <AlertTriangle size={32} className="mx-auto text-gray-400 mb-3" />
+            <h3 className="font-bold text-gray-500">Order Closed</h3>
+            <p className="text-xs text-gray-400 mt-1">This order is {order.status.toLowerCase()}. Actions are disabled.</p>
+        </div>
+    )}
+</div>
         </div>
       </div>
     </div>
