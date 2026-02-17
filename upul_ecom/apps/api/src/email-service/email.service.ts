@@ -197,6 +197,36 @@ export const sendOrderCancelled = async (order: any) => {
   }
 };
 
+// --- 6.5. Customer: Order Refunded ---
+export const sendOrderRefunded = async (order: any) => {
+  try {
+    const refundAmount = order.refundAmount || order.totalAmount;
+    
+    const html = wrapHtml(`Order Refunded 💳`, `
+      <p>Your refund for order <b>#${order.orderNumber}</b> has been processed successfully.</p>
+      
+      <div style="background: #e8f5e9; padding: 15px; border-radius: 5px; margin: 20px 0;">
+        <p style="margin: 0; color: #2e7d32; font-weight: bold;">Refund Amount</p>
+        <p style="margin: 10px 0 0; font-size: 24px; font-weight: bold; color: #1b5e20;">LKR ${refundAmount.toLocaleString()}</p>
+      </div>
+
+      <p>The refund has been credited to your original payment method. Please allow 3-5 business days for the amount to appear in your account.</p>
+      <p>If you have any questions about your refund, please contact our support team.</p>
+    `);
+
+    await queueEmail({
+      to: order.email,
+      subject: `Refund Processed for Order #${order.orderNumber}`,
+      html,
+      orderNumber: order.orderNumber,
+      emailType: 'refunded',
+    });
+  } catch (error) {
+    console.error("Failed to queue refund email:", error);
+    throw error;
+  }
+};
+
 // --- 7. Shop Owner: New Order Alert ---
 export const sendShopNewOrderNotification = async (order: any) => {
   try {

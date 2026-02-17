@@ -35,7 +35,7 @@ export interface EmailJob {
   subject: string;
   html: string;
   orderNumber?: string;
-  emailType: 'confirmation' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'returned' | 'admin-alert';
+  emailType: 'confirmation' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'returned' | 'refunded' | 'admin-alert';
 }
 
 // Queue an email to be sent
