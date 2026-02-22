@@ -22,6 +22,7 @@ import {
   Zap,
   ChevronDown,
 } from "lucide-react";
+import toast from "react-hot-toast";
 
 interface ProductImage {
   fileId: string;
@@ -125,20 +126,20 @@ export default function ProductForm({
 
   const onFormSubmit: SubmitHandler<ProductFormValues> = async (data) => {
     if (!data.categoryId) {
-      alert("Please select a category");
+      toast.error("Please select a category");
       return;
     }
     const totalImages = currentImages.length + selectedRawFiles.length;
     if (totalImages > MAX_IMAGES) {
-      alert(`Max ${MAX_IMAGES} images allowed.`);
+      toast.error(`Max ${MAX_IMAGES} images allowed.`);
       return;
     }
     if (hasVariants && data.variants.length === 0) {
-      alert("Add size variants.");
+      toast.error("Please add at least one size variant.");
       return;
     }
     if (!hasVariants && Number(data.stock) < 0) {
-      alert("Stock cannot be negative.");
+      toast.error("Stock cannot be negative.");
       return;
     }
 
@@ -181,7 +182,7 @@ export default function ProductForm({
       await onSubmit(cleanData);
     } catch (error) {
       console.error("Save failed", error);
-      alert("Failed to save product.");
+      toast.error("Failed to save product. Please try again.");
     } finally {
       setIsUploading(false);
     }
@@ -260,13 +261,13 @@ export default function ProductForm({
 
               {/* Description */}
               <div>
-                <label className="label mb-1.5 sm:mb-2 ml-1 text-sm sm:text-base font-semibold">
+                <label className="label mb-1.5 sm:mb-2 ml-1 text-sm sm:text-base font-semibold text-gray-900 dark:text-white">
                   Description <span className="text-red-500 ml-0.5">*</span>
                 </label>
                 <textarea
                   {...register("description", { required: true })}
                   rows={4}
-                  className="input-field resize-none text-sm sm:text-base leading-relaxed py-2.5 sm:py-3 min-h-[100px] sm:min-h-[120px] w-full"
+                  className="input-field resize-none text-sm sm:text-base leading-relaxed py-2.5 sm:py-3 min-h-[100px] sm:min-h-[120px] w-full [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-200 dark:[&::-webkit-scrollbar-thumb]:bg-slate-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-gray-300 dark:hover:[&::-webkit-scrollbar-thumb]:bg-slate-600 transition-colors"
                   placeholder="Product description..."
                 />
               </div>

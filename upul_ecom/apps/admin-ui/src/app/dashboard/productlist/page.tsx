@@ -8,15 +8,17 @@ import {
   Plus,
   Search,
   Edit,
-  Eye,
-  EyeOff,
   ChevronLeft,
   ChevronRight,
   Loader2,
   PackageX,
+  Trash2,
+  Eye,
+  EyeOff,
+  Tag,
+  Layers,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { Trash2 } from "lucide-react";
 
 // Types matching your API response
 interface Product {
@@ -25,7 +27,7 @@ interface Product {
   sku: string;
   price: number;
   stock: number;
-  visible: boolean; // We use 'visible' now!
+  visible: boolean;
   images: { url: string }[];
   category: { name: string };
   variants: { size: string; stock: number }[];
@@ -41,13 +43,16 @@ interface ApiResponse {
   };
 }
 
+// --- SHARED SCROLLBAR ---
+const customScrollbar =
+  "[&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-200 dark:[&::-webkit-scrollbar-thumb]:bg-slate-700 [&::-webkit-scrollbar-thumb]:rounded-full";
+
 export default function ProductListPage() {
   const queryClient = useQueryClient();
 
   // --- STATE ---
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  // We use a separate state for the actual API query to debounce/delay typing
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
   // Debounce Logic: Wait 500ms after typing stops before searching
@@ -61,7 +66,7 @@ export default function ProductListPage() {
 
   // --- 1. FETCH PRODUCTS ---
   const { data, isLoading, isError } = useQuery<ApiResponse>({
-    queryKey: ["products", page, debouncedSearch], // Refetch when page or search changes
+    queryKey: ["products", page, debouncedSearch],
     queryFn: async () => {
       const res = await axiosInstance.get("/api/products", {
         params: {
@@ -72,7 +77,7 @@ export default function ProductListPage() {
       });
       return res.data;
     },
-    placeholderData: (previousData) => previousData, // Keep old data visible while loading new page
+    placeholderData: (previousData) => previousData,
   });
 
   // --- 2. TOGGLE VISIBILITY MUTATION ---
@@ -84,14 +89,12 @@ export default function ProductListPage() {
       sku: string;
       currentStatus: boolean;
     }) => {
-      // Send the OPPOSITE of current status
       const res = await axiosInstance.patch(`/api/products/${sku}/visibility`, {
         visible: !currentStatus,
       });
       return res.data;
     },
     onSuccess: (data, variables) => {
-      // Update the cache instantly without refetching everything (Optimistic-ish)
       queryClient.setQueryData(
         ["products", page, debouncedSearch],
         (old: ApiResponse | undefined) => {
@@ -115,11 +118,10 @@ export default function ProductListPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (sku: string) => {
-      // Assuming your endpoint is DELETE /api/products/:sku
       await axiosInstance.delete(`/api/products/${sku}`);
     },
     onSuccess: () => {
-      toast.success("Product deleted");
+      toast.success("Product deleted successfully");
       queryClient.invalidateQueries({ queryKey: ["products"] });
     },
     onError: () => toast.error("Failed to delete product"),
@@ -137,203 +139,253 @@ export default function ProductListPage() {
 
   // --- RENDER ---
   return (
-    <div className="max-w-7xl mx-auto p-6 md:p-8">
+    <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
       {/* HEADER */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Products</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Manage your store inventory
+          <h1 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight flex items-center gap-3">
+            <PackageX
+              className="text-blue-500 hidden sm:block"
+              size={28}
+              strokeWidth={2.5}
+            />
+            Inventory
+          </h1>
+          <p className="text-gray-500 dark:text-slate-400 text-xs sm:text-sm font-medium mt-1">
+            Manage your store products and visibility.
           </p>
         </div>
         <Link
           href="/dashboard/products/add"
-          className="bg-black text-white px-5 py-2.5 rounded-lg flex items-center gap-2 hover:bg-gray-800 transition shadow-lg"
+          className="w-full sm:w-auto bg-blue-600 text-white px-5 py-3 sm:py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-md hover:shadow-lg hover:shadow-blue-500/20 active:scale-95"
         >
-          <Plus size={18} /> Add Product
+          <Plus size={18} strokeWidth={2.5} /> Add Product
         </Link>
       </div>
 
       {/* FILTERS & SEARCH */}
-      <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6 flex flex-col md:flex-row gap-4">
-        <div className="relative flex-1">
+      <div className="bg-white dark:bg-slate-900/50 p-4 sm:p-5 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm mb-6 transition-colors">
+        <div className="relative w-full group">
           <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors"
             size={20}
+            strokeWidth={2.5}
           />
           <input
             type="text"
             placeholder="Search by Name or SKU..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black/5"
+            className="w-full h-[48px] sm:h-[52px] pl-12 pr-4 bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-sm sm:text-base font-medium text-gray-900 dark:text-white placeholder:text-gray-400"
           />
         </div>
       </div>
 
-      {/* TABLE */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        {isLoading && !data ? (
-          <div className="p-20 flex justify-center">
-            <Loader2 className="animate-spin" />
-          </div>
-        ) : isError ? (
-          <div className="p-20 text-center text-red-500">
-            Failed to load products
-          </div>
-        ) : data?.data.length === 0 ? (
-          <div className="p-20 flex flex-col items-center text-gray-400">
-            <PackageX size={48} className="mb-4 opacity-50" />
-            <p>No products found.</p>
-          </div>
-        ) : (
-          <table className="w-full text-left text-sm">
-            <thead className="bg-gray-50 text-gray-500 border-b border-gray-200 font-medium uppercase tracking-wider text-xs">
-              <tr>
-                <th className="p-4">Product</th>
-                <th className="p-4">SKU</th>
-                <th className="p-4">Price</th>
-                <th className="p-4">Stock</th>
-                <th className="p-4 text-center">Status</th>
-                <th className="p-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {data?.data.map((product) => (
-                <tr key={product.id} className="hover:bg-gray-50/50 transition">
-                  {/* Product Info */}
-                  <td className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gray-100 rounded-md overflow-hidden border border-gray-200 shrink-0">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        {product.images[0]?.url && (
-                          <img
-                            src={product.images[0].url}
-                            alt=""
-                            className="w-full h-full object-cover"
-                          />
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900 line-clamp-1">
-                          {product.name}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {product.category?.name || "Uncategorized"}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-
-                  <td className="p-4 text-gray-500 font-mono text-xs">
-                    {product.sku}
-                  </td>
-                  <td className="p-4 font-medium">
-                    Rs. {product.price.toLocaleString()}
-                  </td>
-
-                  <td className="p-4">
-                    <span
-                      className={`px-2 py-1 rounded text-xs font-medium ${product.stock > 0 ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}
-                    >
-                      {product.stock} in stock
-                    </span>
-                  </td>
-
-                  {/* Visibility Toggle */}
-                  <td className="p-4 text-center">
-                    <button
-                      onClick={() =>
-                        toggleMutation.mutate({
-                          sku: product.sku,
-                          currentStatus: product.visible,
-                        })
-                      }
-                      disabled={toggleMutation.isPending}
-                      className={`p-2 rounded-full transition-colors ${
-                        product.visible
-                          ? "text-green-600 hover:bg-green-50"
-                          : "text-gray-400 hover:bg-gray-100"
-                      }`}
-                      title={product.visible ? "Publicly Visible" : "Hidden"}
-                    >
-                      {product.visible ? (
-                        <Eye size={20} />
-                      ) : (
-                        <EyeOff size={20} />
-                      )}
-                    </button>
-                  </td>
-
-                  {/* Actions */}
-                  <td className="p-4 text-right">
-                    <Link
-                      href={`/dashboard/products/edit/${product.sku}`}
-                      className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition"
-                    >
-                      <Edit size={16} /> Edit
-                    </Link>
-                  </td>
-
-                  {/* Stock Column Update */}
-                  <td className="p-4">
-                    {/* Check if we have variants */}
-                    {product.variants && product.variants.length > 0 ? (
-                      <div className="flex flex-col gap-1">
-                        {product.variants.map((v, i) => (
-                          <span
-                            key={i}
-                            className={`text-xs px-2 py-0.5 rounded border w-fit ${v.stock > 0 ? "bg-green-50 border-green-100 text-green-700" : "bg-red-50 border-red-100 text-red-700"}`}
-                          >
-                            {v.size}: <strong>{v.stock}</strong>
-                          </span>
-                        ))}
-                        {/* Optional: Show total */}
-                        <span className="text-[10px] text-gray-400 mt-1">
-                          Total: {product.stock}
-                        </span>
-                      </div>
-                    ) : (
-                      // Simple Product Stock
-                      <span
-                        className={`px-2 py-1 rounded text-xs font-medium ${product.stock > 0 ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}
-                      >
-                        {product.stock} in stock
-                      </span>
-                    )}
-                  </td>
-
-                  {/* Actions Column Update */}
-                  <td className="p-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Link
-                        href={`/dashboard/products/edit/${product.sku}`}
-                        className="..."
-                      >
-                        <Edit size={16} />
-                      </Link>
-
-                      {/* DELETE BUTTON */}
-                      <button
-                        onClick={() => handleDelete(product.sku)}
-                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition"
-                        title="Delete Product"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
+      {/* TABLE CONTAINER */}
+      <div className="bg-white dark:bg-slate-900 rounded-[1.5rem] border border-gray-100 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col transition-colors">
+        {/* Table Wrapper for horizontal scroll (only triggers if absolute needed) */}
+        <div className={`w-full overflow-x-auto ${customScrollbar}`}>
+          {isLoading && !data ? (
+            <div className="p-20 flex flex-col items-center justify-center text-blue-500">
+              <Loader2
+                className="animate-spin mb-4"
+                size={32}
+                strokeWidth={2.5}
+              />
+              <p className="text-sm font-bold text-gray-500 dark:text-slate-400">
+                Loading inventory...
+              </p>
+            </div>
+          ) : isError ? (
+            <div className="p-20 text-center text-red-500 font-bold bg-red-50 dark:bg-red-900/10 m-4 rounded-2xl">
+              Failed to load products. Please try again.
+            </div>
+          ) : data?.data.length === 0 ? (
+            <div className="p-24 flex flex-col items-center text-gray-400 dark:text-slate-500">
+              <div className="p-4 bg-gray-50 dark:bg-slate-800 rounded-full mb-4">
+                <Tag size={32} strokeWidth={2} />
+              </div>
+              <p className="font-bold text-lg text-gray-900 dark:text-white">
+                No products found
+              </p>
+              <p className="text-sm mt-1">
+                Try adjusting your search or add a new product.
+              </p>
+            </div>
+          ) : (
+            <table className="w-full text-left text-sm min-w-full md:min-w-[900px]">
+              <thead className="bg-gray-50/80 dark:bg-slate-800/80 backdrop-blur-sm text-gray-500 dark:text-slate-400 text-[10px] sm:text-xs font-extrabold uppercase tracking-widest border-b border-gray-100 dark:border-slate-700">
+                <tr>
+                  <th className="p-3 sm:p-5 pl-4 sm:pl-6 w-[40%] md:w-[30%]">Product</th>
+                  <th className="p-3 sm:p-5 w-[20%] md:w-[15%]">SKU</th>
+                  {/* 🟢 Hidden on mobile */}
+                  <th className="hidden md:table-cell p-3 sm:p-5 w-[15%]">Price</th>
+                  <th className="p-3 sm:p-5 w-[25%] md:w-[20%]">Stock</th>
+                  {/* 🟢 Hidden on mobile */}
+                  <th className="hidden md:table-cell p-3 sm:p-5 text-center w-[10%]">Visible</th>
+                  <th className="p-3 sm:p-5 text-right pr-4 sm:pr-6 w-[15%] md:w-[10%]">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+              </thead>
+              <tbody className="divide-y divide-gray-50 dark:divide-slate-800/50">
+                {data?.data.map((product) => (
+                  <tr
+                    key={product.id}
+                    className="hover:bg-gray-50/50 dark:hover:bg-slate-800/30 transition-colors group"
+                  >
+                    {/* 1. Product Info */}
+                    <td className="p-3 sm:p-5 pl-4 sm:pl-6">
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <div className="w-10 h-22 sm:w-12 sm:h-22 bg-gray-100 dark:bg-slate-800 rounded-xl overflow-hidden border border-gray-200 dark:border-slate-700 shrink-0">
+                          {product.images[0]?.url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={product.images[0].url}
+                              alt={product.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-300 dark:text-slate-600">
+                              <PackageX size={20} />
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex flex-col">
+                          <p className="font-bold text-[12px] sm:text-sm text-gray-900 dark:text-white line-clamp-2 sm:line-clamp-1">
+                            {product.name}
+                          </p>
+                          {/* 🟢 Category hidden on mobile to save space */}
+                          <p className="hidden sm:block text-[10px] sm:text-xs font-medium text-gray-500 dark:text-slate-400 mt-0.5">
+                            {product.category?.name || "Uncategorized"}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* 2. SKU */}
+                    <td className="p-3 sm:p-5 text-gray-500 dark:text-slate-400 font-mono text-[10px] sm:text-xs font-semibold truncate max-w-[80px] sm:max-w-none">
+                      {product.sku}
+                    </td>
+
+                    {/* 3. Price - Hidden on mobile */}
+                    <td className="hidden md:table-cell p-3 sm:p-5 font-black text-gray-900 dark:text-white text-sm sm:text-base">
+                      Rs. {product.price.toLocaleString()}
+                    </td>
+
+                    {/* 4. Stock */}
+                    <td className="p-3 sm:p-5">
+                      {(() => {
+                        const hasVariants =
+                          product.variants && product.variants.length > 0;
+                        const totalStock = hasVariants
+                          ? product.variants.reduce(
+                              (sum, v) => sum + (Number(v.stock) || 0),
+                              0,
+                            )
+                          : Number(product.stock) || 0;
+
+                        return (
+                          <div className="flex flex-col gap-1.5 items-start">
+                            {/* Primary Stock Badge */}
+                            <span
+                              className={`inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg text-[9px] sm:text-[10px] font-bold uppercase tracking-wider border transition-colors ${
+                                totalStock === 0
+                                  ? "bg-rose-50 border-rose-200 text-rose-700 dark:bg-rose-900/20 dark:border-rose-800/50 dark:text-rose-400"
+                                  : totalStock < 10
+                                    ? "bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-900/20 dark:border-amber-800/50 dark:text-amber-400"
+                                    : "bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/20 dark:border-emerald-800/50 dark:text-emerald-400"
+                              }`}
+                            >
+                              <span className="font-black text-xs sm:text-sm">
+                                {totalStock}
+                              </span>
+                              {totalStock === 0
+                                ? "Out"
+                                : totalStock < 10
+                                  ? "Low"
+                                  : "In"}
+                            </span>
+
+                            {/* Minimalist Variants Indicator */}
+                            {hasVariants && (
+                              <span className="text-[8px] sm:text-[9px] font-bold text-gray-500 dark:text-slate-400 flex items-center gap-1 bg-gray-50 dark:bg-slate-800/50 px-1.5 sm:px-2 py-0.5 rounded-md border border-gray-100 dark:border-slate-700 w-fit">
+                                <Layers
+                                  size={10}
+                                  strokeWidth={2.5}
+                                  className="text-blue-500 hidden sm:block"
+                                />
+                                {product.variants.length} Sizes
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </td>
+
+                    {/* 5. Visibility Toggle - Hidden on mobile */}
+                    <td className="hidden md:table-cell p-3 sm:p-5 text-center">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          toggleMutation.mutate({
+                            sku: product.sku,
+                            currentStatus: product.visible,
+                          })
+                        }
+                        disabled={toggleMutation.isPending}
+                        className="relative inline-flex items-center justify-center cursor-pointer outline-none active:scale-95 transition-transform"
+                        title={product.visible ? "Publicly Visible" : "Hidden"}
+                      >
+                        <div
+                          className={`flex items-center gap-2 ${product.visible ? "opacity-100" : "opacity-60"}`}
+                        >
+                          <div
+                            className={`w-10 h-5 rounded-full transition-colors duration-300 shadow-inner ${product.visible ? "bg-blue-600" : "bg-gray-200 dark:bg-slate-700"}`}
+                          >
+                            <div
+                              className={`absolute top-[2px] h-4 w-4 bg-white border border-gray-200 dark:border-gray-500 rounded-full shadow-sm transition-transform duration-300 ${product.visible ? "translate-x-5 border-transparent left-0" : "translate-x-0 left-[2px]"}`}
+                            />
+                          </div>
+                        </div>
+                      </button>
+                    </td>
+
+                    {/* 6. Actions */}
+                    <td className="p-3 sm:p-5 text-right pr-4 sm:pr-6">
+                      <div className="flex items-center justify-end gap-1 sm:gap-1.5">
+                        <Link
+                          href={`/dashboard/products/edit/${product.sku}`}
+                          className="p-2 sm:px-3 sm:py-2 flex items-center gap-1.5 text-xs font-bold text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all active:scale-95"
+                          title="Edit Product"
+                        >
+                          <Edit size={16} strokeWidth={2.5} />
+                          <span className="hidden sm:block">Edit</span>
+                        </Link>
+
+                        <button
+                          onClick={() => handleDelete(product.sku)}
+                          className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all active:scale-95"
+                          title="Delete Product"
+                        >
+                          <Trash2 size={16} strokeWidth={2.5} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
 
         {/* PAGINATION */}
-        <div className="bg-gray-50 border-t border-gray-200 p-4 flex items-center justify-between">
-          <p className="text-sm text-gray-500">
-            Page <span className="font-medium">{page}</span> of{" "}
-            <span className="font-medium">
+        <div className="bg-gray-50 dark:bg-slate-800/30 border-t border-gray-100 dark:border-slate-800 p-4 sm:p-5 flex items-center justify-between transition-colors">
+          <p className="text-xs sm:text-sm font-semibold text-gray-500 dark:text-slate-400">
+            Page{" "}
+            <span className="font-black text-gray-900 dark:text-white">
+              {page}
+            </span>{" "}
+            of{" "}
+            <span className="font-black text-gray-900 dark:text-white">
               {data?.pagination.totalPages || 1}
             </span>
           </p>
@@ -341,16 +393,16 @@ export default function ProductListPage() {
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="p-2 border rounded hover:bg-white disabled:opacity-50 disabled:hover:bg-transparent"
+              className="h-9 w-9 sm:h-10 sm:w-10 flex items-center justify-center border border-gray-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:border-blue-500 hover:text-blue-500 dark:hover:border-blue-400 dark:hover:text-blue-400 disabled:opacity-40 disabled:hover:border-gray-200 dark:disabled:hover:border-slate-700 disabled:hover:text-gray-700 dark:disabled:hover:text-slate-300 transition-all active:scale-95 shadow-sm"
             >
-              <ChevronLeft size={16} />
+              <ChevronLeft size={18} strokeWidth={2.5} />
             </button>
             <button
               onClick={() => setPage((p) => p + 1)}
               disabled={!data || page >= data.pagination.totalPages}
-              className="p-2 border rounded hover:bg-white disabled:opacity-50 disabled:hover:bg-transparent"
+              className="h-9 w-9 sm:h-10 sm:w-10 flex items-center justify-center border border-gray-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:border-blue-500 hover:text-blue-500 dark:hover:border-blue-400 dark:hover:text-blue-400 disabled:opacity-40 disabled:hover:border-gray-200 dark:disabled:hover:border-slate-700 disabled:hover:text-gray-700 dark:disabled:hover:text-slate-300 transition-all active:scale-95 shadow-sm"
             >
-              <ChevronRight size={16} />
+              <ChevronRight size={18} strokeWidth={2.5} />
             </button>
           </div>
         </div>
