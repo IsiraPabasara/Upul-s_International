@@ -22,7 +22,6 @@ import {
   Zap,
 } from "lucide-react";
 
-// --- Types ---
 interface ProductImage {
   fileId: string;
   url: string;
