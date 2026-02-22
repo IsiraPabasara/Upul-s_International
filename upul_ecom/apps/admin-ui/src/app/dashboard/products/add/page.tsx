@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import axiosInstance from "@/app/utils/axiosInstance";
 import ProductForm from "../components/ProductForm";
-import toast from "react-hot-toast";
+import toast, { Toaster } from "react-hot-toast";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
@@ -28,7 +28,9 @@ export default function AddProductPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#F8F9FC] dark:bg-slate-950 p-6 md:p-10 font-sans">
+    <>
+      <Toaster position="top-center" reverseOrder={false} />
+      <div className="min-h-screen bg-[#F8F9FC] dark:bg-slate-950 p-6 md:p-10 font-sans">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
           <Link href="/dashboard/products" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 transition-colors mb-3">
@@ -47,6 +49,7 @@ export default function AddProductPage() {
           isLoading={createMutation.isPending}
         />
       </div>
-    </div>
+      </div>
+    </>
   );
 }

@@ -1,14 +1,12 @@
-"use client";
-
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Pencil, Trash2, Folder, ChevronRight } from "lucide-react";
+import { GripVertical, Pencil, Trash2, ChevronRight, Folder } from "lucide-react";
 
 interface Category {
   id: string;
   name: string;
   sortOrder: number;
-  _count?: { subCategories: number }; // Optional: Show if it has children
+  _count?: { subCategories: number };
 }
 
 interface Props {
@@ -34,67 +32,85 @@ export function SortableCategoryItem({ category, onDrillDown, onEdit, onDelete }
     transform: CSS.Transform.toString(transform),
     transition,
     zIndex: isDragging ? 50 : "auto",
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.8 : 1, // 🟢 Slightly less transparent so it looks solid
   };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center justify-between p-3 mb-2 bg-white border rounded-lg shadow-sm hover:shadow-md transition-all ${isDragging ? "ring-2 ring-blue-500" : "border-gray-200"}`}
+      className={`flex items-center justify-between p-3 sm:p-4 rounded-xl border transition-all shadow-sm group ${
+        isDragging
+          ? "bg-blue-50/80 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 shadow-md scale-[1.02]"
+          : "bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-700"
+      }`}
     >
       {/* LEFT: Drag Handle & Name */}
-      <div className="flex items-center gap-3 flex-1">
-        {/* Drag Handle - Only this part initiates drag */}
+      <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+        
+        {/* Drag Handle */}
+        {/* 🟢 Added touch-none to prevent mobile scrolling bugs while dragging */}
         <button
           {...attributes}
           {...listeners}
-          className="p-1 text-gray-400 hover:text-gray-700 cursor-grab active:cursor-grabbing"
+          className="p-1.5 sm:p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-grab active:cursor-grabbing touch-none rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
         >
-          <GripVertical size={20} />
+          <GripVertical size={18} strokeWidth={2.5} />
         </button>
-
+        
         {/* Drill Down Button (The Name) */}
-        <button 
+        <button
           onClick={() => onDrillDown(category)}
-          className="flex items-center gap-2 text-left font-medium text-gray-700 hover:text-blue-600 transition-colors group"
+          className="flex items-center gap-2.5 sm:gap-3 flex-1 text-left min-w-0 group/btn outline-none"
         >
-          <Folder size={18} className="text-blue-200 group-hover:text-blue-500 fill-current" />
-          {category.name}
+          <div className="p-1.5 sm:p-2 bg-blue-50 dark:bg-blue-400/10 text-blue-600 dark:text-blue-400 rounded-lg group-hover/btn:scale-110 transition-transform shrink-0">
+            <Folder size={16} strokeWidth={2.5} className="fill-current opacity-20" />
+          </div>
+          
+          <span className="font-bold text-sm sm:text-base text-gray-900 dark:text-white truncate group-hover/btn:text-blue-600 dark:group-hover/btn:text-blue-400 transition-colors">
+            {category.name}
+          </span>
+          
           {/* Optional: Count Badge */}
           {category._count && category._count.subCategories > 0 && (
-             <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">
-               {category._count.subCategories}
-             </span>
+            <span className="hidden sm:flex items-center justify-center px-2 py-0.5 text-[10px] font-bold bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 rounded-full">
+              {category._count.subCategories}
+            </span>
           )}
         </button>
       </div>
 
       {/* RIGHT: Actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-0.5 sm:gap-1.5 shrink-0">
+        
         <button
-          onClick={() => onEdit(category)}
-          className="p-2 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded transition"
-          title="Rename"
+          onClick={(e) => { e.stopPropagation(); onEdit(category); }}
+          className="p-2 sm:p-2.5 text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-xl transition-all active:scale-95"
+          title="Rename Category"
         >
-          <Pencil size={16} />
+          <Pencil size={16} strokeWidth={2.5} />
         </button>
         
         <button
-          onClick={() => onDelete(category.id)}
-          className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition"
-          title="Delete"
+          onClick={(e) => { e.stopPropagation(); onDelete(category.id); }}
+          className="p-2 sm:p-2.5 text-gray-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all active:scale-95"
+          title="Delete Category"
         >
-          <Trash2 size={16} />
+          <Trash2 size={16} strokeWidth={2.5} />
+        </button>
+        
+        {/* Visual Divider (Hidden on very small mobile screens) */}
+        <div className="w-px h-6 bg-gray-200 dark:bg-slate-700 mx-1 hidden sm:block"></div>
+        
+        {/* Arrow indicating you can go inside */}
+        <button
+          onClick={() => onDrillDown(category)}
+          className="p-2 sm:p-2.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all active:scale-95 sm:group-hover:translate-x-1"
+          title="View Subcategories"
+        >
+          <ChevronRight size={18} strokeWidth={2.5} />
         </button>
 
-        {/* Arrow indicating you can go inside */}
-        <button 
-          onClick={() => onDrillDown(category)}
-          className="p-1 text-gray-300 hover:text-blue-500"
-        >
-          <ChevronRight size={20} />
-        </button>
       </div>
     </div>
   );
