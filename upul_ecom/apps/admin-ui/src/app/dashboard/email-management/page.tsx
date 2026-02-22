@@ -77,7 +77,7 @@ export default function EmailLogsPage() {
   // Filters
   const [page, setPage] = useState(1);
   const [activeTab, setActiveTab] = useState<"all" | "failed" | "sent">(
-    "failed",
+    "all",
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
