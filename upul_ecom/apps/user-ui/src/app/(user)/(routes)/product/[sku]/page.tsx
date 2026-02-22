@@ -39,120 +39,118 @@ interface Product {
 
 // --- Components ---
 
-const ProductGallery = ({ images, name }: { images: { url: string }[], name: string }) => {
-  const [activeImage, setActiveImage] = useState(images?.[0]?.url || '');
+// const ProductGallery = ({ images, name }: { images: { url: string }[], name: string }) => {
+//   const [activeImage, setActiveImage] = useState(images?.[0]?.url || '');
   
-  // Mobile specific state
-  const [mobileActiveIndex, setMobileActiveIndex] = useState(0);
-  const sliderRef = useRef<HTMLDivElement>(null);
+//   // Mobile specific state
+//   const [mobileActiveIndex, setMobileActiveIndex] = useState(0);
+//   const sliderRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if(images?.[0]?.url) setActiveImage(images[0].url);
-  }, [images]);
+//   useEffect(() => {
+//     if(images?.[0]?.url) setActiveImage(images[0].url);
+//   }, [images]);
 
-  useEffect(() => {
-    window.scrollTo({
-      top: 0,
-      left: 0,
-      behavior: 'instant', 
-    });
-  }, []);
+//   useEffect(() => {
+//     window.scrollTo({
+//       top: 0,
+//       left: 0,
+//       behavior: 'instant', 
+//     });
+//   }, []);
 
-  // Handle scrolling the mobile slider to a specific index
-  const scrollToImage = (index: number) => {
-    if (sliderRef.current) {
-      const width = sliderRef.current.offsetWidth;
-      sliderRef.current.scrollTo({
-        left: width * index,
-        behavior: 'auto'
-      });
-      setMobileActiveIndex(index);
-    }
-  };
+//   const scrollToImage = (index: number) => {
+//     if (sliderRef.current) {
+//       const width = sliderRef.current.offsetWidth;
+//       sliderRef.current.scrollTo({
+//         left: width * index,
+//         behavior: 'auto'
+//       });
+//       setMobileActiveIndex(index);
+//     }
+//   };
 
-  // Track active slide on scroll
-  const handleScroll = () => {
-    if (sliderRef.current) {
-      const scrollLeft = sliderRef.current.scrollLeft;
-      const width = sliderRef.current.offsetWidth;
-      // Calculate index based on scroll position
-      const index = Math.round(scrollLeft / width);
-      setMobileActiveIndex(index);
-    }
-  };
+//   const handleScroll = () => {
+//     if (sliderRef.current) {
+//       const scrollLeft = sliderRef.current.scrollLeft;
+//       const width = sliderRef.current.offsetWidth;
+//       const index = Math.round(scrollLeft / width);
+//       setMobileActiveIndex(index);
+//     }
+//   };
 
-  if (!images || images.length === 0) return <div className="bg-gray-100 h-96 rounded-xl flex items-center justify-center text-gray-400">No Image</div>;
+//   if (!images || images.length === 0) return <div className="bg-gray-100 h-96 rounded-xl flex items-center justify-center text-gray-400">No Image</div>;
 
-  return (
-    <div className="w-full">
-      {/* === MOBILE: Swipeable Slider + Thumbnails === */}
-      <div className="md:hidden flex flex-col gap-3">
+//   return (
+//     <div className="w-full">
+//       {/* === MOBILE: Swipeable Slider + Thumbnails === */}
+//       <div className="md:hidden flex flex-col gap-3">
         
-        {/* Main Slider */}
-        <div className="relative w-full aspect-[3/4] bg-gray-50 rounded-2xl overflow-hidden group">
-          <div 
-            ref={sliderRef}
-            onScroll={handleScroll}
-            className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar w-full h-full"
-          >
-            {images.map((img, idx) => (
-              <img
-                key={idx}
-                src={img.url}
-                alt={`${name} ${idx}`}
-                className="w-full h-full object-cover flex-shrink-0 snap-center"
-              />
-            ))}
-          </div>
+//         {/* Main Slider - Applied custom aspect ratio */}
+//         <div className="relative w-full aspect-[1156/1466] bg-gray-50 rounded-2xl overflow-hidden group">
+//           <div 
+//             ref={sliderRef}
+//             onScroll={handleScroll}
+//             className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar w-full h-full"
+//           >
+//             {images.map((img, idx) => (
+//               <img
+//                 key={idx}
+//                 src={img.url}
+//                 alt={`${name} ${idx}`}
+//                 className="w-full h-full object-cover flex-shrink-0 snap-center"
+//               />
+//             ))}
+//           </div>
           
-          {/* Optional: Indicator Pill (Current / Total) */}
-          <div className="absolute bottom-4 right-4 bg-black/60 text-white text-[10px] px-3 py-1 rounded-full backdrop-blur-sm pointer-events-none">
-             {mobileActiveIndex + 1} / {images.length}
-          </div>
-        </div>
+//           <div className="absolute bottom-4 right-4 bg-black/60 text-white text-[10px] px-3 py-1 rounded-full backdrop-blur-sm pointer-events-none">
+//              {mobileActiveIndex + 1} / {images.length}
+//           </div>
+//         </div>
 
-        {/* New: Mobile Thumbnail Row */}
-        <div className="flex gap-2 overflow-x-auto no-scrollbar px-1">
-          {images.map((img, idx) => (
-            <button
-              key={idx}
-              onClick={() => scrollToImage(idx)}
-              className={`relative flex-shrink-0 w-16 h-20 rounded-lg overflow-hidden border-2 transition-all 
-                ${mobileActiveIndex === idx ? 'border-black ring-1 ring-black' : 'border-transparent opacity-70'}`}
-            >
-              <img 
-                src={img.url} 
-                alt={`thumb-${idx}`} 
-                className="w-full h-full object-cover" 
-              />
-            </button>
-          ))}
-        </div>
+//         {/* Mobile Thumbnail Row - Match ratio for thumbs too */}
+//         <div className="flex gap-2 overflow-x-auto no-scrollbar px-1">
+//           {images.map((img, idx) => (
+//             <button
+//               key={idx}
+//               onClick={() => scrollToImage(idx)}
+//               className={`relative flex-shrink-0 w-16 aspect-[1156/1466] rounded-lg overflow-hidden border-2 transition-all 
+//                 ${mobileActiveIndex === idx ? 'border-black ring-1 ring-black' : 'border-transparent opacity-70'}`}
+//             >
+//               <img 
+//                 src={img.url} 
+//                 alt={`thumb-${idx}`} 
+//                 className="w-full h-full object-cover" 
+//               />
+//             </button>
+//           ))}
+//         </div>
+//       </div>
 
-      </div>
+//       {/* === DESKTOP: Vertical Thumbs + Main Image === */}
+//       <div className="hidden md:flex flex-row gap-4 items-start">
+//         {/* Thumbnails column */}
+//         <div className="flex flex-col gap-3 max-h-[800px] overflow-y-auto no-scrollbar py-1">
+//           {images.map((img, idx) => (
+//             <button 
+//               key={idx} 
+//               onMouseEnter={() => setActiveImage(img.url)}
+//               onClick={() => setActiveImage(img.url)}
+//               className={`w-20 aspect-[1156/1466] flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all 
+//                 ${activeImage === img.url ? 'border-black ring-1 ring-black' : 'border-transparent hover:border-gray-300'}`}
+//             >
+//               <img src={img.url} alt={`${name} ${idx}`} className="w-full h-full object-cover" />
+//             </button>
+//           ))}
+//         </div>
 
-      {/* === DESKTOP: Vertical Thumbs + Main Image === */}
-      <div className="hidden md:flex flex-row gap-4">
-        <div className="flex flex-col gap-3 h-[600px] overflow-y-auto no-scrollbar py-1">
-          {images.map((img, idx) => (
-            <button 
-              key={idx} 
-              onMouseEnter={() => setActiveImage(img.url)}
-              onClick={() => setActiveImage(img.url)}
-              className={`w-20 h-24 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all 
-                ${activeImage === img.url ? 'border-black ring-1 ring-black' : 'border-transparent hover:border-gray-300'}`}
-            >
-              <img src={img.url} alt={`${name} ${idx}`} className="w-full h-full object-cover" />
-            </button>
-          ))}
-        </div>
-        <div className="flex-1 bg-gray-50 rounded-2xl overflow-hidden relative h-[600px]">
-          <img src={activeImage || images[0]?.url} alt={name} className="w-full h-full object-cover" />
-        </div>
-      </div>
-    </div>
-  );
-};
+//         {/* Main Image - Removed fixed height, used aspect ratio + flex-1 */}
+//         <div className="flex-1 bg-gray-50 rounded-2xl overflow-hidden relative aspect-[1156/1466]">
+//           <img src={activeImage || images[0]?.url} alt={name} className="w-full h-full object-cover" />
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
 
 // const ProductGallery = ({ images, name }: { images: { url: string }[], name: string }) => {
 //   const [mobileActiveIndex, setMobileActiveIndex] = useState(0);
@@ -254,148 +252,148 @@ const ProductGallery = ({ images, name }: { images: { url: string }[], name: str
 // };
 
 
-// const ProductGallery = ({ images, name }: { images: { url: string }[], name: string }) => {
-//   const [mobileActiveIndex, setMobileActiveIndex] = useState(0);
-//   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
-//   const sliderRef = useRef<HTMLDivElement>(null);
+const ProductGallery = ({ images, name }: { images: { url: string }[], name: string }) => {
+  const [mobileActiveIndex, setMobileActiveIndex] = useState(0);
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
+  const sliderRef = useRef<HTMLDivElement>(null);
 
-//   useEffect(() => {
-//     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-//   }, []);
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, []);
 
-//   // Prevent background scroll when lightbox is open
-//   useEffect(() => {
-//     if (selectedImageUrl) {
-//       document.body.style.overflow = 'hidden';
-//     } else {
-//       document.body.style.overflow = 'unset';
-//     }
-//   }, [selectedImageUrl]);
+  // Prevent background scroll when lightbox is open
+  useEffect(() => {
+    if (selectedImageUrl) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+  }, [selectedImageUrl]);
 
-//   const scrollToImage = (index: number) => {
-//     if (sliderRef.current) {
-//       const width = sliderRef.current.offsetWidth;
-//       sliderRef.current.scrollTo({ left: width * index, behavior: 'auto' });
-//       setMobileActiveIndex(index);
-//     }
-//   };
+  const scrollToImage = (index: number) => {
+    if (sliderRef.current) {
+      const width = sliderRef.current.offsetWidth;
+      sliderRef.current.scrollTo({ left: width * index, behavior: 'auto' });
+      setMobileActiveIndex(index);
+    }
+  };
 
-//   const handleScroll = () => {
-//     if (sliderRef.current) {
-//       const scrollLeft = sliderRef.current.scrollLeft;
-//       const width = sliderRef.current.offsetWidth;
-//       const index = Math.round(scrollLeft / width);
-//       setMobileActiveIndex(index);
-//     }
-//   };
+  const handleScroll = () => {
+    if (sliderRef.current) {
+      const scrollLeft = sliderRef.current.scrollLeft;
+      const width = sliderRef.current.offsetWidth;
+      const index = Math.round(scrollLeft / width);
+      setMobileActiveIndex(index);
+    }
+  };
 
-//   if (!images || images.length === 0) return <div className="bg-gray-100 h-96 rounded-xl flex items-center justify-center text-gray-400">No Image</div>;
+  if (!images || images.length === 0) return <div className="bg-gray-100 h-96 rounded-xl flex items-center justify-center text-gray-400">No Image</div>;
 
-//   return (
-//     <div className="w-full">
-//       {/* === DESKTOP LIGHTBOX (POPUP) === */}
-//       {selectedImageUrl && (
-//         <div 
-//           className="hidden md:flex fixed inset-0 z-[100] items-center justify-center bg-black/70 backdrop-blur-md transition-all duration-300"
-//           onClick={() => setSelectedImageUrl(null)}
-//         >
-//           {/* Close Button */}
-//           <button 
-//             className="absolute top-6 right-6 text-white/70 hover:text-white transition-colors z-[110]"
-//             onClick={() => setSelectedImageUrl(null)}
-//           >
-//             <X size={32} />
-//           </button>
+  return (
+    <div className="w-full">
+      {/* === DESKTOP LIGHTBOX (POPUP) === */}
+      {selectedImageUrl && (
+        <div 
+          className="hidden md:flex fixed inset-0 z-[100] items-center justify-center bg-black/70 backdrop-blur-md transition-all duration-300"
+          onClick={() => setSelectedImageUrl(null)}
+        >
+          {/* Close Button */}
+          <button 
+            className="absolute top-6 right-6 text-white/70 hover:text-white transition-colors z-[110]"
+            onClick={() => setSelectedImageUrl(null)}
+          >
+            <X size={32} />
+          </button>
           
-//           {/* Image Container restricted to 3/4 Viewport Height */}
-//           <div 
-//             className="relative flex items-center justify-center max-w-[90vw] max-h-[75vh] animate-in zoom-in-95 duration-300"
-//             onClick={(e) => e.stopPropagation()}
-//           >
-//             <img 
-//               src={selectedImageUrl} 
-//               alt="Full view" 
-//               className="max-w-full max-h-[75vh] w-auto h-auto object-contain rounded-lg shadow-2xl border border-white/10"
-//             />
-//           </div>
-//         </div>
-//       )}
+          {/* Image Container restricted to 3/4 Viewport Height */}
+          <div 
+            className="relative flex items-center justify-center max-w-[90vw] max-h-[75vh] animate-in zoom-in-95 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img 
+              src={selectedImageUrl} 
+              alt="Full view" 
+              className="max-w-full max-h-[75vh] w-auto h-auto object-contain rounded-lg shadow-2xl border border-white/10"
+            />
+          </div>
+        </div>
+      )}
 
-//       {/* === MOBILE: Swipeable Slider === */}
-//       <div className="md:hidden flex flex-col gap-3">
-//         <div className="relative w-full aspect-[3/4] bg-gray-50 rounded-2xl overflow-hidden">
-//           <div 
-//             ref={sliderRef}
-//             onScroll={handleScroll}
-//             className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar w-full h-full"
-//           >
-//             {images.map((img, idx) => (
-//               <img
-//                 key={`mobile-img-${idx}`}
-//                 src={img.url}
-//                 alt={`${name} ${idx}`}
-//                 className="w-full h-full object-cover flex-shrink-0 snap-center"
-//               />
-//             ))}
-//           </div>
-//           <div className="absolute bottom-4 right-4 bg-black/60 text-white text-[10px] px-3 py-1 rounded-full backdrop-blur-sm">
-//              {mobileActiveIndex + 1} / {images.length}
-//           </div>
-//         </div>
-//         <div className="flex gap-2 overflow-x-auto no-scrollbar px-1">
-//           {images.map((img, idx) => (
-//             <button
-//               key={`mobile-thumb-${idx}`}
-//               onClick={() => scrollToImage(idx)}
-//               className={`relative flex-shrink-0 w-16 h-20 rounded-lg overflow-hidden border-2 transition-all 
-//                 ${mobileActiveIndex === idx ? 'border-black' : 'border-transparent opacity-70'}`}
-//             >
-//               <img src={img.url} className="w-full h-full object-cover" alt="thumb" />
-//             </button>
-//           ))}
-//         </div>
-//       </div>
+      {/* === MOBILE: Swipeable Slider === */}
+      <div className="md:hidden flex flex-col gap-3">
+        <div className="relative w-full aspect-[3/4] bg-gray-50 rounded-2xl overflow-hidden">
+          <div 
+            ref={sliderRef}
+            onScroll={handleScroll}
+            className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar w-full h-full"
+          >
+            {images.map((img, idx) => (
+              <img
+                key={`mobile-img-${idx}`}
+                src={img.url}
+                alt={`${name} ${idx}`}
+                className="w-full h-full object-cover flex-shrink-0 snap-center"
+              />
+            ))}
+          </div>
+          <div className="absolute bottom-4 right-4 bg-black/60 text-white text-[10px] px-3 py-1 rounded-full backdrop-blur-sm">
+             {mobileActiveIndex + 1} / {images.length}
+          </div>
+        </div>
+        <div className="flex gap-2 overflow-x-auto no-scrollbar px-1">
+          {images.map((img, idx) => (
+            <button
+              key={`mobile-thumb-${idx}`}
+              onClick={() => scrollToImage(idx)}
+              className={`relative flex-shrink-0 w-16 h-20 rounded-lg overflow-hidden border-2 transition-all 
+                ${mobileActiveIndex === idx ? 'border-black' : 'border-transparent opacity-70'}`}
+            >
+              <img src={img.url} className="w-full h-full object-cover" alt="thumb" />
+            </button>
+          ))}
+        </div>
+      </div>
 
-//       {/* === DESKTOP: Dynamic Grid Layout === */}
-// <div className={`hidden md:grid gap-3 ${images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-//   {images.map((img, idx) => {
-//     const isFourthImage = idx === 3;
-//     const hasMoreThanFour = images.length > 4;
+      {/* === DESKTOP: Dynamic Grid Layout === */}
+<div className={`hidden md:grid gap-3 ${images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+  {images.map((img, idx) => {
+    const isFourthImage = idx === 3;
+    const hasMoreThanFour = images.length > 4;
 
-//     // Optional: If you want to only show 4 images total in the grid
-//     if (idx > 3) return null;
+    // Optional: If you want to only show 4 images total in the grid
+    if (idx > 3) return null;
 
-//     return (
-//       <div 
-//         key={`desktop-img-${idx}`} 
-//         onClick={() => setSelectedImageUrl(img.url)}
-//         className={`relative bg-gray-50 rounded-xl overflow-hidden group cursor-zoom-in
-//           ${images.length === 1 ? 'aspect-auto max-h-[80vh]' : 'aspect-[3/4]'}
-//         `}
-//       >
-//         <img 
-//           src={img.url} 
-//           alt={`${name} ${idx}`} 
-//           className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105
-//             ${images.length === 1 ? 'object-contain bg-gray-100' : 'object-cover'}
-//           `} 
-//         />
+    return (
+      <div 
+        key={`desktop-img-${idx}`} 
+        onClick={() => setSelectedImageUrl(img.url)}
+        className={`relative bg-gray-50 rounded-xl overflow-hidden group cursor-zoom-in
+          ${images.length === 1 ? 'aspect-auto max-h-[80vh]' : 'aspect-[3/4]'}
+        `}
+      >
+        <img 
+          src={img.url} 
+          alt={`${name} ${idx}`} 
+          className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105
+            ${images.length === 1 ? 'object-contain bg-gray-100' : 'object-cover'}
+          `} 
+        />
         
-//         {isFourthImage && hasMoreThanFour && (
-//           <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px] flex flex-col items-center justify-center text-white transition-opacity group-hover:opacity-90">
-//             <div className="flex flex-col items-center">
-//               <span className="text-2xl font-bold">+{images.length - 4}</span>
-//               <span className="text-[10px] uppercase tracking-widest font-bold">More Images</span>
-//             </div>
-//           </div>
-//         )}
-//       </div>
-//     );
-//   })}
-// </div>
-//     </div>
-//   );
-// };
+        {isFourthImage && hasMoreThanFour && (
+          <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px] flex flex-col items-center justify-center text-white transition-opacity group-hover:opacity-90">
+            <div className="flex flex-col items-center">
+              <span className="text-2xl font-bold">+{images.length - 4}</span>
+              <span className="text-[10px] uppercase tracking-widest font-bold">More Images</span>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  })}
+</div>
+    </div>
+  );
+};
 
 
 // ... (Rest of your AccordionItem and ProductPage component remains exactly the same)

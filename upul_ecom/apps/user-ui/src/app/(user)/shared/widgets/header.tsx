@@ -178,21 +178,21 @@ export default function Header() {
               </button>
             </form>
 
-            <div className="flex items-center gap-3 md:gap-5">
+            <div className="flex items-center gap-3 md:gap-4">
               <Link
                 href={isLoggedIn ? "/profile" : "/login"}
-                className="hidden sm:flex items-center gap-2 hover:text-red-600 transition-all text-gray-800"
+                className="hidden sm:flex items-center gap-1 hover:text-red-600 transition-all text-gray-800"
               >
                 <User className="w-6 h-6 md:w-7 md:h-7" strokeWidth={1.2} />
                 <div className="flex flex-col -gap-1">
-                  <span className="text-[10px] uppercase text-gray-400 font-bold leading-none">
+                  {/* <span className="text-[10px] uppercase text-gray-400 font-bold leading-none">
                     Account
-                  </span>
-                  <span className="text-xs font-bold uppercase tracking-tight leading-none">
+                  </span> */}
+                  {/* <span className="text-xs font-bold uppercase tracking-tight leading-none">
                     {isLoggedIn && user?.firstname
                       ? `Hi, ${user.firstname}`
                       : "Sign In"}
-                  </span>
+                  </span> */}
                 </div>
               </Link>
 
@@ -246,12 +246,6 @@ export default function Header() {
                 </Link>
               ))}
             <Link
-              href="/blazers"
-              className="shrink-0 hover:opacity-70 transition-opacity"
-            >
-              Blazers
-            </Link>
-            <Link
               href="/shop?hasDiscount=true"
               className="text-red-500 shrink-0 hover:opacity-70 transition-opacity pr-4"
             >
@@ -300,7 +294,6 @@ export default function Header() {
               {categories.filter((c: any) => !c.parentId).map((cat: any) => (
                 <Link key={cat.id} href={`/shop?category=${cat.slug}`} onClick={() => setIsMenuOpen(false)}>{cat.name}</Link>
               ))}
-              <Link href="/blazers" onClick={() => setIsMenuOpen(false)}>Blazers</Link>
               <Link href="/shop?hasDiscount=true" className="text-red-500" onClick={() => setIsMenuOpen(false)}>Sale</Link>
               
               <hr className="border-gray-100 my-4" />
