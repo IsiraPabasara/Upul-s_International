@@ -200,6 +200,9 @@ model Order {
 
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+
+  @@index([createdAt(sort: Desc), status])
+  @@index([userId, createdAt])
 }
 
 enum EmailStatus {

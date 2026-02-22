@@ -212,8 +212,10 @@ export const getDashboardStats = async (
 
     // 🔢 CALCULATIONS (Trend & History)
     const calcTrend = (curr: number, prev: number) => {
-      if (prev === 0) return curr > 0 ? 100 : 0;
-      return parseFloat((((curr - prev) / prev) * 100).toFixed(1));
+      if (prev === 0) return curr > 0 ? 99 : 0;
+      const rawTrend = ((curr - prev) / prev) * 100;
+      const cappedTrend = Math.max(-99, Math.min(99, rawTrend));
+      return parseFloat(cappedTrend.toFixed(1));
     };
 
     const periodTotal = revenueCurrent._sum.totalAmount || 0;
@@ -222,6 +224,10 @@ export const getDashboardStats = async (
       revenuePrev._sum.totalAmount || 0,
     );
     const lifetimeTotal = totalRevenue._sum.totalAmount || 0;
+
+    const getLocalDayKey = (d: Date) => {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    };
 
     // History Logic
     const historyMap = new Map<
@@ -243,7 +249,7 @@ export const getDashboardStats = async (
           label += ` '${iteratorDate.getFullYear().toString().slice(-2)}`;
         iteratorDate.setMonth(iteratorDate.getMonth() + 1);
       } else {
-        key = iteratorDate.toISOString().split("T")[0];
+        key = getLocalDayKey(iteratorDate);
         label =
           range === "monthly"
             ? iteratorDate.toLocaleDateString("en-US", {
@@ -263,7 +269,7 @@ export const getDashboardStats = async (
         if (groupByType === "year") key = d.getFullYear().toString();
         else if (groupByType === "month")
           key = `${d.getFullYear()}-${d.getMonth() + 1}`;
-        else key = d.toISOString().split("T")[0];
+        else key = getLocalDayKey(d);
 
         if (historyMap.has(key)) {
           const entry = historyMap.get(key)!;
@@ -372,36 +378,42 @@ export const getTopProducts = async (
         },
         { $sort: { totalSold: -1 } },
         { $limit: 10 },
+        // Convert string ID to ObjectId so MongoDB can match it
+        {
+          $addFields: {
+            productObjId: { $toObjectId: "$_id" },
+          },
+        },
+        // Fetch the exact product details directly inside the database
+        {
+          $lookup: {
+            from: "Product", // Must match your MongoDB collection name
+            localField: "productObjId",
+            foreignField: "_id",
+            as: "productDetails",
+          },
+        },
+        // Flatten the array MongoDB returns into a single object
+        {
+          $unwind: {
+            path: "$productDetails",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
       ],
-    });
-
-    const topProductIds = (topProductsRaw as unknown as any[]).map(
-      (p: any) => p._id,
-    );
-
-    const productDetails = await prisma.product.findMany({
-      where: { id: { in: topProductIds } },
-      select: {
-        id: true,
-        name: true,
-        price: true,
-        brand: true,
-        stock: true,
-        images: { select: { url: true } },
-      },
     });
 
     const formattedProducts = (topProductsRaw as unknown as any[])
       .map((item) => {
-        const details = productDetails.find((p) => p.id === item._id);
-        if (!details) return null;
+        if (!item.productDetails) return null; // Skip if product was deleted from DB
+
         return {
           id: item._id,
-          name: details.name,
-          price: details.price,
-          brand: details.brand || "Generic",
-          stock: details.stock,
-          image: details.images?.[0]?.url || "/placeholder.png",
+          name: item.productDetails.name,
+          price: item.productDetails.price,
+          brand: item.productDetails.brand || "Generic",
+          stock: item.productDetails.stock,
+          image: item.productDetails.images?.[0]?.url || "/placeholder.png",
           totalSold: item.totalSold,
         };
       })
