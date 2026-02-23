@@ -53,10 +53,11 @@ export default function AdminCouponsPage() {
     }
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent): void => {
     e.preventDefault();
     if (!formData.code.trim() || !formData.value) {
-      return toast.error("Code and Value are required");
+      toast.error("Code and Value are required");
+      return;
     }
     createMutation.mutate(formData);
   };
