@@ -81,7 +81,7 @@ export const deleteBrand = async (req: Request, res: Response, next: NextFunctio
   }
 };
 
-// 🟢 NEW: Update Brand Function
+// 🟢 NEW & IMPROVED: Update Brand Function
 export const updateBrand = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
@@ -93,7 +93,7 @@ export const updateBrand = async (req: Request, res: Response, next: NextFunctio
       return res.status(404).json({ message: "Brand not found" });
     }
 
-    // 2. Check for name duplication (make sure they aren't renaming it to a brand that already exists)
+    // 2. Check for name duplication 
     if (name && name.toLowerCase() !== existingBrand.name.toLowerCase()) {
       const duplicate = await prisma.brand.findUnique({ where: { name } });
       if (duplicate) {
@@ -101,8 +101,8 @@ export const updateBrand = async (req: Request, res: Response, next: NextFunctio
       }
     }
 
-    // 3. 💎 PRO UX: If they uploaded a NEW logo, delete the OLD one from ImageKit to save space!
-    if (existingBrand.logoFileId && logoFileId && existingBrand.logoFileId !== logoFileId) {
+    // 3. 💎 PRO UX: Delete the old logo if the logoFileId has changed OR been removed!
+    if (existingBrand.logoFileId && existingBrand.logoFileId !== logoFileId) {
       try {
         const privateKey = process.env.IMAGEKIT_PRIVATE_KEY || '';
         const authHeader = Buffer.from(privateKey + ':').toString('base64');
@@ -112,7 +112,7 @@ export const updateBrand = async (req: Request, res: Response, next: NextFunctio
             Authorization: `Basic ${authHeader}`
           }
         });
-        console.log("Successfully deleted old logo from ImageKit");
+        console.log("Successfully deleted old logo from ImageKit because it was replaced or removed");
       } catch (ikError) {
         console.error("Failed to delete old image from ImageKit:", ikError);
         // We continue anyway so the database still updates properly
@@ -124,8 +124,10 @@ export const updateBrand = async (req: Request, res: Response, next: NextFunctio
       where: { id },
       data: {
         name,
+        // If logoUrl is empty, save as null
         logoUrl: logoUrl || null,
-        logoFileId: logoFileId || null
+        // If logoFileId is empty, save as null
+        logoFileId: logoFileId || null 
       }
     });
 
