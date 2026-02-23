@@ -17,7 +17,7 @@ export default function AddProductPage() {
       return axiosInstance.post('/api/products', formData);
     },
     onSuccess: () => {
-      toast.success("Product created successfully! 🚀");
+      toast.success("Product created successfully! ");
       queryClient.invalidateQueries({ queryKey: ["products"] });
       router.push("/dashboard/products");
     },
