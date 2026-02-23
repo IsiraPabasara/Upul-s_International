@@ -85,18 +85,24 @@ export default function SizeTypeManager() {
   };
 
   // --- SUBMIT HANDLER ---
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent): void => {
     e.preventDefault();
     const cleanName = newName.trim();
     
-    if (!cleanName) return toast.error('Standard Name is required');
+    if (!cleanName) {
+      toast.error('Standard Name is required');
+      return;
+    }
 
     const valuesArray = newValueString
       .split(',')
       .map((v) => v.trim())
       .filter(Boolean); // Filters out empty strings automatically
 
-    if (valuesArray.length === 0) return toast.error('Please add at least one valid measurement');
+    if (valuesArray.length === 0) {
+      toast.error('Please add at least one valid measurement');
+      return;
+    }
 
     // 🟢 NEW: Duplicate check (ignores current edit)
     const isDuplicate = types.some(
@@ -104,7 +110,8 @@ export default function SizeTypeManager() {
     );
 
     if (isDuplicate) {
-      return toast.error(`The standard "${cleanName}" already exists!`);
+      toast.error(`The standard "${cleanName}" already exists!`);
+      return;
     }
 
     if (editingSizeType) {
