@@ -188,7 +188,8 @@ model Order {
 
   // Snapshots (Data locked at time of purchase)
   email         String
-  shippingAddress Json      
+  shippingAddress Json   
+  billingAddress  Json?   
   items         Json
 
   couponCode     String?
