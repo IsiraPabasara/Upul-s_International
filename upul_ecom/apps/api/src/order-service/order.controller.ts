@@ -11,8 +11,10 @@ const generateOrderNumber = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
+// Inside createOrder function:
 export const createOrder = async (req: Request, res: Response, next: NextFunction) => {
-  const { type, userId, addressId, address, items, email, paymentMethod, couponCode } = req.body;
+  // 🟢 1. Destructure billingAddress from req.body
+  const { type, userId, addressId, address, billingAddress, items, email, paymentMethod, couponCode } = req.body;
 
   try {
     // --- 1. PREPARE COMMON DATA ---
@@ -35,6 +37,9 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
       customerEmail = email;
     }
 
+    // 🟢 2. Determine final billing address (fallback to shipping if null)
+    const finalBillingAddress = billingAddress || shippingAddress;
+
     // --- 2. CALCULATE TOTALS (No Stock Deduction Yet) ---
     // We only READ the database here to get prices and check availability.
     let calculatedTotal = 0;
@@ -43,7 +48,7 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
     for (const item of items) {
       const product = await prisma.product.findUnique({ where: { id: item.productId } });
       if (!product) throw new Error(`Product not found: ${item.sku}`);
-      
+
       // Basic Stock Check (Peek only)
       let currentStock = product.stock;
       if (item.size) {
@@ -87,7 +92,7 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
     if (paymentMethod === 'PAYHERE') {
       const merchantId = process.env.PAYHERE_MERCHANT_ID;
       const secret = process.env.PAYHERE_SECRET;
-      
+
       if (!merchantId || !secret) throw new Error("PayHere config missing");
 
       // 1. Prepare Payload for Redis
@@ -97,6 +102,7 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
         customerId,
         customerEmail,
         shippingAddress,
+        billingAddress: finalBillingAddress, // 🟢 3. Add to Redis payload
         finalItems,
         grandTotal,
         finalDiscount,
@@ -120,23 +126,23 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
         isPayHere: true,
         orderId: orderNumber, // needed for frontend tracking
         payhereParams: {
-            sandbox: true,
-            merchant_id: merchantId,
-            return_url: `${process.env.FRONTEND_URL}/checkout/success?orderNumber=${orderNumber}`, // PayHere redirects here on success
-            cancel_url: `${process.env.FRONTEND_URL}/checkout`, // Simply go back to checkout
-            notify_url: `${process.env.API_URL}/api/payment/notify`,
-            order_id: orderNumber,
-            items: "Order #" + orderNumber,
-            currency: currency,
-            amount: amountStr,
-            first_name: shippingAddress.firstname,
-            last_name: shippingAddress.lastname,
-            email: customerEmail,
-            phone: shippingAddress.phoneNumber,
-            address: shippingAddress.addressLine,
-            city: shippingAddress.city,
-            country: "Sri Lanka",
-            hash: hash
+          sandbox: true,
+          merchant_id: merchantId,
+          return_url: `${process.env.FRONTEND_URL}/checkout/success?orderNumber=${orderNumber}`, // PayHere redirects here on success
+          cancel_url: `${process.env.FRONTEND_URL}/checkout`, // Simply go back to checkout
+          notify_url: `${process.env.API_URL}/api/payment/notify`,
+          order_id: orderNumber,
+          items: "Order #" + orderNumber,
+          currency: currency,
+          amount: amountStr,
+          first_name: shippingAddress.firstname,
+          last_name: shippingAddress.lastname,
+          email: customerEmail,
+          phone: shippingAddress.phoneNumber,
+          address: shippingAddress.addressLine,
+          city: shippingAddress.city,
+          country: "Sri Lanka",
+          hash: hash
         }
       });
     }
@@ -167,29 +173,39 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
         if (appliedCouponCode) {
              await tx.coupon.update({ where: { code: appliedCouponCode }, data: { usedCount: { increment: 1 }, usedByUserIds: { push: customerId || '' } }});
         }
+      }
 
-        // 3. Create Order
-        const newOrder = await tx.order.create({
-            data: {
-                orderNumber,
-                guestToken,
-                userId: customerId,
-                email: customerEmail,
-                shippingAddress,
-                items: finalItems,
-                totalAmount: grandTotal,
-                discountAmount: finalDiscount,
-                couponCode: appliedCouponCode,
-                status: 'PENDING',
-                paymentMethod: 'COD'
-            }
+      // 2. Update Coupon
+      if (appliedCouponCode) {
+        await tx.coupon.update({
+          where: { code: appliedCouponCode },
+          data: { usedCount: { increment: 1 }, usedByUserIds: { push: customerId || '' } }
         });
+      }
 
-        // 4. Clear Cart
-        if (customerId) {
-            await tx.cart.update({ where: { userId: customerId }, data: { items: [] }});
+      // 3. Create Order
+      const newOrder = await tx.order.create({
+        data: {
+          orderNumber,
+          guestToken,
+          userId: customerId,
+          email: customerEmail,
+          shippingAddress,
+          billingAddress: finalBillingAddress, // 🟢 4. Add to Prisma DB create call
+          items: finalItems,
+          totalAmount: grandTotal,
+          discountAmount: finalDiscount,
+          couponCode: appliedCouponCode,
+          status: 'PENDING',
+          paymentMethod: 'COD'
         }
-        return newOrder;
+      });
+
+      // 4. Clear Cart
+      if (customerId) {
+        await tx.cart.update({ where: { userId: customerId }, data: { items: [] } });
+      }
+      return newOrder;
     });
 
     sendOrderConfirmation(order).catch(console.error);
@@ -207,7 +223,6 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
   }
 };
 
-
 export const getGuestOrder = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { token } = req.params;
@@ -219,16 +234,16 @@ export const getGuestOrder = async (req: Request, res: Response, next: NextFunct
     });
 
     if (!order) {
-        return res.status(404).json({ message: "Invalid tracking link" });
+      return res.status(404).json({ message: "Invalid tracking link" });
     }
 
     // If the order is finished, we block access to protect customer privacy
     if (order.status === 'DELIVERED' || order.status === 'CANCELLED') {
-        return res.status(410).json({ 
-            message: "Link Expired", 
-            reason: order.status, // "DELIVERED" or "CANCELLED"
-            orderNumber: order.orderNumber // Let them know which order it was
-        });
+      return res.status(410).json({
+        message: "Link Expired",
+        reason: order.status, // "DELIVERED" or "CANCELLED"
+        orderNumber: order.orderNumber // Let them know which order it was
+      });
     }
 
     return res.json(order);
@@ -236,7 +251,6 @@ export const getGuestOrder = async (req: Request, res: Response, next: NextFunct
     return next(error);
   }
 };
-
 
 export const getUserOrders = async (req: any, res: Response, next: NextFunction) => {
   try {

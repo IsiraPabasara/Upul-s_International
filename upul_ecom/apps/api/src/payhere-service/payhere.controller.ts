@@ -65,6 +65,7 @@ export const handlePayHereNotify = async (req: Request, res: Response) => {
                     userId: shadowOrder.customerId,
                     email: shadowOrder.customerEmail,
                     shippingAddress: shadowOrder.shippingAddress,
+                    billingAddress: shadowOrder.billingAddress,
                     items: shadowOrder.finalItems,
                     totalAmount: shadowOrder.grandTotal,
                     discountAmount: shadowOrder.finalDiscount,
