@@ -32,7 +32,7 @@ export const mergeWishlist = async (req: any, res: Response, next: NextFunction)
     }
 
     // 2. Merge Logic: prevent duplicates
-    const dbItemIds = new Set(wishlist.items.map(i => i.productId));
+    const dbItemIds = new Set(wishlist.items.map((i: any) => i.productId));
     const newItems = [...wishlist.items];
 
     for (const item of cleanLocalItems) {
@@ -67,12 +67,12 @@ export const toggleWishlistItem = async (req: any, res: Response, next: NextFunc
       wishlist = await prisma.wishlist.create({ data: { userId, items: [] } });
     }
 
-    const exists = wishlist.items.find(i => i.productId === item.productId);
+    const exists = wishlist.items.find((i: any) => i.productId === item.productId);
     let newItems;
 
     if (exists) {
       // Remove it
-      newItems = wishlist.items.filter(i => i.productId !== item.productId);
+      newItems = wishlist.items.filter((i: any) => i.productId !== item.productId);
     } else {
       // Add it
       newItems = [...wishlist.items, item];

@@ -22,12 +22,12 @@ const getCategoryBranchIds = async (slug: string): Promise<string[]> => {
   // 3. Recursive finder
   const findAllChildren = (parentId: string): string[] => {
     const directChildren = allCategories
-      .filter(c => c.parentId === parentId)
-      .map(c => c.id);
+      .filter((c: any) => c.parentId === parentId)
+      .map((c: any) => c.id);
     
     let allDescendants = [...directChildren];
     
-    directChildren.forEach(childId => {
+    directChildren.forEach((childId: string) => {
       allDescendants = [...allDescendants, ...findAllChildren(childId)];
     });
 

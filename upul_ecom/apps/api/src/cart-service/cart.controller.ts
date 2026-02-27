@@ -171,10 +171,10 @@ export const verifyCart = async (req: Request, res: Response, next: NextFunction
       where: { id: { in: productIds } }
     });
 
-    const productMap = new Map(products.map(p => [p.id, p]));
+    const productMap = new Map(products.map((p: any) => [p.id, p]));
 
     for (const item of items) {
-      const product = productMap.get(item.productId);
+      const product = productMap.get(item.productId) as any;
       const errorKey = item.sku;
 
       // Check Existence & Visibility
@@ -196,7 +196,7 @@ export const verifyCart = async (req: Request, res: Response, next: NextFunction
 
       // Stock Validation
       if (item.size) {
-        const variant = product.variants.find(v => v.size === item.size);
+        const variant = (product.variants as any[]).find((v: any) => v.size === item.size);
         if (!variant || variant.stock < item.quantity) {
           errors[errorKey] = variant ? `Only ${variant.stock} left` : "Size unavailable";
           isValid = false;

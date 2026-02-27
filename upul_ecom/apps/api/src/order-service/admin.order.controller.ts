@@ -21,7 +21,7 @@ export const getAdminOrderStats = async (req: Request, res: Response, next: Next
       RETURNED: 0,  // 🟢 Now separate
     };
 
-    statusCounts.forEach(item => {
+    statusCounts.forEach((item: any) => {
       const count = item._count._all;
       stats.ALL += count;
       if (item.status in stats) {
@@ -143,7 +143,7 @@ export const updateOrderStatus = async (
     }
 
     // 3. TRANSACTION: Update Status + Restore Stock (if Cancelled/Returned)
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       // Update the Order Status
       const updatedOrder = await tx.order.update({
         where: { id: orderId },

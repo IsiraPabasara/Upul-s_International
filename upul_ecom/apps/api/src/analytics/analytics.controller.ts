@@ -471,8 +471,8 @@ export const getTopCustomers = async (
 
     // 3. Fetch User Details (Name, Email, Image)
     const userIds = topUsersRaw
-      .map((u) => u.userId)
-      .filter((id): id is string => id !== null);
+      .map((u: any) => u.userId)
+      .filter((id: any): id is string => id !== null);
 
     const userDetails = await prisma.users.findMany({
       where: { id: { in: userIds } },
@@ -487,8 +487,8 @@ export const getTopCustomers = async (
 
     // 4. Merge Data
     const formattedCustomers = topUsersRaw
-      .map((item) => {
-        const user = userDetails.find((u) => u.id === item.userId);
+      .map((item: any) => {
+        const user = userDetails.find((u: any) => u.id === item.userId);
         if (!user) return null;
 
         return {
