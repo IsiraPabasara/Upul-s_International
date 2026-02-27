@@ -171,41 +171,35 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
 
         // 2. Update Coupon
         if (appliedCouponCode) {
-             await tx.coupon.update({ where: { code: appliedCouponCode }, data: { usedCount: { increment: 1 }, usedByUserIds: { push: customerId || '' } }});
+          await tx.coupon.update({
+            where: { code: appliedCouponCode },
+            data: { usedCount: { increment: 1 }, usedByUserIds: { push: customerId || '' } }
+          });
         }
-      }
 
-      // 2. Update Coupon
-      if (appliedCouponCode) {
-        await tx.coupon.update({
-          where: { code: appliedCouponCode },
-          data: { usedCount: { increment: 1 }, usedByUserIds: { push: customerId || '' } }
+        // 3. Create Order
+        const newOrder = await tx.order.create({
+          data: {
+            orderNumber,
+            guestToken,
+            userId: customerId,
+            email: customerEmail,
+            shippingAddress,
+            billingAddress: finalBillingAddress,
+            items: finalItems,
+            totalAmount: grandTotal,
+            discountAmount: finalDiscount,
+            couponCode: appliedCouponCode,
+            status: 'PENDING',
+            paymentMethod: 'COD'
+          }
         });
-      }
 
-      // 3. Create Order
-      const newOrder = await tx.order.create({
-        data: {
-          orderNumber,
-          guestToken,
-          userId: customerId,
-          email: customerEmail,
-          shippingAddress,
-          billingAddress: finalBillingAddress, // 🟢 4. Add to Prisma DB create call
-          items: finalItems,
-          totalAmount: grandTotal,
-          discountAmount: finalDiscount,
-          couponCode: appliedCouponCode,
-          status: 'PENDING',
-          paymentMethod: 'COD'
+        // 4. Clear Cart
+        if (customerId) {
+          await tx.cart.update({ where: { userId: customerId }, data: { items: [] } });
         }
-      });
-
-      // 4. Clear Cart
-      if (customerId) {
-        await tx.cart.update({ where: { userId: customerId }, data: { items: [] } });
-      }
-      return newOrder;
+        return newOrder;
     });
 
     sendOrderConfirmation(order).catch(console.error);
