@@ -29,7 +29,7 @@ export const validateCoupon = async (code: string, userId: string | null, cartTo
   if (userId) {
     // Check if user has already used it (if limit exists)
     if (coupon.limitPerUser) {
-      const userUsageCount = coupon.usedByUserIds.filter(id => id === userId).length;
+      const userUsageCount = coupon.usedByUserIds.filter((id: any) => id === userId).length;
       if (userUsageCount >= coupon.limitPerUser) {
         throw new Error("You have already used this coupon");
       }

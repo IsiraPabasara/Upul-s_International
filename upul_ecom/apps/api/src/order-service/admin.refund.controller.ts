@@ -19,7 +19,7 @@ export const refundOrder = async (req: Request, res: Response, next: NextFunctio
     }
 
     // 2. TRANSACTION: Update Status + Restore Stock
-    const updatedOrder = await prisma.$transaction(async (tx) => {
+    const updatedOrder = await prisma.$transaction(async (tx: any) => {
       // A. Update Status
       const result = await tx.order.update({
         where: { id: orderId },

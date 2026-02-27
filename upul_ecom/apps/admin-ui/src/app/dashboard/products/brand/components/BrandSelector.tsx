@@ -1,14 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useRef, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import axiosInstance from '@/app/utils/axiosInstance';
-import toast from 'react-hot-toast';
-import { Plus, Check, X, Loader2, ChevronDown } from 'lucide-react';
+import { Check, ChevronDown, Tag, Loader2 } from 'lucide-react';
 
 interface Brand {
   id: string;
   name: string;
+  logoUrl: string | null;
 }
 
 interface BrandSelectorProps {
@@ -17,9 +17,19 @@ interface BrandSelectorProps {
 }
 
 export default function BrandSelector({ selectedBrand, onChange }: BrandSelectorProps) {
-  const queryClient = useQueryClient();
-  const [isAddingNew, setIsAddingNew] = useState(false);
-  const [newBrandName, setNewBrandName] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // 1. Fetch Brands
   const { data: brands = [], isLoading } = useQuery<Brand[]>({
@@ -30,97 +40,103 @@ export default function BrandSelector({ selectedBrand, onChange }: BrandSelector
     },
   });
 
-  // 2. Create Brand
-  const createBrandMutation = useMutation({
-    mutationFn: (name: string) => axiosInstance.post('/api/brands', { name }),
-    onSuccess: (response) => {
-      const newBrand = response.data;
-      queryClient.invalidateQueries({ queryKey: ['brands'] });
-      onChange(newBrand.name);
-      setIsAddingNew(false);
-      setNewBrandName('');
-      toast.success('Brand added!');
-    },
-    onError: (err: any) => {
-      toast.error(err.response?.data?.message || "Brand already exists");
-    },
-  });
+  // Helper to find the currently selected brand object
+  const selectedBrandObj = brands.find(b => b.name === selectedBrand);
 
-  const handleCreateBrand = () => {
-    if (!newBrandName.trim()) return;
-    createBrandMutation.mutate(newBrandName);
-  };
-
-  // Common Input Style (Matches your ProductForm)
-  const baseInputStyles = "w-full h-[46px] px-4 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-sm text-gray-700 dark:text-gray-200 placeholder:text-gray-400";
+  // Shared responsive input styles
+  const baseInputStyles = "w-full h-[44px] sm:h-[46px] px-3 sm:px-4 bg-slate-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:border-blue-500 outline-none transition-all text-sm sm:text-base font-medium";
 
   return (
     <div className="w-full">
-      {!isAddingNew ? (
-        <div className="flex gap-2">
-          {/* Dropdown Wrapper */}
-          <div className="relative w-full">
-            <select
-              className={`${baseInputStyles} appearance-none cursor-pointer`}
-              value={selectedBrand}
-              onChange={(e) => onChange(e.target.value)}
-              disabled={isLoading}
-            >
-              <option value="">{isLoading ? 'Loading brands...' : 'Select a Brand'}</option>
-              {brands
+      <div ref={dropdownRef} className="relative w-full group">
+        
+        {/* Dropdown Trigger Button with Selected Logo */}
+        <button
+          type="button"
+          onClick={() => !isLoading && setIsOpen(!isOpen)}
+          className={`${baseInputStyles} flex items-center justify-between hover:border-blue-300 dark:hover:border-blue-800/50 ${isOpen ? 'ring-4 ring-blue-500/10 border-blue-500 bg-white dark:bg-slate-900' : ''} ${isLoading ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            {isLoading ? (
+              <Loader2 size={16} className="animate-spin text-gray-400" />
+            ) : selectedBrandObj?.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img 
+                src={selectedBrandObj.logoUrl} 
+                alt={selectedBrandObj.name} 
+                className="w-6 h-6 rounded-full object-contain bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shrink-0 shadow-sm p-0.5" 
+                onError={(e) => (e.currentTarget.style.display = 'none')}
+              />
+            ) : selectedBrandObj ? (
+               <div className="w-6 h-6 rounded-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 flex items-center justify-center shrink-0 shadow-sm text-gray-400">
+                 <Tag size={12} strokeWidth={2.5} />
+               </div>
+            ) : null} {/* 🟢 FIXED: Added : null right here! */}
+            
+            <span className={`block truncate ${selectedBrand ? 'text-gray-900 dark:text-white font-bold' : 'text-gray-400'}`}>
+              {isLoading ? 'Loading brands...' : (selectedBrand || 'Select a Brand')}
+            </span>
+          </div>
+
+          <ChevronDown 
+            size={18} 
+            strokeWidth={2.5} 
+            className={`shrink-0 ml-2 transition-transform duration-300 ${isOpen ? 'rotate-180 text-blue-500' : 'text-gray-400 group-hover:text-blue-500'}`} 
+          />
+        </button>
+        
+        {/* Dropdown Menu with Logos */}
+        {isOpen && !isLoading && (
+          <div className="absolute z-[100] w-full mt-2 bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-2xl shadow-xl max-h-[280px] overflow-y-auto py-2 animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200 custom-scrollbar">
+            {brands.length === 0 ? (
+              <div className="px-4 py-6 text-sm text-gray-400 text-center font-medium flex flex-col items-center gap-2">
+                <Tag size={24} className="opacity-20" />
+                <p>No brands found.</p>
+                <p className="text-xs">Add them in the Brand Manager.</p>
+              </div>
+            ) : (
+              brands
                 .sort((a, b) => a.name.localeCompare(b.name))
                 .map((brand) => (
-                  <option key={brand.id} value={brand.name}>
-                    {brand.name}
-                  </option>
-                ))}
-            </select>
-            
-            {/* Custom Arrow Icon */}
-            <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-gray-400">
-              <ChevronDown size={16} />
-            </div>
+                  <button
+                    key={brand.id}
+                    type="button"
+                    onClick={() => {
+                      onChange(brand.name);
+                      setIsOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 sm:px-4 py-2.5 text-sm sm:text-base transition-colors ${
+                      selectedBrand === brand.name 
+                        ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-bold' 
+                        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-800 font-medium'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      {brand.logoUrl ? (
+                         // eslint-disable-next-line @next/next/no-img-element
+                         <img 
+                           src={brand.logoUrl} 
+                           alt={brand.name} 
+                           className="w-7 h-7 rounded-full object-contain bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shrink-0 shadow-sm p-0.5" 
+                           onError={(e) => (e.currentTarget.style.display = 'none')}
+                         />
+                      ) : (
+                         <div className="w-7 h-7 rounded-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 flex items-center justify-center shrink-0 shadow-sm text-gray-400">
+                           <Tag size={14} strokeWidth={2.5} />
+                         </div>
+                      )}
+                      <span className="truncate">{brand.name}</span>
+                    </div>
+
+                    {selectedBrand === brand.name && (
+                       <Check size={16} strokeWidth={3} className="shrink-0 ml-3 animate-in zoom-in duration-200" />
+                    )}
+                  </button>
+                ))
+            )}
           </div>
-          
-          {/* Add Button */}
-          <button
-            type="button"
-            onClick={() => setIsAddingNew(true)}
-            className="h-[46px] w-[46px] flex items-center justify-center bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl border border-blue-100 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shrink-0"
-            title="Add New Brand"
-          >
-            <Plus size={20} />
-          </button>
-        </div>
-      ) : (
-        /* Add Mode */
-        <div className="flex gap-2 animate-in fade-in slide-in-from-left-2 duration-200">
-          <input
-            type="text"
-            className={baseInputStyles}
-            placeholder="Brand Name..."
-            value={newBrandName}
-            onChange={(e) => setNewBrandName(e.target.value)}
-            autoFocus
-            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleCreateBrand())}
-          />
-          <button
-            type="button"
-            onClick={handleCreateBrand}
-            disabled={createBrandMutation.isPending}
-            className="h-[46px] w-[46px] flex items-center justify-center bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-colors disabled:opacity-50 shrink-0 shadow-sm shadow-emerald-500/20"
-          >
-            {createBrandMutation.isPending ? <Loader2 className="animate-spin" size={20}/> : <Check size={20} />}
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsAddingNew(false)}
-            className="h-[46px] w-[46px] flex items-center justify-center bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-300 rounded-xl hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors shrink-0"
-          >
-            <X size={20} />
-          </button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

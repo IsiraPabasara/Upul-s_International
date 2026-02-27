@@ -7,7 +7,7 @@ import { useTheme } from "@/app/context/ThemeContext";
 import { 
   LayoutDashboard, ShoppingBag, Package, Layers, Ruler, LogOut, 
   ChevronDown, ChevronRight, PlusCircle, List, Moon, Sun, X, 
-  Mail
+  Mail, Tag, Ticket // 🟢 Imported Ticket icon for Coupons
 } from "lucide-react";
 
 const mainNavItems = [
@@ -21,8 +21,10 @@ const productSubItems = [
   { label: "Add Product", href: "/dashboard/products/add", icon: PlusCircle },
   { label: "Product List", href: "/dashboard/productlist", icon: List },
   { label: "Categories", href: "/dashboard/products/category", icon: Layers },
+  { label: "Brands", href: "/dashboard/products/brands", icon: Tag }, 
   { label: "Size Standards", href: "/dashboard/products/sizetypes", icon: Ruler },
-];
+  { label: "Coupons", href: "/dashboard/coupens", icon: Ticket }, // 🟢 Added Coupons here!
+]
 
 interface SidebarProps {
   isOpen: boolean;
@@ -88,9 +90,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         </div>
 
         {/* SCROLLABLE NAV */}
-        <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-1">
+        <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-1 custom-scrollbar">
           {mainNavItems.map((item) => {
-            // 🟢 UPDATED LOGIC HERE
             const isActive = isRouteActive(item.href);
             
             return (
@@ -126,10 +127,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               </div>
             </div>
 
-            <div className={`overflow-hidden transition-all duration-300 ${isProductsOpen ? 'max-h-96 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
+            <div className={`overflow-hidden transition-all duration-300 ${isProductsOpen ? 'max-h-[500px] opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
               <div className="space-y-0.5 ml-4 pl-3 border-l-2 border-slate-100 dark:border-slate-800">
                 {productSubItems.map((subItem) => {
-                  // 🟢 UPDATED LOGIC FOR SUB ITEMS TOO
                   const isSubActive = isRouteActive(subItem.href);
 
                   return (
@@ -143,6 +143,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         }
                       `}
                     >
+                      <subItem.icon size={16} className={isSubActive ? "text-blue-600 dark:text-blue-400" : "text-slate-400"} />
                       {subItem.label}
                     </Link>
                   );

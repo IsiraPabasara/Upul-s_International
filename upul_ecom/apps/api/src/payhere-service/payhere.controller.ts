@@ -33,7 +33,7 @@ export const handlePayHereNotify = async (req: Request, res: Response) => {
     // ✅ SCENARIO 1: SUCCESS (Status = 2)
     if (status_code === "2") {
         
-        await prisma.$transaction(async (tx) => {
+        await prisma.$transaction(async (tx: any) => {
             // A. Deduct Stock (CRITICAL: Check if still available)
             for (const item of shadowOrder.finalItems) {
                 const product = await tx.product.findUnique({ where: { id: item.productId }});

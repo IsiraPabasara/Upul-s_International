@@ -151,18 +151,27 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
     // 🔵 PATH B: COD (IMMEDIATE DB CREATION)
     // ==========================================
     // (This block remains exactly the same as your previous code because COD is instant)
-    const order = await prisma.$transaction(async (tx) => {
-      // 1. Deduct Stock
-      for (const item of items) {
-        const product = await tx.product.findUnique({ where: { id: item.productId } });
-        if (item.size) {
-          // update variant stock
-          const newVariants = product?.variants.map((v: any) =>
-            v.size === item.size ? { ...v, stock: v.stock - item.quantity } : v
-          );
-          await tx.product.update({ where: { id: product?.id }, data: { variants: newVariants } });
-        } else {
-          await tx.product.update({ where: { id: product?.id }, data: { stock: { decrement: item.quantity } } });
+    const order = await prisma.$transaction(async (tx: any) => {
+        // ... (Repeat the stock deduction & Order.create logic you had for COD)
+        // Since you wanted to reuse code, ideally you extract the deduction logic to a helper function.
+        // For brevity, I assume you keep the existing COD transaction logic here.
+        
+        // 1. Deduct Stock
+        for (const item of items) {
+             // ... DB Update Logic ...
+             const product = await tx.product.findUnique({ where: { id: item.productId }});
+             if(item.size) {
+                 // update variant stock
+                  const newVariants = product?.variants.map((v:any) => v.size === item.size ? {...v, stock: v.stock - item.quantity} : v);
+                  await tx.product.update({ where: {id: product?.id}, data: { variants: newVariants }});
+             } else {
+                 await tx.product.update({ where: {id: product?.id}, data: { stock: { decrement: item.quantity }}});
+             }
+        }
+
+        // 2. Update Coupon
+        if (appliedCouponCode) {
+             await tx.coupon.update({ where: { code: appliedCouponCode }, data: { usedCount: { increment: 1 }, usedByUserIds: { push: customerId || '' } }});
         }
       }
 
@@ -351,7 +360,7 @@ export const cancelUserOrder = async (req: any, res: Response, next: NextFunctio
     if (!order) return res.status(404).json({ message: "Order not found" });
     if (order.userId !== userId) return res.status(403).json({ message: "Unauthorized" });
 
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
        return await cancelOrderLogic(id, tx);
     });
 
@@ -372,7 +381,7 @@ export const cancelGuestOrder = async (req: Request, res: Response, next: NextFu
     const order = await prisma.order.findUnique({ where: { guestToken: token } });
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       return await cancelOrderLogic(order.id, tx);
     });
 

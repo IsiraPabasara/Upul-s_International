@@ -2,14 +2,90 @@ import { Request, Response, NextFunction } from "express";
 import prisma from "../../../../packages/libs/prisma";
 import { sendOrderCancelled, sendOrderDelivered, sendOrderProcessing, sendOrderReturned, sendShippingUpdate } from "../email-service/email.service";
 
-// 1. GET ALL ORDERS (With Pagination & Sorting)
+// 📊 GET TOTAL ORDER STATS (For the top cards)
+export const getAdminOrderStats = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const statusCounts = await prisma.order.groupBy({
+      by: ['status'],
+      _count: { _all: true },
+    });
+
+    const stats = {
+      ALL: 0,
+      PENDING: 0,
+      PROCESSING: 0,
+      CONFIRMED: 0,
+      SHIPPED: 0,
+      DELIVERED: 0,
+      CANCELLED: 0, // 🟢 Now separate
+      RETURNED: 0,  // 🟢 Now separate
+    };
+
+    statusCounts.forEach((item: any) => {
+      const count = item._count._all;
+      stats.ALL += count;
+      if (item.status in stats) {
+        stats[item.status as keyof typeof stats] += count;
+      }
+    });
+
+    return res.json(stats);
+  } catch (error) {
+    return next(error);
+  }
+};
 export const getAllOrders = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const orders = await prisma.order.findMany({
-      orderBy: { createdAt: 'desc' }, // Newest first
-      // You might want to include specific fields only to keep payload light
+    // 1. Extract query params (with safe defaults)
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const filter = req.query.filter as string || "ALL";
+    const search = req.query.search as string || "";
+
+    const skip = (page - 1) * limit;
+
+    // 2. Build the Prisma WHERE clause dynamically
+    const whereClause: any = {};
+
+    // Apply Status Filter
+    if (filter !== "ALL") {
+      if (filter === "ISSUES") {
+        whereClause.status = { in: ["CANCELLED", "RETURNED"] };
+      } else {
+        whereClause.status = filter;
+      }
+    }
+
+    // Apply Search Query (Search by Order ID or Email)
+    if (search) {
+      whereClause.OR = [
+        { orderNumber: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } }
+      ];
+    }
+
+    // 3. Fire both queries at the exact same time for maximum speed
+    const [totalOrders, orders] = await prisma.$transaction([
+      prisma.order.count({ where: whereClause }), // Gets total matches for pagination math
+      prisma.order.findMany({
+        where: whereClause,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit, // ONLY grab the 10 we need!
+      }),
+    ]);
+
+    // 4. Return a structured pagination object
+    return res.json({
+      orders,
+      metadata: {
+        total: totalOrders,
+        page,
+        totalPages: Math.ceil(totalOrders / limit),
+        hasMore: page * limit < totalOrders
+      }
     });
-    return res.json(orders);
+
   } catch (error) {
     return next(error);
   }
@@ -67,7 +143,7 @@ export const updateOrderStatus = async (
     }
 
     // 3. TRANSACTION: Update Status + Restore Stock (if Cancelled/Returned)
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       // Update the Order Status
       const updatedOrder = await tx.order.update({
         where: { id: orderId },

@@ -4,12 +4,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import axiosInstance from "@/app/utils/axiosInstance";
 import ProductForm, { ProductFormValues } from "../../components/ProductForm";
-import toast from "react-hot-toast";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import toast, { Toaster } from "react-hot-toast";
+import { ArrowLeft, Loader2, CheckCircle } from "lucide-react";
 import Link from "next/link";
 
 export default function EditProductPage() {
   const { sku } = useParams();
+  const router = useRouter();
   const queryClient = useQueryClient();
 
   // 1. FETCH
@@ -28,12 +29,31 @@ export default function EditProductPage() {
       return axiosInstance.put(`/api/products/${sku}`, formData);
     },
     onSuccess: () => {
-      toast.success("Product updated successfully!");
+      toast.success("Product updated - Redirecting..", {
+        duration: 4000,
+        position: "top-center",
+        style: {
+          background: "#10b981",
+          color: "#fff",
+          fontSize: "16px",
+          fontWeight: "bold",
+          padding: "16px 24px",
+          borderRadius: "12px",
+        },
+      });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["product", sku] });
+      
+      // Redirect after 2 seconds
+      setTimeout(() => {
+        router.push("/dashboard/productlist");
+      }, 2000);
     },
     onError: (err: any) => {
-      toast.error(err.response?.data?.error || "Failed to update");
+      toast.error(err.response?.data?.error || "Failed to update product", {
+        duration: 4000,
+        position: "top-center",
+      });
     },
   });
 
@@ -41,19 +61,27 @@ export default function EditProductPage() {
   if (isError || !product) return <div className="text-center p-20 text-red-500">Product Not Found</div>;
 
   return (
-    <div className="max-w-5xl mx-auto p-8 bg-gray-50 min-h-screen">
-      <div className="mb-6">
-        <Link href="/dashboard/products" className="text-sm text-gray-500 hover:text-black flex items-center gap-2 mb-2">
-          <ArrowLeft size={16} /> Back to Products
-        </Link>
-        <h1 className="text-2xl font-bold">Edit Product: <span className="text-gray-500">{product.name}</span></h1>
-      </div>
+    <>
+      <Toaster position="top-center" reverseOrder={false} />
+      <div className="min-h-screen bg-[#F8F9FC] dark:bg-slate-950 p-6 md:p-10 font-sans transition-colors duration-300">
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-8">
+          <Link href="/dashboard/productlist" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 transition-colors mb-3">
+            <ArrowLeft size={16} /> Back to Inventory Page
+          </Link>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
+            Edit Product
+          </h1>
+          <p className="text-gray-500 dark:text-slate-400 mt-1">{product.name}</p>
+        </div>
 
-      <ProductForm
-        initialData={product}
-        onSubmit={async (data) => updateMutation.mutate(data)}
-        isLoading={updateMutation.isPending}
-      />
-    </div>
+        <ProductForm
+          initialData={product}
+          onSubmit={async (data) => updateMutation.mutate(data)}
+          isLoading={updateMutation.isPending}
+        />
+      </div>
+      </div>
+    </>
   );
 }

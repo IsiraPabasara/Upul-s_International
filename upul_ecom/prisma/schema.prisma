@@ -58,7 +58,8 @@ model Product {
   description  String
   price        Float
   availability Boolean @default(true)
-  brand        String
+  brandId   String?   @db.ObjectId
+  brand     Brand?    @relation(fields: [brandId], references: [id])
   visible      Boolean @default(true)
 
   images ProductImage[]
@@ -97,7 +98,10 @@ model Category {
 model Brand {
   id   String @id @default(auto()) @map("_id") @db.ObjectId
   name String @unique
-  // Optional: logoUrl String? 
+  logoUrl   String?   // Optional, in case a brand doesn't have a logo yet
+  logoFileId String?
+
+  products  Product[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -201,6 +205,9 @@ model Order {
 
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+
+  @@index([createdAt(sort: Desc), status])
+  @@index([userId, createdAt])
 }
 
 enum EmailStatus {
@@ -265,3 +272,4 @@ model Coupon {
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 }
+

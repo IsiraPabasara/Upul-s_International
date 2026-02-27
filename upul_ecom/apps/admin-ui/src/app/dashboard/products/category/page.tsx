@@ -17,7 +17,18 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { SortableCategoryItem } from "./components/SortableCategoryItem";
-import { ArrowLeft, Home, Loader2, Plus, AlertCircle, Save, X } from "lucide-react"; // 👈 Added Icons
+import { 
+  ArrowLeft, 
+  Home, 
+  Loader2, 
+  Plus, 
+  AlertCircle, 
+  Save, 
+  X,
+  ChevronRight,
+  FolderTree,
+  Network
+} from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axiosInstance from "@/app/utils/axiosInstance";
 import toast from "react-hot-toast";
@@ -26,7 +37,7 @@ interface Category {
   id: string;
   name: string;
   sortOrder: number;
-  _count?: { subCategories: number }; // or children
+  _count?: { subCategories: number }; 
 }
 
 export default function CategoryManager() {
@@ -39,7 +50,6 @@ export default function CategoryManager() {
 
   // Input State
   const [inputValue, setInputValue] = useState("");
-  // 👇 NEW: Track which item we are editing (null = creating new)
   const [editingItem, setEditingItem] = useState<Category | null>(null);
 
   // --- 1. FETCH ---
@@ -67,41 +77,39 @@ export default function CategoryManager() {
       });
     },
     onSuccess: (res) => {
-      toast.success("Category added");
+      toast.success("Category added successfully");
       setInputValue("");
-      // Optimistic add (optional, but good)
       if (res.data) setCategories(prev => [...prev, res.data]);
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       queryClient.invalidateQueries({ queryKey: ['categories-selector'] });
     },
-    onError: (err: any) => toast.error(err.response?.data?.error || "Failed")
+    onError: (err: any) => toast.error(err.response?.data?.error || "Failed to add category")
   });
 
-  // --- 3. UPDATE MUTATION (The Pencil Fix) ✏️ ---
+  // --- 3. UPDATE MUTATION ✏️ ---
   const updateMutation = useMutation({
     mutationFn: async (payload: { id: string, name: string }) => {
-      // Assuming your backend supports PUT /categories/:id
       return axiosInstance.put(`/api/categories/${payload.id}`, { name: payload.name });
     },
     onSuccess: () => {
       toast.success("Category renamed");
       setInputValue("");
-      setEditingItem(null); // Exit edit mode
+      setEditingItem(null); 
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       queryClient.invalidateQueries({ queryKey: ['categories-selector'] });
     },
-    onError: () => toast.error("Failed to rename")
+    onError: () => toast.error("Failed to rename category")
   });
 
   // --- 4. DELETE MUTATION ---
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => axiosInstance.delete(`/api/categories/${id}`),
     onSuccess: () => {
-      toast.success("Deleted");
+      toast.success("Category deleted");
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       queryClient.invalidateQueries({ queryKey: ['categories-selector'] });
     },
-    onError: () => toast.error("Failed to delete")
+    onError: () => toast.error("Failed to delete category")
   });
 
   // --- 5. REORDER MUTATION ---
@@ -135,19 +143,15 @@ export default function CategoryManager() {
     if (!inputValue.trim()) return;
 
     if (editingItem) {
-      // Update Mode
       updateMutation.mutate({ id: editingItem.id, name: inputValue });
     } else {
-      // Create Mode
       createMutation.mutate(inputValue);
     }
   };
 
-  // 👇 The "Pencil" Click Handler
   const handleEditClick = (cat: Category) => {
     setEditingItem(cat);
     setInputValue(cat.name);
-    // Optional: Focus the input (requires a ref, simplest is just state update)
   };
 
   const handleCancelEdit = () => {
@@ -155,27 +159,47 @@ export default function CategoryManager() {
     setInputValue("");
   };
 
-  // DND Sensors
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5, // Requires 5px movement before dragging starts, allowing clicks on mobile!
+      },
+    }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
   // --- RENDER ---
   return (
-    <div className="max-w-3xl mx-auto p-8">
+    <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
       
-      {/* Header & Breadcrumbs */}
-      <div className="flex items-center gap-2 mb-6 text-sm text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-100 shadow-sm">
-        <button onClick={() => setPath([])} className="hover:text-blue-600 flex items-center gap-1 font-medium">
-          <Home size={16} /> Home
+      {/* PAGE HEADER */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight flex items-center gap-3">
+            <Network className="text-blue-500 hidden sm:block" size={28} strokeWidth={2.5} />
+            Category Management
+          </h1>
+          <p className="text-gray-500 dark:text-slate-400 text-xs sm:text-sm font-medium mt-1">
+            Organize your store taxonomy with drag and drop.
+          </p>
+        </div>
+      </div>
+
+      {/* BREADCRUMBS */}
+      <div className="flex flex-wrap items-center gap-2 mb-6 bg-white dark:bg-slate-900/50 p-3 sm:p-4 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm transition-colors">
+        <button 
+          onClick={() => setPath([])} 
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors ${path.length === 0 ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-800'}`}
+        >
+          <Home size={14} strokeWidth={2.5} /> Root
         </button>
+        
         {path.map((crumb, idx) => (
           <div key={crumb.id} className="flex items-center gap-2">
-            <span className="text-gray-300">/</span>
+            <ChevronRight size={14} strokeWidth={3} className="text-gray-300 dark:text-slate-600" />
             <button 
               onClick={() => setPath(prev => prev.slice(0, idx + 1))}
-              className={`${idx === path.length - 1 ? "font-bold text-black" : "hover:text-blue-600"}`}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors ${idx === path.length - 1 ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-800'}`}
             >
               {crumb.name}
             </button>
@@ -183,42 +207,49 @@ export default function CategoryManager() {
         ))}
       </div>
 
-      <div className="bg-white shadow-xl rounded-2xl overflow-hidden border border-gray-100">
-        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-          <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            {currentParentId ? `📂 ${path[path.length-1].name}` : "🗂️ Root Categories"}
-          </h1>
+      {/* MAIN CARD */}
+      <div className="bg-white dark:bg-slate-900 rounded-[1.5rem] shadow-sm border border-gray-200 dark:border-slate-800 overflow-hidden flex flex-col transition-colors">
+        
+        {/* Card Header */}
+        <div className="p-5 sm:p-6 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50/80 dark:bg-slate-800/50 backdrop-blur-sm">
+          <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2.5">
+            <FolderTree size={20} className={currentParentId ? "text-blue-500" : "text-gray-400"} strokeWidth={2.5} />
+            {currentParentId ? path[path.length-1].name : "Root Categories"}
+          </h2>
           {currentParentId && (
             <button 
               onClick={() => setPath(prev => prev.slice(0, -1))}
-              className="text-xs flex items-center gap-1 text-gray-500 hover:text-black transition px-2 py-1 rounded hover:bg-gray-200"
+              className="text-xs font-bold uppercase tracking-widest flex items-center gap-1.5 text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600 px-3 py-1.5 rounded-xl transition-all shadow-sm active:scale-95"
             >
-              <ArrowLeft size={14} /> Back
+              <ArrowLeft size={14} strokeWidth={2.5} /> Back
             </button>
           )}
         </div>
 
-        {/* List */}
-        <div className="p-6 min-h-[300px]">
+        {/* Drag & Drop List */}
+        <div className="p-4 sm:p-6 min-h-[300px] bg-white dark:bg-slate-900">
           {isLoading ? (
-            <div className="flex justify-center py-10"><Loader2 className="animate-spin text-gray-400" /></div>
+            <div className="flex justify-center items-center h-full py-20 text-blue-500">
+              <Loader2 className="animate-spin" size={32} strokeWidth={2.5} />
+            </div>
           ) : (
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={categories.map(c => c.id)} strategy={verticalListSortingStrategy}>
                 {categories.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-gray-400 border-2 border-dashed border-gray-100 rounded-lg">
-                    <AlertCircle className="mb-2 opacity-50" />
-                    <p>No sub-categories here yet.</p>
+                  <div className="flex flex-col items-center justify-center py-16 text-gray-400 dark:text-slate-500 border-2 border-dashed border-gray-200 dark:border-slate-800 rounded-2xl bg-gray-50/50 dark:bg-slate-800/20">
+                    <FolderTree size={48} strokeWidth={1.5} className="mb-4 opacity-20" />
+                    <p className="font-bold text-gray-600 dark:text-slate-400 text-sm">No sub-categories found.</p>
+                    <p className="text-xs mt-1">Use the form below to create one.</p>
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {categories.map((cat) => (
                       <SortableCategoryItem 
                         key={cat.id} 
                         category={cat}
                         onDrillDown={(c) => setPath(prev => [...prev, { id: c.id, name: c.name }])}
-                        onEdit={handleEditClick} // 👈 Connects the pencil!
-                        onDelete={(id) => { if(confirm("Delete?")) deleteMutation.mutate(id); }}
+                        onEdit={handleEditClick} 
+                        onDelete={(id) => { if(confirm("Are you sure you want to delete this category?")) deleteMutation.mutate(id); }}
                       />
                     ))}
                   </div>
@@ -229,45 +260,60 @@ export default function CategoryManager() {
         </div>
 
         {/* Footer: Create / Edit Form */}
-        <form onSubmit={handleSubmit} className={`p-4 border-t flex gap-3 transition-colors ${editingItem ? "bg-amber-50" : "bg-gray-50"}`}>
-          <input
-            type="text"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            placeholder={editingItem ? `Rename "${editingItem.name}"...` : `Add new inside "${currentParentId ? path[path.length-1].name : 'Home'}"...`}
-            className={`flex-1 px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all
-              ${editingItem ? "border-amber-300 focus:ring-amber-200" : "border-gray-300 focus:ring-black/5"}`}
-          />
-          
-          {editingItem ? (
-            <>
+        <form 
+          onSubmit={handleSubmit} 
+          className={`p-4 sm:p-6 border-t transition-colors duration-300 ${
+            editingItem 
+              ? "bg-amber-50/50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/30" 
+              : "bg-gray-50/80 dark:bg-slate-800/50 border-gray-100 dark:border-slate-800"
+          }`}
+        >
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+            <input
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder={editingItem ? `Rename "${editingItem.name}"...` : `Add new category to "${currentParentId ? path[path.length-1].name : 'Root'}"...`}
+              
+              className={`w-full sm:flex-1 shrink-0 min-h-[48px] sm:min-h-[52px] h-[48px] sm:h-[52px] px-4 rounded-xl text-sm sm:text-base font-semibold text-gray-900 dark:text-white outline-none transition-all shadow-sm
+                ${editingItem 
+                  ? "bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-700/50 focus:ring-4 focus:ring-amber-500/20 focus:border-amber-500 placeholder:text-amber-300 dark:placeholder:text-amber-700" 
+                  : "bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 placeholder:text-gray-400 dark:placeholder:text-slate-500"
+                }`}
+            />
+            
+            {editingItem ? (
+              <div className="flex gap-2 shrink-0">
+                <button 
+                  type="submit"
+                  disabled={updateMutation.isPending || !inputValue.trim()}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 min-h-[48px] sm:min-h-[52px] h-[48px] sm:h-[52px] px-6 sm:px-8 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold transition-all shadow-md hover:shadow-lg disabled:opacity-50 active:scale-95"
+                >
+                  {updateMutation.isPending ? <Loader2 size={18} strokeWidth={2.5} className="animate-spin" /> : <Save size={18} strokeWidth={2.5} />}
+                  <span className="hidden sm:block">Update</span>
+                </button>
+                <button 
+                  type="button" 
+                  onClick={handleCancelEdit}
+                  className="min-h-[48px] sm:min-h-[52px] h-[48px] sm:h-[52px] w-[48px] sm:w-[52px] flex items-center justify-center bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white rounded-xl transition-all shadow-sm active:scale-95 shrink-0"
+                  title="Cancel Edit"
+                >
+                  <X size={20} strokeWidth={2.5} />
+                </button>
+              </div>
+            ) : (
               <button 
                 type="submit"
-                disabled={updateMutation.isPending}
-                className="bg-amber-500 text-white px-6 rounded-lg font-medium hover:bg-amber-600 transition flex items-center gap-2"
+                disabled={createMutation.isPending || !inputValue.trim()}
+                className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-2 min-h-[48px] sm:min-h-[52px] h-[48px] sm:h-[52px] px-6 sm:px-8 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all shadow-md hover:shadow-lg disabled:opacity-50 active:scale-95"
               >
-                {updateMutation.isPending ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                Update
+                {createMutation.isPending ? <Loader2 size={18} strokeWidth={2.5} className="animate-spin" /> : <Plus size={18} strokeWidth={2.5} />}
+                Add Category
               </button>
-              <button 
-                type="button" 
-                onClick={handleCancelEdit}
-                className="bg-gray-200 text-gray-600 px-4 rounded-lg hover:bg-gray-300 transition"
-              >
-                <X size={20} />
-              </button>
-            </>
-          ) : (
-            <button 
-              type="submit"
-              disabled={createMutation.isPending || !inputValue}
-              className="bg-black text-white px-6 rounded-lg font-medium hover:bg-gray-800 disabled:opacity-50 transition flex items-center gap-2"
-            >
-              {createMutation.isPending ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
-              Add
-            </button>
-          )}
+            )}
+          </div>
         </form>
+
       </div>
     </div>
   );

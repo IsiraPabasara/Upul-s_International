@@ -134,7 +134,7 @@ const MainAnalyticsChart = ({
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4 z-20 relative">
         <div>
-          <h3 className="text-2xl font-extrabold text-slate-800 dark:text-white flex items-center gap-3">
+          <h3 className="text-lg sm:text-xl lg:text-2xl font-extrabold text-slate-800 dark:text-white flex items-center gap-3">
             {getMetricLabel()}
             {isFetching && !isLoading && (
               <span className="flex h-3 w-3 relative">

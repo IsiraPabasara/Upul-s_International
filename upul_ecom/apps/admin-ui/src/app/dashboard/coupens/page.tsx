@@ -1,8 +1,14 @@
 'use client';
+
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axiosInstance from '@/app/utils/axiosInstance';
-import { Trash2, Loader2, Tag, Calendar, User, Globe, Lock } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { 
+  Trash2, Loader2, Ticket, Calendar, User, 
+  Globe, Lock, Plus, X, Percent, DollarSign,
+  Hash, ShoppingCart, Infinity
+} from 'lucide-react';
 
 export default function AdminCouponsPage() {
   const queryClient = useQueryClient();
@@ -21,7 +27,7 @@ export default function AdminCouponsPage() {
   });
 
   // Fetch Coupons
-  const { data: coupons, isLoading } = useQuery({
+  const { data: coupons, isLoading, isError } = useQuery({
     queryKey: ['admin-coupons'],
     queryFn: async () => (await axiosInstance.get('/api/coupons')).data
   });
@@ -33,189 +39,298 @@ export default function AdminCouponsPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-coupons'] });
       setIsCreating(false);
       setFormData({ ...formData, code: '', value: '' }); // Reset partial
-      alert("Coupon Created!");
+      toast.success("Coupon created successfully!");
     },
-    onError: (err: any) => alert(err.response?.data?.message || "Failed to create")
+    onError: (err: any) => toast.error(err.response?.data?.message || "Failed to create coupon")
   });
 
   // Delete Mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => await axiosInstance.delete(`/api/coupons/${id}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-coupons'] })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-coupons'] });
+      toast.success("Coupon removed");
+    }
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent): void => {
     e.preventDefault();
+    if (!formData.code.trim() || !formData.value) {
+      toast.error("Code and Value are required");
+      return;
+    }
     createMutation.mutate(formData);
   };
 
-  if (isLoading) return <div className="p-10 flex justify-center"><Loader2 className="animate-spin" /></div>;
+  const inputStyles = "w-full h-[52px] pl-11 pr-4 bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-sm sm:text-base font-medium text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-slate-500 shadow-sm";
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Manage Coupons</h1>
+    <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
+      
+      {/* --- HEADER --- */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight flex items-center gap-3">
+            <Ticket className="text-blue-500 hidden sm:block" size={28} strokeWidth={2.5} />
+            Coupon Management
+          </h1>
+          <p className="text-gray-500 dark:text-slate-400 text-xs sm:text-sm font-medium mt-1">
+            Create and distribute discount codes for your customers.
+          </p>
+        </div>
         <button 
           onClick={() => setIsCreating(!isCreating)}
-          className="bg-black text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-800 transition"
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all active:scale-95 shadow-sm ${
+            isCreating 
+              ? "bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700" 
+              : "bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg"
+          }`}
         >
-          {isCreating ? 'Cancel' : '+ New Coupon'}
+          {isCreating ? <X size={18} strokeWidth={2.5} /> : <Plus size={18} strokeWidth={2.5} />}
+          {isCreating ? 'Cancel' : 'New Coupon'}
         </button>
       </div>
 
       {/* --- CREATE FORM --- */}
       {isCreating && (
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm mb-8">
-          <h2 className="text-lg font-bold mb-4">Create New Discount Code</h2>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-[1.5rem] shadow-sm border border-gray-100 dark:border-slate-800 mb-8 transition-colors animate-in slide-in-from-top-4 duration-300">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-6">
             
-            {/* Row 1 */}
-            <div className="col-span-2 md:col-span-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Coupon Code</label>
-              <input 
-                required 
-                type="text" 
-                placeholder="SUMMER2026"
-                className="w-full border p-2 rounded-md uppercase font-mono tracking-wider"
-                value={formData.code}
-                onChange={e => setFormData({...formData, code: e.target.value.toUpperCase()})}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 col-span-2 md:col-span-1">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                <select 
-                  className="w-full border p-2 rounded-md"
-                  value={formData.type}
-                  onChange={e => setFormData({...formData, type: e.target.value})}
-                >
-                  <option value="PERCENTAGE">Percentage (%)</option>
-                  <option value="FIXED">Fixed Amount</option>
-                </select>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Code */}
+              <div className="lg:col-span-1">
+                <label className="label mb-2 ml-1 text-sm font-bold text-gray-900 dark:text-white">Coupon Code <span className="text-red-500">*</span></label>
+                <div className="relative group">
+                  <Ticket className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={18} strokeWidth={2.5} />
+                  <input 
+                    required 
+                    type="text" 
+                    placeholder="e.g. SUMMER2026"
+                    className={`${inputStyles} uppercase font-mono tracking-widest font-bold pl-12`}
+                    value={formData.code}
+                    onChange={e => setFormData({...formData, code: e.target.value.toUpperCase().replace(/\s/g, '')})}
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Value</label>
-                <input 
-                  required type="number" 
-                  className="w-full border p-2 rounded-md"
-                  value={formData.value}
-                  onChange={e => setFormData({...formData, value: e.target.value})}
-                />
+
+              {/* Type */}
+              <div className="lg:col-span-1">
+                <label className="label mb-2 ml-1 text-sm font-bold text-gray-900 dark:text-white">Discount Type</label>
+                <div className="relative group">
+                  {formData.type === 'PERCENTAGE' ? (
+                    <Percent className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors z-10" size={18} strokeWidth={2.5} />
+                  ) : (
+                    <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors z-10" size={18} strokeWidth={2.5} />
+                  )}
+                  <select 
+                    className={`${inputStyles} pl-12 appearance-none`}
+                    value={formData.type}
+                    onChange={e => setFormData({...formData, type: e.target.value})}
+                  >
+                    <option value="PERCENTAGE">Percentage (%)</option>
+                    <option value="FIXED">Fixed Amount ($)</option>
+                  </select>
+                </div>
               </div>
+
+              {/* Value */}
+              <div className="lg:col-span-1">
+                <label className="label mb-2 ml-1 text-sm font-bold text-gray-900 dark:text-white">Discount Value <span className="text-red-500">*</span></label>
+                <div className="relative group">
+                  <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={18} strokeWidth={2.5} />
+                  <input 
+                    required type="number" min="0" step="any"
+                    className={inputStyles}
+                    placeholder={formData.type === 'PERCENTAGE' ? "e.g. 20" : "e.g. 50"}
+                    value={formData.value}
+                    onChange={e => setFormData({...formData, value: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              {/* Min Order */}
+              <div>
+                <label className="label mb-2 ml-1 text-sm font-bold text-gray-900 dark:text-white">Min. Order Amount</label>
+                <div className="relative group">
+                  <ShoppingCart className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={18} strokeWidth={2.5} />
+                  <input 
+                    type="number" min="0"
+                    className={inputStyles}
+                    value={formData.minOrderAmount}
+                    onChange={e => setFormData({...formData, minOrderAmount: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              {/* Uses Per User */}
+              <div>
+                <label className="label mb-2 ml-1 text-sm font-bold text-gray-900 dark:text-white">Uses Per User</label>
+                <div className="relative group">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={18} strokeWidth={2.5} />
+                  <input 
+                    type="number" min="1"
+                    className={inputStyles}
+                    placeholder="Leave empty for unlimited"
+                    value={formData.limitPerUser}
+                    onChange={e => setFormData({...formData, limitPerUser: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              {/* Total Global Uses */}
+              <div>
+                <label className="label mb-2 ml-1 text-sm font-bold text-gray-900 dark:text-white">Total Global Uses</label>
+                <div className="relative group">
+                  <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={18} strokeWidth={2.5} />
+                  <input 
+                    type="number" min="1"
+                    className={inputStyles}
+                    placeholder="e.g. First 100 users"
+                    value={formData.maxUses}
+                    onChange={e => setFormData({...formData, maxUses: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              {/* Expiration Date */}
+              <div className="lg:col-span-2">
+                <label className="label mb-2 ml-1 text-sm font-bold text-gray-900 dark:text-white">Expiration Date</label>
+                <div className="relative group">
+                  <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={18} strokeWidth={2.5} />
+                  <input 
+                    type="date" 
+                    // 🟢 dark:[color-scheme:dark] makes the browser's native date picker turn dark!
+                    className={`${inputStyles} dark:[color-scheme:dark]`}
+                    value={formData.expiresAt}
+                    onChange={e => setFormData({...formData, expiresAt: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              {/* Public/Private Checkbox */}
+              <div className="lg:col-span-1 flex items-center h-full pt-6">
+                <label className="relative flex items-center gap-3 cursor-pointer group p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors w-full border border-transparent hover:border-gray-200 dark:hover:border-slate-700">
+                  <div className="relative flex items-center justify-center">
+                    <input 
+                      type="checkbox" 
+                      className="peer sr-only"
+                      checked={formData.isPublic}
+                      onChange={e => setFormData({...formData, isPublic: e.target.checked})}
+                    />
+                    <div className="w-12 h-6 bg-gray-200 dark:bg-slate-700 rounded-full peer-checked:bg-blue-500 transition-colors"></div>
+                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-6 shadow-sm"></div>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-gray-900 dark:text-white">Public Coupon</span>
+                    <span className="text-[10px] text-gray-500 dark:text-slate-400">Guests can use without logging in</span>
+                  </div>
+                </label>
+              </div>
+
             </div>
 
-            {/* Row 2: Constraints */}
-            <div>
-               <label className="block text-sm font-medium text-gray-700 mb-1">Min Order Amount</label>
-               <input 
-                  type="number" 
-                  className="w-full border p-2 rounded-md"
-                  value={formData.minOrderAmount}
-                  onChange={e => setFormData({...formData, minOrderAmount: e.target.value})}
-               />
-            </div>
-
-            <div>
-               <label className="block text-sm font-medium text-gray-700 mb-1">Expiration Date</label>
-               <input 
-                  type="date" 
-                  className="w-full border p-2 rounded-md"
-                  value={formData.expiresAt}
-                  onChange={e => setFormData({...formData, expiresAt: e.target.value})}
-               />
-            </div>
-
-            {/* Row 3: Limits */}
-            <div>
-               <label className="block text-sm font-medium text-gray-700 mb-1">Uses Per User (1 = One time)</label>
-               <input 
-                  type="number" 
-                  className="w-full border p-2 rounded-md"
-                  placeholder="Leave empty for unlimited"
-                  value={formData.limitPerUser}
-                  onChange={e => setFormData({...formData, limitPerUser: e.target.value})}
-               />
-            </div>
-
-            <div>
-               <label className="block text-sm font-medium text-gray-700 mb-1">Total Global Uses</label>
-               <input 
-                  type="number" 
-                  className="w-full border p-2 rounded-md"
-                  placeholder="e.g. First 100 users"
-                  value={formData.maxUses}
-                  onChange={e => setFormData({...formData, maxUses: e.target.value})}
-               />
-            </div>
-
-            {/* Row 4: Public/Private */}
-            <div className="col-span-2 flex items-center gap-2">
-              <input 
-                type="checkbox" 
-                id="isPublic"
-                checked={formData.isPublic}
-                onChange={e => setFormData({...formData, isPublic: e.target.checked})}
-                className="w-4 h-4"
-              />
-              <label htmlFor="isPublic" className="text-sm font-medium text-gray-700">
-                Public Code (Guests can use without logging in)
-              </label>
-            </div>
-
-            <div className="col-span-2">
+            <div className="flex justify-end pt-4 border-t border-gray-100 dark:border-slate-800">
               <button 
-                disabled={createMutation.isPending}
+                disabled={createMutation.isPending || !formData.code.trim()}
                 type="submit" 
-                className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 disabled:bg-gray-400"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 h-[52px] px-8 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all shadow-md hover:shadow-lg disabled:opacity-50 active:scale-95 shrink-0"
               >
-                {createMutation.isPending ? 'Saving...' : 'Create Coupon'}
+                {createMutation.isPending ? <Loader2 size={18} strokeWidth={2.5} className="animate-spin" /> : <Plus size={18} strokeWidth={2.5} />}
+                Create Coupon
               </button>
             </div>
           </form>
         </div>
       )}
 
-      {/* --- LIST --- */}
-      <div className="grid gap-4">
-        {coupons?.map((coupon: any) => (
-          <div key={coupon.id} className="bg-white p-5 rounded-lg border border-gray-200 flex flex-col md:flex-row justify-between items-center shadow-sm">
-            <div className="flex items-start gap-4 mb-4 md:mb-0">
-              <div className="bg-gray-100 p-3 rounded-md">
-                <Tag className="w-6 h-6 text-gray-600" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 tracking-wide">{coupon.code}</h3>
-                <p className="text-sm text-green-600 font-bold">
-                  {coupon.type === 'PERCENTAGE' ? `${coupon.value}% OFF` : `-$${coupon.value} Discount`}
-                </p>
-                <div className="flex gap-3 text-xs text-gray-500 mt-1">
-                   <span className="flex items-center gap-1"><User size={12}/> {coupon.limitPerUser ? `Limit: ${coupon.limitPerUser}/user` : 'Unlim. per user'}</span>
-                   <span className="flex items-center gap-1">
-                      {coupon.isPublic ? <Globe size={12}/> : <Lock size={12}/>} 
-                      {coupon.isPublic ? 'Public' : 'Logged-in Only'}
-                   </span>
-                   {coupon.expiresAt && <span className="flex items-center gap-1"><Calendar size={12}/> Exp: {new Date(coupon.expiresAt).toLocaleDateString()}</span>}
+      {/* --- LIST VIEW --- */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 animate-pulse">
+          {[1, 2, 3].map(i => <div key={i} className="h-40 bg-white dark:bg-slate-800/50 border border-gray-100 dark:border-slate-800 rounded-[1.5rem]" />)}
+        </div>
+      ) : isError ? (
+        <div className="p-10 text-center bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-800/50 rounded-2xl text-rose-500 font-bold">
+          Failed to load coupons. Please refresh the page.
+        </div>
+      ) : coupons?.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-24 text-gray-400 dark:text-slate-500 bg-white dark:bg-slate-900 rounded-[1.5rem] border border-gray-100 dark:border-slate-800 border-dashed shadow-sm">
+          <Ticket size={56} strokeWidth={1.5} className="mb-4 opacity-20" />
+          <p className="font-bold text-gray-600 dark:text-slate-400 text-base">No active coupons.</p>
+          <p className="text-sm mt-1">Create your first discount code above.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          {coupons?.map((coupon: any) => (
+            <div key={coupon.id} className="group relative bg-white dark:bg-slate-900 rounded-[1.5rem] border border-gray-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col">
+              
+              {/* Card Header (Code & Discount) */}
+              <div className="p-5 pb-4 bg-gradient-to-br from-blue-50/50 to-transparent dark:from-blue-900/10 dark:to-transparent border-b border-dashed border-gray-200 dark:border-slate-700 flex justify-between items-start">
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Ticket size={16} className="text-blue-500" strokeWidth={2.5} />
+                    <span className="text-[10px] font-bold tracking-widest uppercase text-blue-500">Discount Code</span>
+                  </div>
+                  <h3 className="text-2xl font-black text-gray-900 dark:text-white font-mono tracking-wide">{coupon.code}</h3>
+                </div>
+                
+                <div className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-3 py-1.5 rounded-lg font-black text-sm shadow-sm border border-emerald-200 dark:border-emerald-800/50">
+                  {coupon.type === 'PERCENTAGE' ? `${coupon.value}% OFF` : `-$${coupon.value}`}
                 </div>
               </div>
-            </div>
 
-            <div className="flex items-center gap-6">
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-500">Usage</p>
-                <p className="text-lg font-bold">{coupon.usedCount} <span className="text-gray-400 text-sm">/ {coupon.maxUses || '∞'}</span></p>
+              {/* Cutout Circles for "Ticket" Effect */}
+              <div className="absolute top-[82px] -left-3 w-6 h-6 bg-gray-50 dark:bg-slate-950 rounded-full border-r border-gray-100 dark:border-slate-800"></div>
+              <div className="absolute top-[82px] -right-3 w-6 h-6 bg-gray-50 dark:bg-slate-950 rounded-full border-l border-gray-100 dark:border-slate-800"></div>
+
+              {/* Card Body (Stats & Details) */}
+              <div className="p-5 flex-1 flex flex-col justify-between gap-4">
+                
+                <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-xs font-medium text-gray-500 dark:text-slate-400">
+                  <div className="flex items-center gap-1.5">
+                    <ShoppingCart size={14} className="text-gray-400" />
+                    <span>Min: ${coupon.minOrderAmount || '0'}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <User size={14} className="text-gray-400" />
+                    <span>{coupon.limitPerUser ? `Limit: ${coupon.limitPerUser}` : 'Unlim. per user'}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {coupon.isPublic ? <Globe size={14} className="text-blue-400"/> : <Lock size={14} className="text-amber-400"/>} 
+                    <span>{coupon.isPublic ? 'Public Code' : 'Logged-in Only'}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Calendar size={14} className={coupon.expiresAt && new Date(coupon.expiresAt) < new Date() ? 'text-rose-500' : 'text-gray-400'} />
+                    <span className={coupon.expiresAt && new Date(coupon.expiresAt) < new Date() ? 'text-rose-500 font-bold' : ''}>
+                      {coupon.expiresAt ? new Date(coupon.expiresAt).toLocaleDateString() : 'Never Expires'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Footer section with usage and delete */}
+                <div className="flex items-end justify-between pt-4 border-t border-gray-100 dark:border-slate-800">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-slate-500 mb-0.5">Total Usage</span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-lg font-black text-gray-900 dark:text-white leading-none">{coupon.usedCount || 0}</span>
+                      <span className="text-sm font-bold text-gray-400">/ {coupon.maxUses || <Infinity size={16} className="inline mb-0.5" />}</span>
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={() => { if(confirm(`Delete coupon ${coupon.code}?`)) deleteMutation.mutate(coupon.id) }}
+                    disabled={deleteMutation.isPending}
+                    className="p-2 text-gray-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all active:scale-95 disabled:opacity-50"
+                    title="Delete Coupon"
+                  >
+                    <Trash2 size={18} strokeWidth={2.5} />
+                  </button>
+                </div>
+
               </div>
-              <button 
-                onClick={() => { if(confirm('Delete?')) deleteMutation.mutate(coupon.id) }}
-                className="text-red-500 hover:bg-red-50 p-2 rounded-full transition"
-              >
-                <Trash2 size={20} />
-              </button>
             </div>
-          </div>
-        ))}
-        {coupons?.length === 0 && <p className="text-center text-gray-500 mt-10">No coupons found.</p>}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

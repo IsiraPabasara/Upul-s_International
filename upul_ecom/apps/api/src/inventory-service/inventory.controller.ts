@@ -100,7 +100,7 @@ export const getInventory = async (
       ]);
 
     // 🧮 CALCULATE REAL STATS (Drill into Variants!)
-    const outOfStockCount = allProductsValue.reduce((count, p) => {
+    const outOfStockCount = allProductsValue.reduce((count: number, p: any) => {
       if (Array.isArray(p.variants) && p.variants.length > 0) {
         // Count specific variants that are 0
         const emptyVariants = (p.variants as any[]).filter(
@@ -112,14 +112,14 @@ export const getInventory = async (
       }
     }, 0);
 
-    const totalInventoryValue = allProductsValue.reduce((acc, curr) => {
+    const totalInventoryValue = allProductsValue.reduce((acc: number, curr: any) => {
       const price = Number(curr.price) || 0;
       const stock = Number(curr.stock) || 0;
       return acc + price * stock;
     }, 0);
 
     // Optimize Images
-    const products = rawProducts.map((p) => ({
+    const products = rawProducts.map((p: any) => ({
       ...p,
       images:
         Array.isArray(p.images) && p.images.length > 0 ? [p.images[0]] : [],
@@ -168,7 +168,7 @@ export const bulkUpdateInventory = async (
       updatesBySku[update.sku].push(update);
     });
 
-    const results = await prisma.$transaction(async (tx) => {
+    const results = await prisma.$transaction(async (tx: any) => {
       const skuKeys = Object.keys(updatesBySku);
 
       return Promise.all(

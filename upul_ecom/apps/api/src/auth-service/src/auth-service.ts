@@ -313,8 +313,8 @@ export const deleteUserAddress = async (req: any, res: Response, next: NextFunct
         const user = await prisma.users.findUnique({ where: { id: userId } });
         if (!user) throw new AuthError("User not found");
 
-        const addressToDelete = user.addresses.find(a => a.id === addressId);
-        let updatedAddresses = user.addresses.filter(a => a.id !== addressId);
+        const addressToDelete = user.addresses.find((a: any) => a.id === addressId);
+        let updatedAddresses = user.addresses.filter((a: any) => a.id !== addressId);
 
         if (addressToDelete?.isDefault && updatedAddresses.length > 0) {
             updatedAddresses[0].isDefault = true;
@@ -338,7 +338,7 @@ export const setDefaultAddress = async (req: any, res: Response, next: NextFunct
         const user = await prisma.users.findUnique({ where: { id: userId } });
         if (!user) throw new AuthError("User not found");
 
-        const updatedAddresses = user.addresses.map(a => ({
+        const updatedAddresses = user.addresses.map((a: any) => ({
             ...a,
             isDefault: a.id === addressId
         }));
