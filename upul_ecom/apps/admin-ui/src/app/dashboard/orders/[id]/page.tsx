@@ -285,8 +285,13 @@ export default function AdminOrderDetails() {
                     {order.shippingAddress.lastname}
                   </p>
                   <p className="leading-relaxed">
-                    {order.shippingAddress.addressLine},{" "}
-                    {order.shippingAddress.city}
+                    {order.shippingAddress.addressLine}
+                  </p>
+                  {order.shippingAddress.apartment && (
+                    <p className="leading-relaxed">{order.shippingAddress.apartment}</p>
+                  )}
+                  <p className="leading-relaxed">
+                    {order.shippingAddress.city}, {order.shippingAddress.postalCode}
                   </p>
                 </div>
               </div>

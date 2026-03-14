@@ -292,6 +292,9 @@ export default function UserOrderDetailsPage() {
                   {order.shippingAddress.firstname} {order.shippingAddress.lastname}
                 </p>
                 <p className="break-words">{order.shippingAddress.addressLine}</p>
+                {order.shippingAddress.apartment && (
+                  <p className="break-words">{order.shippingAddress.apartment}</p>
+                )}
                 <p className="break-words">
                   {order.shippingAddress.city}, {order.shippingAddress.postalCode}
                 </p>

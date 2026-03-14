@@ -26,7 +26,6 @@ const checkoutSchema = z.object({
   phoneNumber: z.string().min(9, 'Phone number is required'),
   saveAddress: z.boolean().default(false).optional(),
 
-  // 🟢 ADDED: Billing fields
   billingFirstname: z.string().optional(),
   billingLastname: z.string().optional(),
   billingAddressLine: z.string().optional(),
@@ -45,7 +44,6 @@ const inputErrorClass =
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const pathname = usePathname();
   const queryClient = useQueryClient();
 
   const {
@@ -64,9 +62,9 @@ export default function CheckoutPage() {
   const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // 🟢 CHANGED: Specific State for Method
   const [paymentMethod, setPaymentMethod] = useState<'COD' | 'PAYHERE' | null>(null);
   const [paymentError, setPaymentError] = useState(false);
+  const [addressError, setAddressError] = useState(false); // New state for address selection error
 
   const [promoInput, setPromoInput] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
@@ -103,19 +101,26 @@ export default function CheckoutPage() {
     register,
     handleSubmit,
     formState: { errors },
-    reset,
   } = useForm<CheckoutFormValues>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: { saveAddress: true },
   });
 
-  // 🟢 ADDED: State for Billing Address Toggle
   const [isSameAsShipping, setIsSameAsShipping] = useState(true);
 
   useEffect(() => {
-    // if (pathname !== '/checkout') return; // Commented out to prevent hydration issues if path varies
     if (!isProcessing && (!items || items.length === 0)) router.replace('/shop');
   }, [items, router, isProcessing]);
+
+  useEffect(() => {
+    // Reset scroll position and ensure body is scrollable
+    window.scrollTo(0, 0);
+    document.body.style.overflow = 'auto';
+    
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, []);
 
   const handleApplyCoupon = async () => {
     const code = promoInput.trim().toUpperCase();
@@ -155,7 +160,6 @@ export default function CheckoutPage() {
   };
 
   const onPlaceOrder = async (data: CheckoutFormValues) => {
-    // 🟢 CHANGED: Check for specific method
     if (!paymentMethod) {
       setPaymentError(true);
       toast.error('Please select a payment method to continue');
@@ -165,9 +169,8 @@ export default function CheckoutPage() {
     setIsProcessing(true);
     try {
       let orderPayload: any;
-
-      // 🟢 ADDED: Format billing address if it's different
       let finalBillingAddress = null;
+      
       if (!isSameAsShipping) {
         finalBillingAddress = {
           firstname: data.billingFirstname,
@@ -181,7 +184,15 @@ export default function CheckoutPage() {
       }
 
       if (user) {
-        let finalAddressId = selectedAddressId; // Local variable
+        let finalAddressId = selectedAddressId;
+
+        // Validation for logged in user selecting an existing address
+        if (!isAddingNewAddress && !finalAddressId) {
+          setAddressError(true);
+          toast.error('Please select a shipping address');
+          setIsProcessing(false);
+          return;
+        }
 
         if (isAddingNewAddress) {
           const res = await axiosInstance.post('/api/auth/add-address', {
@@ -191,35 +202,23 @@ export default function CheckoutPage() {
 
           if (res.data.success) {
             await queryClient.invalidateQueries({ queryKey: ['user'] });
-            // update the local variable to the new ID
             finalAddressId = res.data.addresses[res.data.addresses.length - 1].id;
-
-            // Update state for UI consistency
             setSelectedAddressId(finalAddressId);
             setIsAddingNewAddress(false);
-
-            // REMOVE THE "return" so code continues to place order immediately
           } else {
             setIsProcessing(false);
             return;
           }
         }
 
-        if (!finalAddressId) {
-          // Check local variable
-          toast.error('Please select an address');
-          setIsProcessing(false);
-          return;
-        }
-
         orderPayload = {
           type: 'USER',
           userId: user.id,
           addressId: finalAddressId,
-          billingAddress: finalBillingAddress, // 🟢 ADDED
+          billingAddress: finalBillingAddress,
           items,
           email: user.email,
-          paymentMethod: paymentMethod, // 🟢
+          paymentMethod: paymentMethod,
           shippingFee: SHIPPING_COST,
           couponCode: couponCode,
         };
@@ -228,9 +227,9 @@ export default function CheckoutPage() {
           type: 'GUEST',
           email: data.email,
           address: { ...data },
-          billingAddress: finalBillingAddress, // 🟢 ADDED
+          billingAddress: finalBillingAddress,
           items,
-          paymentMethod: paymentMethod, // 🟢
+          paymentMethod: paymentMethod,
           shippingFee: SHIPPING_COST,
           couponCode: couponCode,
         };
@@ -239,7 +238,6 @@ export default function CheckoutPage() {
       const res = await axiosInstance.post('/api/orders', orderPayload);
 
       if (res.data.success) {
-        // 🟢 PAYHERE REDIRECTION LOGIC
         if (res.data.isPayHere) {
           const params = res.data.payhereParams;
           const form = document.createElement('form');
@@ -263,17 +261,15 @@ export default function CheckoutPage() {
           document.body.appendChild(form);
           toast.loading('Redirecting to Secure Payment...');
           setTimeout(() => form.submit(), 1500);
-          return; // Stop here
+          return;
         }
 
-        // 🟢 STANDARD COD SUCCESS
         clearCart();
         router.replace(`/checkout/success?orderNumber=${res.data.orderId}&success=true`);
       }
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Order failed');
     } finally {
-      // Only stop loading if we aren't redirecting to PayHere
       if (paymentMethod === 'COD') {
         setIsProcessing(false);
       }
@@ -308,7 +304,7 @@ export default function CheckoutPage() {
     );
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen font-sans text-gray-700 bg-white">
+    <div className="flex flex-col lg:flex-row font-sans text-gray-700 bg-white lg:min-h-screen">
       {/* MOBILE SUMMARY HEADER */}
       <div className="lg:hidden bg-[#FAFAFA] p-4 border-b border-gray-200 flex justify-between items-center sticky top-0 z-20">
         <div className="flex items-center gap-2 text-black font-bold">
@@ -318,13 +314,10 @@ export default function CheckoutPage() {
         <span className="text-black font-black">LKR {grandTotal.toLocaleString()}</span>
       </div>
 
-      {/* LEFT COLUMN: Main Form Area */}
+      {/* LEFT COLUMN */}
       <div className="w-full lg:w-[58%] px-4 md:px-12 lg:px-24 py-8 lg:py-16">
         <div className="max-w-xl mx-auto lg:ml-auto lg:mr-0">
-          <Link
-            href="/"
-            className="text-2xl md:text-3xl font-black tracking-tighter text-black uppercase block mb-6 md:mb-10"
-          >
+          <Link href="/" className="block mb-6 md:mb-10">
             <h1 className="text-3xl font-black tracking-tighter uppercase">
               Checkout<span className="text-blue-600">.</span>
             </h1>
@@ -346,11 +339,16 @@ export default function CheckoutPage() {
                 {user.addresses?.map((addr: any) => (
                   <div
                     key={addr.id}
-                    onClick={() => setSelectedAddressId(addr.id)}
+                    onClick={() => {
+                      setSelectedAddressId(addr.id);
+                      setAddressError(false);
+                    }}
                     className={`p-4 border-2 rounded-lg cursor-pointer transition-all flex items-center gap-4 ${
                       selectedAddressId === addr.id
                         ? 'border-black bg-gray-50'
-                        : 'border-gray-100 hover:border-gray-300'
+                        : addressError 
+                          ? 'border-red-500 bg-red-50'
+                          : 'border-gray-100 hover:border-gray-300'
                     }`}
                   >
                     <div
@@ -370,8 +368,18 @@ export default function CheckoutPage() {
                     </div>
                   </div>
                 ))}
+                
+                {addressError && (
+                  <p className="text-red-500 text-[10px] font-bold mt-2 flex items-center gap-1 uppercase tracking-tighter">
+                    <AlertCircle size={12} /> Selection required to proceed
+                  </p>
+                )}
+
                 <button
-                  onClick={() => setIsAddingNewAddress(true)}
+                  onClick={() => {
+                    setIsAddingNewAddress(true);
+                    setAddressError(false);
+                  }}
                   className="text-xs md:text-sm font-bold text-black underline flex items-center gap-1 mt-4 uppercase tracking-tighter"
                 >
                   + Use a different address
@@ -455,10 +463,9 @@ export default function CheckoutPage() {
             )}
           </section>
 
-          {/* 🟢 ADDED: Billing Address Section */}
+          {/* Billing Address */}
           <section className="mb-10 md:mb-12">
             <h2 className="text-lg md:text-xl font-medium text-black mb-4 md:mb-6">Billing Address</h2>
-
             <label className="flex items-center gap-2 cursor-pointer mb-6">
               <input
                 type="checkbox"
@@ -470,53 +477,19 @@ export default function CheckoutPage() {
             </label>
 
             {!isSameAsShipping && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
-                <input
-                  {...register('billingFirstname')}
-                  placeholder="First name"
-                  className={inputFieldClass}
-                  required={!isSameAsShipping}
-                />
-                <input
-                  {...register('billingLastname')}
-                  placeholder="Last name"
-                  className={inputFieldClass}
-                  required={!isSameAsShipping}
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                <input {...register('billingFirstname')} placeholder="First name" className={inputFieldClass} required={!isSameAsShipping} />
+                <input {...register('billingLastname')} placeholder="Last name" className={inputFieldClass} required={!isSameAsShipping} />
                 <div className="md:col-span-2">
-                  <input
-                    {...register('billingAddressLine')}
-                    placeholder="Address"
-                    className={inputFieldClass}
-                    required={!isSameAsShipping}
-                  />
+                  <input {...register('billingAddressLine')} placeholder="Address" className={inputFieldClass} required={!isSameAsShipping} />
                 </div>
                 <div className="md:col-span-2">
-                  <input
-                    {...register('billingApartment')}
-                    placeholder="Apartment, suite, etc. (optional)"
-                    className={inputFieldClass}
-                  />
+                  <input {...register('billingApartment')} placeholder="Apartment, suite, etc. (optional)" className={inputFieldClass} />
                 </div>
-                <input
-                  {...register('billingCity')}
-                  placeholder="City"
-                  className={inputFieldClass}
-                  required={!isSameAsShipping}
-                />
-                <input
-                  {...register('billingPostalCode')}
-                  placeholder="Postal code"
-                  className={inputFieldClass}
-                  required={!isSameAsShipping}
-                />
+                <input {...register('billingCity')} placeholder="City" className={inputFieldClass} required={!isSameAsShipping} />
+                <input {...register('billingPostalCode')} placeholder="Postal code" className={inputFieldClass} required={!isSameAsShipping} />
                 <div className="md:col-span-2">
-                  <input
-                    {...register('billingPhoneNumber')}
-                    placeholder="Phone"
-                    className={inputFieldClass}
-                    required={!isSameAsShipping}
-                  />
+                  <input {...register('billingPhoneNumber')} placeholder="Phone" className={inputFieldClass} required={!isSameAsShipping} />
                 </div>
               </div>
             )}
@@ -528,74 +501,44 @@ export default function CheckoutPage() {
             <p className="text-xs md:text-sm text-gray-500 mb-4 md:mb-6">All transactions are secure and encrypted.</p>
 
             <div className="space-y-3">
-              {/* OPTION 1: COD */}
               <div
-                onClick={() => {
-                  setPaymentMethod('COD');
-                  setPaymentError(false);
-                }}
+                onClick={() => { setPaymentMethod('PAYHERE'); setPaymentError(false); }}
                 className={`border-2 rounded-lg p-4 md:p-5 cursor-pointer transition-all flex justify-between items-center ${
-                  paymentMethod === 'COD'
-                    ? 'border-black bg-gray-50'
-                    : paymentError
-                      ? 'border-red-500 bg-red-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                  paymentMethod === 'PAYHERE' ? 'border-blue-600 bg-blue-50' : paymentError ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
                 <div className="flex items-center gap-4">
-                  <Banknote className="text-green-600" size={24} />
-                  <div>
-                    <p className="text-xs md:text-sm font-bold text-black uppercase tracking-wider">Cash on Delivery</p>
-                    <p className="text-[10px] md:text-xs text-gray-500 mt-1">Pay with cash upon physical delivery</p>
-                  </div>
+                  <div className={`w-5 h-5 md:w-6 md:h-6 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'PAYHERE' ? 'border-blue-600' : paymentError ? 'border-red-500' : 'border-gray-300'}`}>
+                  {paymentMethod === 'PAYHERE' && <div className="w-2.5 h-2.5 md:w-3 md:h-3 bg-blue-600 rounded-full" />}
                 </div>
-                <div
-                  className={`w-5 h-5 md:w-6 md:h-6 rounded-full border-2 flex items-center justify-center ${
-                    paymentMethod === 'COD'
-                      ? 'border-black'
-                      : paymentError
-                        ? 'border-red-500'
-                        : 'border-gray-300'
-                  }`}
-                >
-                  {paymentMethod === 'COD' && <div className="w-2.5 h-2.5 md:w-3 md:h-3 bg-black rounded-full" />}
-                </div>
-              </div>
-
-              {/* OPTION 2: PAYHERE */}
-              <div
-                onClick={() => {
-                  setPaymentMethod('PAYHERE');
-                  setPaymentError(false);
-                }}
-                className={`border-2 rounded-lg p-4 md:p-5 cursor-pointer transition-all flex justify-between items-center ${
-                  paymentMethod === 'PAYHERE'
-                    ? 'border-blue-600 bg-blue-50'
-                    : paymentError
-                      ? 'border-red-500 bg-red-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <div className="flex items-center gap-4">
-                  <CreditCard className="text-blue-600" size={24} />
+                  
                   <div>
                     <p className="text-xs md:text-sm font-bold text-black uppercase tracking-wider">Pay Online</p>
                     <p className="text-[10px] md:text-xs text-gray-500 mt-1">Visa, Master, Amex (Secured by PayHere)</p>
                   </div>
                 </div>
-                <div
-                  className={`w-5 h-5 md:w-6 md:h-6 rounded-full border-2 flex items-center justify-center ${
-                    paymentMethod === 'PAYHERE'
-                      ? 'border-blue-600'
-                      : paymentError
-                        ? 'border-red-500'
-                        : 'border-gray-300'
-                  }`}
-                >
-                  {paymentMethod === 'PAYHERE' && (
-                    <div className="w-2.5 h-2.5 md:w-3 md:h-3 bg-blue-600 rounded-full" />
-                  )}
+
+                <img src="https://ik.imagekit.io/aqi4rj9dnl/mastercard-visa-cards-logos-icons-701751695036083sdqsk5ncvn%20(1).png?updatedAt=1773466068496" alt="Visa and Mastercard" className="h-4 md:h-6" />
+                
+              </div>
+
+              <div
+                onClick={() => { setPaymentMethod('COD'); setPaymentError(false); }}
+                className={`border-2 rounded-lg p-4 md:p-5 cursor-pointer transition-all flex justify-between items-center ${
+                  paymentMethod === 'COD' ? 'border-black bg-gray-50' : paymentError ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center gap-4">
+                  <div className={`w-5 h-5 md:w-6 md:h-6 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'COD' ? 'border-black' : paymentError ? 'border-red-500' : 'border-gray-300'}`}>
+                  {paymentMethod === 'COD' && <div className="w-2.5 h-2.5 md:w-3 md:h-3 bg-black rounded-full" />}
                 </div>
+                  
+                  <div>
+                    <p className="text-xs md:text-sm font-bold text-black uppercase tracking-wider">Cash on Delivery</p>
+                    <p className="text-[10px] md:text-xs text-gray-500 mt-1">Pay with cash upon physical delivery</p>
+                  </div>
+                </div>
+                
               </div>
             </div>
 
@@ -610,10 +553,9 @@ export default function CheckoutPage() {
         </div>
       </div>
 
-      {/* RIGHT COLUMN: Sticky Summary Area */}
+      {/* RIGHT COLUMN */}
       <div className="w-full lg:w-[42%] bg-[#FAFAFA] border-t lg:border-t-0 lg:border-l border-gray-200 px-4 md:px-12 lg:px-12 py-8 lg:py-16">
-        <div className="max-w-sm mx-auto lg:mx-0 lg:sticky lg:top-16">
-          {/* Items */}
+        <div className="mx-auto lg:mx-0 lg:sticky lg:top-16">
           <div className="space-y-4 mb-8 md:mb-10 lg:max-h-[50vh] lg:overflow-y-auto lg:pr-4">
             {items.map((item) => (
               <div key={item.sku} className="flex gap-4 items-center lg:pt-2">
@@ -625,25 +567,17 @@ export default function CheckoutPage() {
                     {item.quantity}
                   </span>
                 </div>
-
                 <div className="flex-1 text-[11px] md:text-xs">
-                  <p className="font-bold text-black line-clamp-2 leading-tight uppercase tracking-tight">
-                    {item.name}
-                  </p>
+                  <p className="font-bold text-black line-clamp-2 leading-tight uppercase tracking-tight">{item.name}</p>
                   <div className="text-gray-400 text-[9px] md:text-[10px] uppercase mt-1 tracking-tighter flex flex-wrap gap-2">
                     {item.size && <span>Size: {item.size}</span>}
                     <span>{item.color}</span>
                   </div>
                 </div>
-
                 <div className="text-right shrink-0">
-                  <p className="text-[11px] md:text-xs font-bold text-black">
-                    LKR {((Number(item.price) || 0) * (Number(item.quantity) || 0)).toLocaleString()}
-                  </p>
+                  <p className="text-[11px] md:text-xs font-bold text-black">LKR {((Number(item.price) || 0) * (Number(item.quantity) || 0)).toLocaleString()}</p>
                   {item.originalPrice && item.originalPrice > item.price && (
-                    <p className="text-[9px] text-gray-400 line-through">
-                      LKR {(item.originalPrice * item.quantity).toLocaleString()}
-                    </p>
+                    <p className="text-[9px] text-gray-400 line-through">LKR {(item.originalPrice * item.quantity).toLocaleString()}</p>
                   )}
                 </div>
               </div>
@@ -671,25 +605,14 @@ export default function CheckoutPage() {
                     {couponLoading ? <Loader2 className="animate-spin" size={16} /> : 'Apply'}
                   </button>
                 </div>
-
                 {couponMsg.text && (
-                  <p
-                    className={`text-[11px] mt-2 font-bold ${
-                      couponMsg.type === 'error' ? 'text-red-500' : 'text-green-600'
-                    }`}
-                  >
-                    {couponMsg.text}
-                  </p>
+                  <p className={`text-[11px] mt-2 font-bold ${couponMsg.type === 'error' ? 'text-red-500' : 'text-green-600'}`}>{couponMsg.text}</p>
                 )}
               </div>
             ) : (
               <div className="flex justify-between items-center bg-green-50 p-3 rounded-md border border-green-200">
-                <span className="text-xs text-green-700 font-bold uppercase tracking-wider">
-                  Code <span className="underline">{couponCode}</span> applied
-                </span>
-                <button type="button" onClick={handleRemoveCoupon} className="text-green-700 hover:text-green-900">
-                  <X size={16} />
-                </button>
+                <span className="text-xs text-green-700 font-bold uppercase tracking-wider">Code <span className="underline">{couponCode}</span> applied</span>
+                <button type="button" onClick={handleRemoveCoupon} className="text-green-700 hover:text-green-900"><X size={16} /></button>
               </div>
             )}
           </div>
@@ -700,33 +623,27 @@ export default function CheckoutPage() {
               <span className="text-gray-500">Subtotal</span>
               <span className="font-bold text-black">LKR {subtotal.toLocaleString()}</span>
             </div>
-
             {totalDiscount > 0 && (
               <div className="flex justify-between text-[11px] md:text-xs text-green-600 font-bold uppercase tracking-tighter">
                 <span>Savings</span>
                 <span>- LKR {totalDiscount.toLocaleString()}</span>
               </div>
             )}
-
             {couponCode && discountAmount > 0 && (
               <div className="flex justify-between text-[11px] md:text-xs text-green-700 font-bold uppercase tracking-tighter">
                 <span>Coupon ({couponCode})</span>
                 <span>- LKR {Number(discountAmount).toLocaleString()}</span>
               </div>
             )}
-
             <div className="flex justify-between text-[11px] md:text-xs uppercase tracking-wider">
               <span className="text-gray-500">Shipping</span>
               <span className="text-black font-bold">LKR {SHIPPING_COST.toLocaleString()}</span>
             </div>
-
             <div className="flex justify-between items-center pt-5 border-t border-black mb-8 lg:mb-0">
               <span className="text-sm md:text-base font-black uppercase tracking-tighter">Total</span>
               <div className="text-right flex items-baseline gap-1">
                 <span className="text-[9px] text-gray-400 font-bold">LKR</span>
-                <span className="text-xl md:text-2xl font-black text-black tracking-tighter">
-                  {grandTotal.toLocaleString()}
-                </span>
+                <span className="text-xl md:text-2xl font-black text-black tracking-tighter">{grandTotal.toLocaleString()}</span>
               </div>
             </div>
           </div>
