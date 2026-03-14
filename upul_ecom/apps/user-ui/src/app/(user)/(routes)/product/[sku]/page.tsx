@@ -638,7 +638,7 @@ export default function ProductPage() {
 
             {/* Stock Status */}
             <div className="pt-6 space-y-2 text-xs text-gray-500">
-                <p>Brand: <span className="text-gray-900 font-medium">{product.brand}</span></p>
+                <p>Brand: <span className="text-gray-900 font-medium">{product.brand || "Upul's International"}</span></p>
                 <p>SKU: <span className="text-gray-900 font-medium">{product.sku}</span></p>
                 
                 {(hasVariants && !selectedSize) ? (

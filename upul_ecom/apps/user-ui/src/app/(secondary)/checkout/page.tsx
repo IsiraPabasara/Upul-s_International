@@ -550,6 +550,13 @@ export default function CheckoutPage() {
           </section>
 
           <PlaceOrderButton className="hidden lg:block" />
+          <p className="text-[10px] text-gray-500 mt-4 text-center">By clicking Pay Now, you agree to our <Link href="/about-us" className="underline hover:text-black transition-colors">Terms and Conditions</Link>.</p>
+          <div className="flex justify-center gap-4 mt-3 text-[10px] text-gray-500">
+            <Link href="/about-us" className="underline hover:text-black transition-colors">Shipping & Returns</Link>
+            <span>•</span>
+            <Link href="/about-us" className="underline hover:text-black transition-colors">Privacy Policy</Link>
+          </div>
+  
         </div>
       </div>
 
@@ -649,7 +656,11 @@ export default function CheckoutPage() {
           </div>
 
           <PlaceOrderButton className="lg:hidden mt-8" />
-        </div>
+          <p className="text-[10px] text-gray-500 mt-4 text-center">By clicking Pay Now, you agree to our <Link href="/term-and-conditions" className="underline hover:text-black transition-colors">Terms and Conditions</Link>.</p>          <div className="flex justify-center gap-4 mt-3 text-[10px] text-gray-500">
+            <Link href="/about-us" className="underline hover:text-black transition-colors">Shipping & Returns</Link>
+            <span>•</span>
+            <Link href="/about-us" className="underline hover:text-black transition-colors">Privacy Policy</Link>
+          </div>        </div>
       </div>
     </div>
   );

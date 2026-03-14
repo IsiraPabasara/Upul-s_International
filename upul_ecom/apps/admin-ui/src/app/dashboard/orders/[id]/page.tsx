@@ -293,6 +293,9 @@ export default function AdminOrderDetails() {
                   <p className="leading-relaxed">
                     {order.shippingAddress.city}, {order.shippingAddress.postalCode}
                   </p>
+                  <p className="leading-relaxed">
+                    {order.email}
+                  </p>
                 </div>
               </div>
 
