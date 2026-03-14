@@ -7,6 +7,7 @@ import BrandSelector from "./../brand/components/BrandSelector";
 import ImageUploader from "./../../products/imagekit/components/ImageUploader";
 import StockManager from "./../stockmanager/components/StockManager";
 import ColorSelector from "./../colorselector/ColorSelector";
+import CountrySelector from "./../brand/components/CountySelector";
 import { uploadImageToKit } from "./../imagekit/utils/uploadService";
 import {
   Loader2,
@@ -40,6 +41,7 @@ export interface ProductFormValues {
   price: number;
   stock: number;
   brand: string;
+  country?: string;
   categoryId: string;
   sizeType: string;
   variants: Variant[];
@@ -63,6 +65,7 @@ const INITIAL_DATA: ProductFormValues = {
   price: 0,
   stock: 0,
   brand: "",
+  country: "",
   categoryId: "",
   sizeType: "Standard",
   variants: [],
@@ -273,6 +276,26 @@ export default function ProductForm({
                   rows={4}
                   className="input-field resize-none text-sm sm:text-base leading-relaxed py-2.5 sm:py-3 min-h-[100px] sm:min-h-[120px] w-full [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-200 dark:[&::-webkit-scrollbar-thumb]:bg-slate-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-gray-300 dark:hover:[&::-webkit-scrollbar-thumb]:bg-slate-600 transition-colors"
                   placeholder="Product description..."
+                />
+              </div>
+
+              <div className="pt-2">
+                <label className="label mb-1.5 sm:mb-2 ml-1 text-sm sm:text-base font-semibold">
+                  Country of Origin{" "}
+                  <span className="text-gray-400 font-normal ml-1">
+                    (Optional)
+                  </span>
+                </label>
+
+                <Controller
+                  name="country" // 🟢 Tells React Hook Form to manage the 'country' string
+                  control={control}
+                  render={({ field }) => (
+                    <CountrySelector
+                      selectedCountry={field.value}
+                      onChange={field.onChange}
+                    />
+                  )}
                 />
               </div>
 

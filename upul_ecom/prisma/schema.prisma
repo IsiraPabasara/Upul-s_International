@@ -59,6 +59,7 @@ model Product {
   price        Float
   availability Boolean @default(true)
   brand     String?   
+ country    String?
   visible      Boolean @default(true)
 
   images ProductImage[]
@@ -77,6 +78,11 @@ model Product {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Country {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  name      String    @unique
 }
 
 model Category {
