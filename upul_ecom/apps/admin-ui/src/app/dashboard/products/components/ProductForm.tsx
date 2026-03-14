@@ -178,7 +178,6 @@ export default function ProductForm({
         cleanData.sizeType = "One Size";
         cleanData.stock = Number(data.stock) || 0;
       }
-
       await onSubmit(cleanData);
     } catch (error) {
       console.error("Save failed", error);
@@ -211,7 +210,12 @@ export default function ProductForm({
   }, []);
 
   return (
-    <form onSubmit={handleSubmit(onFormSubmit)} className="pb-20">
+    <form
+      onSubmit={handleSubmit(onFormSubmit, (errors) =>
+        console.log("🚨 BLOCKED BY VALIDATION ERRORS:", errors),
+      )}
+      className="pb-20"
+    >
       <div className="grid grid-cols-1 xl:grid-cols-5 gap-8 items-start">
         {/* === LEFT COLUMN === */}
         <div className="xl:col-span-3 space-y-8">

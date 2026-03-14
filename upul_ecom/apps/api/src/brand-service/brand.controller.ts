@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../../packages/libs/prisma';
-import axios from 'axios'; // 🟢 Make sure you import axios!
+import axios from 'axios'; 
 
 export const getBrands = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -15,7 +15,6 @@ export const getBrands = async (req: Request, res: Response, next: NextFunction)
 
 export const createBrand = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // 🟢 Catch logoFileId from the frontend
     const { name, logoUrl, logoFileId } = req.body;
     
     const existing = await prisma.brand.findUnique({ where: { name } });
@@ -27,7 +26,7 @@ export const createBrand = async (req: Request, res: Response, next: NextFunctio
       data: { 
         name,
         logoUrl: logoUrl || null,
-        logoFileId: logoFileId || null // 🟢 Save it to the DB!
+        logoFileId: logoFileId || null 
       }
     });
 
@@ -46,17 +45,20 @@ export const deleteBrand = async (req: Request, res: Response, next: NextFunctio
     if (!brand) return res.status(404).json({ message: "Brand not found" });
 
     // 2. Prevent deletion if products are currently using this brand
-    const linkedProducts = await prisma.product.count({ where: { brandId: id } });
+    // 🟢 FIXED: Changed 'brandToDelete.name' to 'brand.name'
+    const linkedProducts = await prisma.product.count({ 
+      where: { brand: brand.name } 
+    });
+    
     if (linkedProducts > 0) {
       return res.status(400).json({ 
         message: `Cannot delete brand. It is linked to ${linkedProducts} products.` 
       });
     }
 
-    // 🟢 3. Delete the actual image from ImageKit Cloud!
+    // 3. Delete the actual image from ImageKit Cloud!
     if (brand.logoFileId) {
       try {
-        // ImageKit requires Basic Auth using your Private Key + a colon ":"
         const privateKey = process.env.IMAGEKIT_PRIVATE_KEY || '';
         const authHeader = Buffer.from(privateKey + ':').toString('base64');
         
@@ -81,7 +83,7 @@ export const deleteBrand = async (req: Request, res: Response, next: NextFunctio
   }
 };
 
-// 🟢 NEW & IMPROVED: Update Brand Function
+// Update Brand Function
 export const updateBrand = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
@@ -93,15 +95,21 @@ export const updateBrand = async (req: Request, res: Response, next: NextFunctio
       return res.status(404).json({ message: "Brand not found" });
     }
 
-    // 2. Check for name duplication 
+    // 2. Check for name duplication & Update connected products!
     if (name && name.toLowerCase() !== existingBrand.name.toLowerCase()) {
       const duplicate = await prisma.brand.findUnique({ where: { name } });
       if (duplicate) {
         return res.status(400).json({ message: "A brand with this name already exists" });
       }
+      
+      // 🟢 PRO FIX: If the brand name changes, update all existing products so their logos don't break!
+      await prisma.product.updateMany({
+        where: { brand: existingBrand.name },
+        data: { brand: name }
+      });
     }
 
-    // 3. 💎 PRO UX: Delete the old logo if the logoFileId has changed OR been removed!
+    // 3. Delete the old logo if the logoFileId has changed OR been removed!
     if (existingBrand.logoFileId && existingBrand.logoFileId !== logoFileId) {
       try {
         const privateKey = process.env.IMAGEKIT_PRIVATE_KEY || '';

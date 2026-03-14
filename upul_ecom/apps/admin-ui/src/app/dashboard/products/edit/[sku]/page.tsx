@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import axiosInstance from "@/app/utils/axiosInstance";
 import ProductForm, { ProductFormValues } from "../../components/ProductForm";
 import toast, { Toaster } from "react-hot-toast";
-import { ArrowLeft, Loader2, CheckCircle } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 
 export default function EditProductPage() {
