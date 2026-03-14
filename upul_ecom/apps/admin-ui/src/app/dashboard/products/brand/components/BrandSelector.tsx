@@ -12,15 +12,14 @@ interface Brand {
 }
 
 interface BrandSelectorProps {
-  selectedBrand: string;
-  onChange: (brandName: string) => void;
+  selectedBrand: string; // 🟢 We are using the Brand NAME string (e.g., "Deedat")
+  onChange: (brandName: string) => void; // 🟢 Send the NAME back to the form
 }
 
 export default function BrandSelector({ selectedBrand, onChange }: BrandSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -31,7 +30,6 @@ export default function BrandSelector({ selectedBrand, onChange }: BrandSelector
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // 1. Fetch Brands
   const { data: brands = [], isLoading } = useQuery<Brand[]>({
     queryKey: ['brands'],
     queryFn: async () => {
@@ -40,17 +38,15 @@ export default function BrandSelector({ selectedBrand, onChange }: BrandSelector
     },
   });
 
-  // Helper to find the currently selected brand object
+  // 🟢 Find the brand object by matching the exact brand NAME
   const selectedBrandObj = brands.find(b => b.name === selectedBrand);
 
-  // Shared responsive input styles
   const baseInputStyles = "w-full h-[44px] sm:h-[46px] px-3 sm:px-4 bg-slate-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:border-blue-500 outline-none transition-all text-sm sm:text-base font-medium";
 
   return (
     <div className="w-full">
       <div ref={dropdownRef} className="relative w-full group">
         
-        {/* Dropdown Trigger Button with Selected Logo */}
         <button
           type="button"
           onClick={() => !isLoading && setIsOpen(!isOpen)}
@@ -71,9 +67,10 @@ export default function BrandSelector({ selectedBrand, onChange }: BrandSelector
                <div className="w-6 h-6 rounded-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 flex items-center justify-center shrink-0 shadow-sm text-gray-400">
                  <Tag size={12} strokeWidth={2.5} />
                </div>
-            ) : null} {/* 🟢 FIXED: Added : null right here! */}
+            ) : null}
             
             <span className={`block truncate ${selectedBrand ? 'text-gray-900 dark:text-white font-bold' : 'text-gray-400'}`}>
+              {/* 🟢 Show the selected brand name */}
               {isLoading ? 'Loading brands...' : (selectedBrand || 'Select a Brand')}
             </span>
           </div>
@@ -85,7 +82,6 @@ export default function BrandSelector({ selectedBrand, onChange }: BrandSelector
           />
         </button>
         
-        {/* Dropdown Menu with Logos */}
         {isOpen && !isLoading && (
           <div className="absolute z-[100] w-full mt-2 bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-2xl shadow-xl max-h-[280px] overflow-y-auto py-2 animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200 custom-scrollbar">
             {brands.length === 0 ? (
@@ -102,11 +98,11 @@ export default function BrandSelector({ selectedBrand, onChange }: BrandSelector
                     key={brand.id}
                     type="button"
                     onClick={() => {
-                      onChange(brand.name);
+                      onChange(brand.name); // 🟢 Send the string NAME back to React Hook Form
                       setIsOpen(false);
                     }}
                     className={`w-full flex items-center justify-between px-3 sm:px-4 py-2.5 text-sm sm:text-base transition-colors ${
-                      selectedBrand === brand.name 
+                      selectedBrand === brand.name // 🟢 Highlight if the names match
                         ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-bold' 
                         : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-800 font-medium'
                     }`}

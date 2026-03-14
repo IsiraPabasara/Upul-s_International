@@ -58,8 +58,7 @@ model Product {
   description  String
   price        Float
   availability Boolean @default(true)
-  brandId   String?   @db.ObjectId
-  brand     Brand?    @relation(fields: [brandId], references: [id])
+  brand     String?   
   visible      Boolean @default(true)
 
   images ProductImage[]
@@ -100,8 +99,6 @@ model Brand {
   name String @unique
   logoUrl   String?   // Optional, in case a brand doesn't have a logo yet
   logoFileId String?
-
-  products  Product[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

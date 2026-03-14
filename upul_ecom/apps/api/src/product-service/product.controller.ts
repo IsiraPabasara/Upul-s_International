@@ -17,7 +17,7 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
       return res.status(400).json({ message: "Error generating unique SKU, please try again." });
     }
 
-    // 3. 👇 CALCULATE STOCK LOGIC (The part that was missing)
+    // 3. CALCULATE STOCK LOGIC
     let finalStock = 0;
     
     // Check if variants exist AND have items
@@ -46,7 +46,9 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
         // Default visible to true if not sent
         visible: data.visible !== undefined ? data.visible : true,
 
-        brand: data.brand,
+        // 🟢 FIXED: Just save the raw string to the brand column
+        brand: data.brand || null, 
+
         images: data.images,
         colors: data.colors || [],
         categoryId: data.categoryId,
@@ -97,7 +99,8 @@ export const getAllProducts = async (
         take,
         orderBy: { createdAt: "desc" }, // Newest first
         include: {
-          category: { select: { name: true } }, // Just get category name
+          category: { select: { name: true } }, 
+          // 🟢 FIXED: Removed 'brand' from include since it's no longer a relation
         },
       }),
       prisma.product.count({ where }),
@@ -184,6 +187,7 @@ export const getProductBySku = async (
       where: { sku },
       include: {
         category: true,
+        // 🟢 FIXED: Removed 'brand' from include since it's no longer a relation
       },
     });
 
@@ -197,73 +201,13 @@ export const getProductBySku = async (
   }
 };
 
-// 2. UPDATE By SKU
-// export const updateProductBySku = async (req: Request, res: Response, next: NextFunction) => {
-//   try {
-//     const { sku } = req.params;
-//     const { 
-//       name, description, price, stock, categoryId, 
-//       images, variants, discountType, discountValue, brand, sizeType, visible
-//     } = req.body;
-
-//     // 1. Map Variants safely
-//     const formattedVariants = Array.isArray(variants)
-//       ? variants.map((v: any) => ({ size: v.size, stock: Number(v.stock) }))
-//       : [];
-
-//     // 2. 👇 CALCULATE STOCK LOGIC (Create vs Update must match)
-//     let finalStock = 0;
-    
-//     if (formattedVariants.length > 0) {
-//        // Option A: Sum of Variants
-//        finalStock = formattedVariants.reduce((sum: number, v: any) => sum + v.stock, 0);
-//     } else {
-//        // Option B: Manual Stock Input
-//        finalStock = Number(stock || 0);
-//     }
-
-//     const updatedProduct = await prisma.product.update({
-//       where: { sku },
-//       data: {
-//         name,
-//         description,
-//         price: Number(price),
-//         brand,
-//         sizeType,
-        
-//         // Stock & Availability
-//         stock: finalStock,
-//         availability: finalStock > 0, 
-        
-//         // Visibility
-//         visible: visible, 
-
-//         category: categoryId ? { connect: { id: categoryId } } : undefined,
-        
-//         // IMPORTANT: We overwrite these arrays
-//         images: images, 
-//         variants: formattedVariants, 
-
-//         discountType: discountType || "NONE",
-//         discountValue: Number(discountValue || 0),
-//       },
-//     });
-
-//     return res.json({ success: true, product: updatedProduct });
-//   } catch (error) {
-//     if ((error as any).code === 'P2002') {
-//        return res.status(400).json({ error: "Duplicate value found." });
-//     }
-//     return next(error);
-//   }
-// };
-
 export const updateProductBySku = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { sku } = req.params;
     const { 
       name, description, price, stock, categoryId, 
       images, variants, discountType, discountValue, brand, sizeType, visible, colors, isNewArrival
+      // 🟢 FIXED: Destructured 'brand' cleanly
     } = req.body;
 
     // 1. Ensure product exists
@@ -291,18 +235,18 @@ export const updateProductBySku = async (req: Request, res: Response, next: Next
       data: {
         name,
         description,
-        price: Number(price),
-        brand,
+        price: Number(price), 
+        
+        // 🟢 FIXED: Just save the string directly
+        brand: brand || null,
+        
         sizeType,
         stock: finalStock,
         availability: finalStock > 0, 
         visible: visible !== undefined ? visible : existingProduct.visible,
         isNewArrival: isNewArrival !== undefined ? isNewArrival : existingProduct.isNewArrival,
         
-        // Use direct ID assignment if your schema allows it (usually categoryId: categoryId)
-        // or keep connect but ensure categoryId exists
         categoryId: categoryId || existingProduct.categoryId,
-        
         images: images || existingProduct.images, 
         colors: colors || existingProduct.colors,
         variants: formattedVariants, 
@@ -325,11 +269,9 @@ export const updateProductBySku = async (req: Request, res: Response, next: Next
 export const deleteProduct = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { sku } = req.params;
-    // Note: If you have relations (like CartItems), you might need to handle them first
-    // or use Cascade Delete in Prisma schema.
     await prisma.product.delete({ where: { sku } });
     return res.json({ success: true });
   } catch (error) {
     return next(error);
   }
-};
+};  
