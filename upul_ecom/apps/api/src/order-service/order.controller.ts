@@ -178,22 +178,26 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
         }
 
         // 3. Create Order
-        const newOrder = await tx.order.create({
-          data: {
-            orderNumber,
-            guestToken,
-            userId: customerId,
-            email: customerEmail,
-            shippingAddress,
-            billingAddress: finalBillingAddress,
-            items: finalItems,
-            totalAmount: grandTotal,
-            discountAmount: finalDiscount,
-            couponCode: appliedCouponCode,
-            status: 'PENDING',
-            paymentMethod: 'COD'
-          }
-        });
+        const orderData: any = {
+          orderNumber,
+          guestToken,
+          email: customerEmail,
+          shippingAddress,
+          billingAddress: finalBillingAddress,
+          items: finalItems,
+          totalAmount: grandTotal,
+          discountAmount: finalDiscount,
+          couponCode: appliedCouponCode,
+          status: 'PENDING',
+          paymentMethod: 'COD'
+        };
+
+        // Only add userId if customerId exists
+        if (customerId) {
+          orderData.userId = customerId;
+        }
+
+        const newOrder = await tx.order.create({ data: orderData });
 
         // 4. Clear Cart
         if (customerId) {

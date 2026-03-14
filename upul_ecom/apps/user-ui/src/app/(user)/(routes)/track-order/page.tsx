@@ -263,6 +263,9 @@ export default function TrackOrderPage() {
                   {order.shippingAddress.firstname} {order.shippingAddress.lastname}
                 </p>
                 <p>{order.shippingAddress.addressLine}</p>
+                {order.shippingAddress.apartment && (
+                  <p>{order.shippingAddress.apartment}</p>
+                )}
                 <p>
                   {order.shippingAddress.city}, {order.shippingAddress.postalCode}
                 </p>
