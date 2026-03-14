@@ -171,7 +171,7 @@ export const getShopProducts = async (req: Request, res: Response, next: NextFun
       where.OR = [
         { name: { contains: String(search), mode: 'insensitive' } },
         { description: { contains: String(search), mode: 'insensitive' } },
-        { brand: { is: { name: { contains: String(search), mode: 'insensitive' } } } }
+        { brand: { contains: String(search), mode: 'insensitive' } }
       ];
     }
 
@@ -180,7 +180,7 @@ export const getShopProducts = async (req: Request, res: Response, next: NextFun
       where.categoryId = categoryIds.length > 0 ? { in: categoryIds } : "000000000000000000000000";
     }
 
-    if (brand) where.brand = { is: { name: { equals: String(brand), mode: 'insensitive' } } };
+    if (brand) where.brand = { mode: 'insensitive', equals: String(brand) };
 
     if (minPrice || maxPrice) {
       where.price = {
