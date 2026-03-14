@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import prisma from "../../../../packages/libs/prisma";
+import { deleteFromImageKit } from "../imagekit-service/imagekit.controller";
 
 export const createProduct = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -269,9 +270,26 @@ export const updateProductBySku = async (req: Request, res: Response, next: Next
 export const deleteProduct = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { sku } = req.params;
+
+    // 1. Get the product to find the fileIds
+    const product = await prisma.product.findUnique({ 
+      where: { sku },
+      select: { images: true } 
+    });
+
+    if (!product) return res.status(404).json({ error: "Product not found" });
+
+    // 2. Extract IDs into a flat array: ["id1", "id2"]
+    const idsToDelete = product.images.map((img: any) => img.fileId).filter(Boolean);
+
+    // 3. 🚀 Clean up ImageKit
+    await deleteFromImageKit(idsToDelete);
+
+    // 4. Delete from DB
     await prisma.product.delete({ where: { sku } });
-    return res.json({ success: true });
+
+    return res.json({ success: true, message: "Product and images wiped!" });
   } catch (error) {
     return next(error);
   }
-};  
+};
