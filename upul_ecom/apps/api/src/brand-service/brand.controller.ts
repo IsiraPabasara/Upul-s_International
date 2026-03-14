@@ -1,12 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../../packages/libs/prisma';
 import axios from 'axios'; 
+import { deleteFromImageKit } from '../imagekit-service/imagekit.controller'; 
 
 export const getBrands = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const brands = await prisma.brand.findMany({
       orderBy: { name: 'asc' }
-    });
+    }); 
     return res.json(brands);
   } catch (error) {
     return next(error);
@@ -40,12 +41,11 @@ export const deleteBrand = async (req: Request, res: Response, next: NextFunctio
   try {
     const { id } = req.params;
 
-    // 1. Find the brand first so we know what file to delete!
+    // 1. Find the brand first
     const brand = await prisma.brand.findUnique({ where: { id } });
     if (!brand) return res.status(404).json({ message: "Brand not found" });
 
     // 2. Prevent deletion if products are currently using this brand
-    // 🟢 FIXED: Changed 'brandToDelete.name' to 'brand.name'
     const linkedProducts = await prisma.product.count({ 
       where: { brand: brand.name } 
     });
@@ -56,22 +56,10 @@ export const deleteBrand = async (req: Request, res: Response, next: NextFunctio
       });
     }
 
-    // 3. Delete the actual image from ImageKit Cloud!
+    // 🟢 3. The New Way: Use the helper we built!
+    // This replaces all the Axios/Buffer/Private Key code.
     if (brand.logoFileId) {
-      try {
-        const privateKey = process.env.IMAGEKIT_PRIVATE_KEY || '';
-        const authHeader = Buffer.from(privateKey + ':').toString('base64');
-        
-        await axios.delete(`https://api.imagekit.io/v1/files/${brand.logoFileId}`, {
-          headers: {
-            Authorization: `Basic ${authHeader}`
-          }
-        });
-        console.log("Successfully deleted image from ImageKit");
-      } catch (ikError) {
-        console.error("Failed to delete image from ImageKit:", ikError);
-        // We continue anyway so the broken brand doesn't get stuck in your database
-      }
+      await deleteFromImageKit(brand.logoFileId);
     }
 
     // 4. Finally, delete from your Database

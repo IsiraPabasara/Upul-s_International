@@ -13,8 +13,6 @@ import {
   Loader2,
   PackageX,
   Trash2,
-  Eye,
-  EyeOff,
   Tag,
   Layers,
 } from "lucide-react";
